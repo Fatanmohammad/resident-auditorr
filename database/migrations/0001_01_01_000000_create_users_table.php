@@ -13,10 +13,16 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('nip')->unique();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            
+            // Kolom cabang_id tanpa foreign key dulu agar tidak crash
+            $table->unsignedBigInteger('cabang_id')->nullable();
+            $table->enum('role', ['ra', 'kabag_ra', 'kadiv_skai', 'auditee'])->default('ra');
+            
             $table->rememberToken();
             $table->timestamps();
         });
