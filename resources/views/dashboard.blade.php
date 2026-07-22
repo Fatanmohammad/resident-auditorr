@@ -2,202 +2,61 @@
 @section('title', 'Dashboard')
 
 @section('content')
-{{-- Row 1: 5 Stat Cards sesuai diagram --}}
-<div class="grid grid-cols-5" style="margin-bottom: 1.25rem;">
+
+{{-- Greeting Bar --}}
+<div style="margin-bottom: 1.5rem;">
+    <h1 style="font-size: 1.3rem; font-weight: 700; color: var(--bs-blue-dark);">
+        Selamat datang, {{ explode(' ', auth()->user()->name)[0] }}
+    </h1>
+    <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem;">
+        {{ now()->isoFormat('dddd, D MMMM Y') }} &mdash; Sistem Resident Auditor PT Bank Sulteng
+    </p>
+</div>
+
+{{-- Stat Cards --}}
+<div class="grid grid-cols-4" style="margin-bottom: 1.5rem;">
     <div class="stat-card">
-        <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
+        <div class="stat-icon blue"><i class="bi bi-people"></i></div>
         <div class="stat-info">
             <div class="stat-label">Total RA Aktif</div>
             <div class="stat-value">{{ $totalRa }}</div>
-            <div class="stat-sub">{{ $totalCabang }} cabang</div>
+            <div class="stat-sub">{{ $totalCabang }} cabang terdaftar</div>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon red"><i class="bi bi-exclamation-triangle-fill"></i></div>
-        <div class="stat-info">
-            <div class="stat-label">Temuan Signifikan</div>
-            <div class="stat-value">{{ $temuanSignifikan }}</div>
-            <div class="stat-sub">{{ $temuanBerulang }} berulang</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon yellow"><i class="bi bi-calendar3"></i></div>
+        <div class="stat-icon blue"><i class="bi bi-calendar3"></i></div>
         <div class="stat-info">
             <div class="stat-label">Audit Plan</div>
             <div class="stat-value">{{ $totalJadwal }}</div>
-            <div class="stat-sub">{{ $jadwalSelesai }} approved</div>
+            <div class="stat-sub">{{ $jadwalSelesai }} telah disetujui</div>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon purple"><i class="bi bi-bar-chart-line-fill"></i></div>
+        <div class="stat-icon blue"><i class="bi bi-file-earmark-text"></i></div>
         <div class="stat-info">
-            <div class="stat-label">Scoring Terbaru</div>
-            <div class="stat-value">{{ $scoringTerbaru->count() }}</div>
-            <div class="stat-sub">laporan scoring</div>
+            <div class="stat-label">Temuan Signifikan</div>
+            <div class="stat-value">{{ $temuanSignifikan }}</div>
+            <div class="stat-sub">{{ $temuanBerulang }} temuan berulang</div>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon green"><i class="bi bi-graph-up-arrow"></i></div>
+        <div class="stat-icon blue"><i class="bi bi-clipboard2-check"></i></div>
         <div class="stat-info">
-            <div class="stat-label">TL Selesai</div>
+            <div class="stat-label">Tindak Lanjut Selesai</div>
             <div class="stat-value">{{ $monitoringData->total_selesai ?? 0 }}</div>
-            <div class="stat-sub">{{ $monitoringData->total_pending ?? 0 }} pending</div>
+            <div class="stat-sub">{{ $monitoringData->total_pending ?? 0 }} masih pending</div>
         </div>
     </div>
 </div>
 
-{{-- Row 2: 5 Widget sesuai diagram --}}
-<div class="grid grid-cols-5" style="margin-bottom: 1.25rem;">
+{{-- Main Content --}}
+<div class="grid grid-cols-2" style="margin-bottom: 1.5rem;">
 
-    {{-- Widget 1: RA (Resident Auditor) --}}
-    <div class="widget-card">
-        <div class="widget-header">
-            <div class="widget-title"><i class="bi bi-person-badge"></i> RA per Cabang</div>
-        </div>
-        <div class="widget-body">
-            <ul class="widget-list">
-                @forelse($raPerCabang as $cabangId => $ras)
-                    <li>
-                        <span class="label">{{ $ras->first()->cabang?->nama_cabang ?? 'Tanpa Cabang' }}</span>
-                        <span class="value">{{ $ras->count() }} RA</span>
-                    </li>
-                @empty
-                    <li><span class="label" style="width:100%; text-align:center;">Belum ada data</span></li>
-                @endforelse
-            </ul>
-            @if($raMalas > 0)
-            <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: #fee2e2; border-radius: var(--radius-sm); font-size: 0.75rem; color: #dc2626;">
-                <i class="bi bi-exclamation-circle"></i> {{ $raMalas }} RA tidak aktif 30 hari
-            </div>
-            @endif
-        </div>
-    </div>
-
-    {{-- Widget 2: Temuan Lemah --}}
-    <div class="widget-card">
-        <div class="widget-header">
-            <div class="widget-title"><i class="bi bi-bug"></i> Temuan Lemah</div>
-        </div>
-        <div class="widget-body">
-            <ul class="widget-list">
-                <li><span class="label">Signifikan</span><span class="badge badge-danger">{{ $temuanSignifikan }}</span></li>
-                <li><span class="label">Berulang</span><span class="badge badge-warning">{{ $temuanBerulang }}</span></li>
-                @foreach($temuanPerBidang as $kategori => $total)
-                    @if(!in_array($kategori, ['signifikan','berulang']))
-                    <li><span class="label">{{ ucfirst($kategori) }}</span><span class="value">{{ $total }}</span></li>
-                    @endif
-                @endforeach
-            </ul>
-            <a href="{{ route('temuan.index') }}" class="btn btn-outline btn-sm btn-full" style="margin-top: 0.75rem;">Lihat Semua</a>
-        </div>
-    </div>
-
-    {{-- Widget 3: Penjadwalan Audit --}}
-    <div class="widget-card">
-        <div class="widget-header">
-            <div class="widget-title"><i class="bi bi-calendar-check"></i> Penjadwalan Audit</div>
-        </div>
-        <div class="widget-body">
-            <ul class="widget-list">
-                @forelse($jadwalAktif as $plan)
-                <li>
-                    <div>
-                        <div style="font-weight: 600; font-size: 0.78rem;">{{ $plan->cabang?->nama_cabang ?? '-' }}</div>
-                        <div style="font-size: 0.7rem; color: var(--text-muted);">{{ $plan->raUser?->name ?? '-' }}</div>
-                    </div>
-                    <span class="badge {{ $plan->status_approval === 'approved' ? 'badge-success' : 'badge-warning' }}">
-                        {{ $plan->status_approval === 'approved' ? 'OK' : 'Proses' }}
-                    </span>
-                </li>
-                @empty
-                <li><span class="label" style="width:100%; text-align:center;">Belum ada jadwal</span></li>
-                @endforelse
-            </ul>
-            <a href="{{ route('audit-plan.index') }}" class="btn btn-outline btn-sm btn-full" style="margin-top: 0.75rem;">Lihat Semua</a>
-        </div>
-    </div>
-
-    {{-- Widget 4: Kinerja & Scoring --}}
-    <div class="widget-card">
-        <div class="widget-header">
-            <div class="widget-title"><i class="bi bi-trophy"></i> Kinerja & Scoring</div>
-        </div>
-        <div class="widget-body">
-            <ul class="widget-list">
-                @forelse($scoringTerbaru as $scoring)
-                <li>
-                    <div>
-                        <div style="font-weight: 600; font-size: 0.78rem;">{{ $scoring->auditPlan?->cabang?->nama_cabang ?? '-' }}</div>
-                        <div style="font-size: 0.7rem; color: var(--text-muted);">{{ $scoring->peringkat_ra }}</div>
-                    </div>
-                    <span style="font-weight: 700; color: var(--bs-blue); font-size: 0.85rem;">{{ $scoring->skor_akhir }}</span>
-                </li>
-                @empty
-                <li><span class="label" style="width:100%; text-align:center;">Belum ada scoring</span></li>
-                @endforelse
-            </ul>
-            <a href="{{ route('scoring.index') }}" class="btn btn-outline btn-sm btn-full" style="margin-top: 0.75rem;">Lihat Semua</a>
-        </div>
-    </div>
-
-    {{-- Widget 5: Ringkasan Monitoring --}}
-    <div class="widget-card">
-        <div class="widget-header">
-            <div class="widget-title"><i class="bi bi-clipboard-data"></i> Ringkasan Monitoring</div>
-        </div>
-        <div class="widget-body">
-            <ul class="widget-list">
-                <li><span class="label">Total Temuan</span><span class="value">{{ $monitoringData->total_temuan ?? 0 }}</span></li>
-                <li><span class="label">TL Selesai</span><span class="badge badge-success">{{ $monitoringData->total_selesai ?? 0 }}</span></li>
-                <li><span class="label">TL Pending</span><span class="badge badge-warning">{{ $monitoringData->total_pending ?? 0 }}</span></li>
-                <li>
-                    <span class="label">Progress</span>
-                    @php
-                        $total = ($monitoringData->total_temuan ?? 0);
-                        $selesai = ($monitoringData->total_selesai ?? 0);
-                        $pct = $total > 0 ? round(($selesai / $total) * 100) : 0;
-                    @endphp
-                    <span class="value">{{ $pct }}%</span>
-                </li>
-            </ul>
-            <a href="{{ route('monitoring.index') }}" class="btn btn-outline btn-sm btn-full" style="margin-top: 0.75rem;">Lihat Detail</a>
-        </div>
-    </div>
-</div>
-
-{{-- Row 3: Alur Proses + Jadwal Terkini --}}
-<div class="grid grid-cols-2">
-    <div class="widget-card">
-        <div class="widget-header">
-            <div class="widget-title"><i class="bi bi-diagram-3"></i> Ringkasan Alur Proses</div>
-        </div>
-        <div class="widget-body">
-            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                @php
-                    $steps = [
-                        ['num'=>'1','label'=>'Input Parameter','route'=>'parameter.index','color'=>'#d1fae5','text'=>'#065f46'],
-                        ['num'=>'2','label'=>'Penjadwalan Audit','route'=>'audit-plan.index','color'=>'#fef3c7','text'=>'#92400e'],
-                        ['num'=>'3','label'=>'Pelaksanaan Audit','route'=>'kka.index','color'=>'#dbeafe','text'=>'#1e40af'],
-                        ['num'=>'4','label'=>'Monitoring','route'=>'monitoring.index','color'=>'#ede9fe','text'=>'#7c3aed'],
-                        ['num'=>'5','label'=>'Tindak Lanjut','route'=>'tindak-lanjut.index','color'=>'#fce7f3','text'=>'#9d174d'],
-                        ['num'=>'6','label'=>'Scoring & Laporan','route'=>'scoring.index','color'=>'#fee2e2','text'=>'#dc2626'],
-                    ];
-                @endphp
-                @foreach($steps as $step)
-                <a href="{{ route($step['route']) }}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; border-radius: var(--radius-md); background: {{ $step['color'] }}; text-decoration: none; transition: var(--transition);">
-                    <span style="width: 24px; height: 24px; border-radius: 50%; background: {{ $step['text'] }}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0;">{{ $step['num'] }}</span>
-                    <span style="font-size: 0.82rem; font-weight: 600; color: {{ $step['text'] }};">{{ $step['label'] }}</span>
-                    <i class="bi bi-arrow-right" style="margin-left: auto; color: {{ $step['text'] }}; font-size: 0.75rem;"></i>
-                </a>
-                @endforeach
-            </div>
-        </div>
-    </div>
-
-    <div class="widget-card">
-        <div class="widget-header">
-            <div class="widget-title"><i class="bi bi-clock-history"></i> Jadwal Audit Terkini</div>
-            <a href="{{ route('audit-plan.index') }}" class="btn btn-outline btn-sm">Semua</a>
+    {{-- Jadwal Audit Terkini --}}
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Jadwal Audit Terkini</div>
+            <a href="{{ route('audit-plan.index') }}" class="btn btn-outline btn-sm">Lihat Semua</a>
         </div>
         <div class="table-wrapper">
             <table class="data-table">
@@ -213,26 +72,183 @@
                     @forelse($jadwalAktif as $plan)
                     <tr>
                         <td><strong>{{ $plan->cabang?->nama_cabang ?? '-' }}</strong></td>
-                        <td>{{ $plan->raUser?->name ?? '-' }}</td>
+                        <td style="color: var(--text-muted);">{{ $plan->raUser?->name ?? '-' }}</td>
                         <td>{{ $plan->tahun_periode }}</td>
                         <td>
                             @php
                                 $cls = match($plan->status_approval) {
-                                    'approved' => 'badge-success',
-                                    'rejected' => 'badge-danger',
-                                    'draft'    => 'badge-gray',
-                                    default    => 'badge-warning',
+                                    'approved'               => 'badge-success',
+                                    'rejected'               => 'badge-danger',
+                                    'waiting_kabag_approval',
+                                    'waiting_kadiv_approval' => 'badge-warning',
+                                    default                  => 'badge-gray',
+                                };
+                                $label = match($plan->status_approval) {
+                                    'approved'               => 'Approved',
+                                    'rejected'               => 'Ditolak',
+                                    'waiting_kabag_approval' => 'Menunggu Kabag',
+                                    'waiting_kadiv_approval' => 'Menunggu Kadiv',
+                                    default                  => 'Draft',
                                 };
                             @endphp
-                            <span class="badge {{ $cls }}">{{ strtoupper(str_replace('_',' ',$plan->status_approval)) }}</span>
+                            <span class="badge {{ $cls }}">{{ $label }}</span>
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="4" class="empty-state"><i class="bi bi-inbox"></i><p>Belum ada data</p></td></tr>
+                    <tr>
+                        <td colspan="4">
+                            <div class="empty-state"><i class="bi bi-calendar-x"></i><p>Belum ada jadwal audit.</p></div>
+                        </td>
+                    </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
+
+    {{-- Ringkasan Monitoring --}}
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Ringkasan Monitoring Tindak Lanjut</div>
+            <a href="{{ route('monitoring.index') }}" class="btn btn-outline btn-sm">Detail</a>
+        </div>
+        <div class="card-body">
+            {{-- Progress Bar --}}
+            @php
+                $total   = $monitoringData->total_temuan ?? 0;
+                $selesai = $monitoringData->total_selesai ?? 0;
+                $pending = $monitoringData->total_pending ?? 0;
+                $pct     = $total > 0 ? round(($selesai / $total) * 100) : 0;
+            @endphp
+            <div style="margin-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--bs-blue-dark);">Progress Penyelesaian TL</span>
+                    <span style="font-size: 0.8rem; font-weight: 700; color: var(--bs-blue);">{{ $pct }}%</span>
+                </div>
+                <div style="height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden;">
+                    <div style="width: {{ $pct }}%; height: 100%; background: var(--bs-blue); border-radius: 4px; transition: width 0.6s ease;"></div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                <div style="text-align: center; padding: 0.875rem; background: var(--bg-main); border-radius: var(--radius-md);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--bs-blue-dark);">{{ $total }}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Total Temuan</div>
+                </div>
+                <div style="text-align: center; padding: 0.875rem; background: #f0fdf4; border-radius: var(--radius-md);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #065f46;">{{ $selesai }}</div>
+                    <div style="font-size: 0.72rem; color: #065f46; margin-top: 0.2rem;">TL Selesai</div>
+                </div>
+                <div style="text-align: center; padding: 0.875rem; background: #fffbeb; border-radius: var(--radius-md);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #92400e;">{{ $pending }}</div>
+                    <div style="font-size: 0.72rem; color: #92400e; margin-top: 0.2rem;">TL Pending</div>
+                </div>
+            </div>
+
+            {{-- Temuan per Kategori --}}
+            @if($temuanPerBidang->count())
+            <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;">Temuan per Kategori</div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    @foreach($temuanPerBidang as $kategori => $jumlah)
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 0.8rem; color: var(--text-muted); width: 90px; flex-shrink: 0;">{{ ucfirst($kategori) }}</span>
+                        <div style="flex: 1; height: 6px; background: var(--border-color); border-radius: 3px;">
+                            <div style="width: {{ $total > 0 ? round(($jumlah/$total)*100) : 0 }}%; height: 100%; background: var(--bs-blue); border-radius: 3px;"></div>
+                        </div>
+                        <span style="font-size: 0.8rem; font-weight: 600; color: var(--bs-blue-dark); width: 20px; text-align: right;">{{ $jumlah }}</span>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+        </div>
+    </div>
 </div>
+
+{{-- Bottom Row --}}
+<div class="grid grid-cols-2">
+
+    {{-- Alur Proses --}}
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Alur Proses Audit</div>
+        </div>
+        <div class="card-body">
+            @php
+                $steps = [
+                    ['num'=>1,'label'=>'Input Parameter','desc'=>'Parameter RKAT & scoring awal','route'=>'parameter.index'],
+                    ['num'=>2,'label'=>'Penjadwalan Audit','desc'=>'Audit Plan & approval berjenjang','route'=>'audit-plan.index'],
+                    ['num'=>3,'label'=>'Pelaksanaan Audit','desc'=>'KKA, KHA & pencatatan temuan','route'=>'kka.index'],
+                    ['num'=>4,'label'=>'Monitoring','desc'=>'Monitoring temuan & tindak lanjut','route'=>'monitoring.index'],
+                    ['num'=>5,'label'=>'Scoring & Laporan','desc'=>'Kalkulasi skor & generate laporan','route'=>'scoring.index'],
+                ];
+            @endphp
+            <div style="display: flex; flex-direction: column; gap: 0;">
+                @foreach($steps as $i => $step)
+                <a href="{{ route($step['route']) }}" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; text-decoration: none; {{ $i < count($steps)-1 ? 'border-bottom: 1px solid var(--border-color);' : '' }} transition: var(--transition);" class="alur-item">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bs-blue); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; flex-shrink: 0;">{{ $step['num'] }}</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: var(--bs-blue-dark);">{{ $step['label'] }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ $step['desc'] }}</div>
+                    </div>
+                    <i class="bi bi-chevron-right" style="color: var(--text-muted); font-size: 0.75rem;"></i>
+                </a>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+    {{-- Scoring Terbaru + RA Info --}}
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+        {{-- Scoring Terbaru --}}
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Scoring RA Terbaru</div>
+                <a href="{{ route('scoring.index') }}" class="btn btn-outline btn-sm">Semua</a>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Cabang</th><th>Skor</th><th>Peringkat</th></tr>
+                    </thead>
+                    <tbody>
+                        @forelse($scoringTerbaru as $s)
+                        <tr>
+                            <td><strong>{{ $s->auditPlan?->cabang?->nama_cabang ?? '-' }}</strong></td>
+                            <td style="font-weight: 700; color: var(--bs-blue);">{{ $s->skor_akhir }}</td>
+                            <td>
+                                @php $cls = $s->skor_akhir >= 85 ? 'badge-success' : ($s->skor_akhir >= 70 ? 'badge-warning' : 'badge-danger'); @endphp
+                                <span class="badge {{ $cls }}">{{ $s->peringkat_ra }}</span>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="3"><div class="empty-state" style="padding: 1rem;"><i class="bi bi-bar-chart"></i><p>Belum ada data scoring.</p></div></td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- RA Tidak Aktif --}}
+        @if($raMalas > 0)
+        <div style="padding: 1rem 1.25rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-lg); display: flex; align-items: center; gap: 0.875rem;">
+            <i class="bi bi-exclamation-triangle" style="font-size: 1.25rem; color: #92400e; flex-shrink: 0;"></i>
+            <div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: #92400e;">Perhatian</div>
+                <div style="font-size: 0.78rem; color: #92400e; margin-top: 0.1rem;">{{ $raMalas }} RA tidak memiliki aktivitas dalam 30 hari terakhir.</div>
+            </div>
+        </div>
+        @endif
+
+    </div>
+</div>
+
 @endsection
+
+@push('styles')
+<style>
+.alur-item:hover { background: #f8fafc; border-radius: var(--radius-md); padding-left: 0.5rem; }
+</style>
+@endpush

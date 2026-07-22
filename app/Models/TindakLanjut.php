@@ -25,6 +25,11 @@ class TindakLanjut extends Model
         return $this->belongsTo(TemuanAudit::class, 'temuan_id');
     }
 
+    public function temuan(): BelongsTo
+    {
+        return $this->belongsTo(TemuanAudit::class, 'temuan_id');
+    }
+
     // Relasi ke User Auditee yang merespon[cite: 1]
     public function auditeeUser(): BelongsTo
     {

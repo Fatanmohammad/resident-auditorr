@@ -6,19 +6,12 @@
         <div class="header-title">@yield('title', 'Dashboard')</div>
     </div>
 
-    <div class="user-profile">
-        <div class="user-info">
-            <div class="user-name">{{ auth()->user()->name }}</div>
-            <div class="user-role">{{ strtoupper(str_replace('_', ' ', auth()->user()->role)) }}</div>
-        </div>
-        <div class="avatar">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</div>
-        <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
-            @csrf
-            <button type="submit" class="btn-logout" title="Logout">
-                <i class="bi bi-box-arrow-right"></i>
-            </button>
-        </form>
-    </div>
+    <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+        @csrf
+        <button type="submit" class="btn-logout" title="Logout">
+            <i class="bi bi-box-arrow-right"></i>
+        </button>
+    </form>
 </header>
 
 @push('scripts')
