@@ -1,6 +1,8 @@
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
-        <img src="{{ asset('img/logo.png') }}" alt="Logo Bank Sulteng">
+        <a href="{{ route('dashboard') }}">
+            <img src="{{ asset('img/logo.png') }}" alt="Logo Bank Sulteng">
+        </a>
     </div>
 
     <div class="sidebar-nav">
