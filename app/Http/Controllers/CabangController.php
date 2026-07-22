@@ -24,9 +24,8 @@ class CabangController extends Controller
             'parent_id' => 'nullable|exists:cabangs,id',
         ]);
 
-        $cabang = Cabang::create($validated);
-
-        return response()->json(['status' => 'success', 'message' => 'Data cabang berhasil ditambahkan.', 'data' => $cabang], 201);
+        Cabang::create($validated);
+        return back()->with('success', 'Data cabang berhasil ditambahkan.');
     }
 
     // Detail cabang spesifik

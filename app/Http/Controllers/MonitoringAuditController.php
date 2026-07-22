@@ -8,14 +8,19 @@ use Illuminate\Http\Request;
 
 class MonitoringAuditController extends Controller
 {
-    // Mengambil data monitoring berdasarkan Audit Plan
+    public function index()
+    {
+        $monitorings = MonitoringAudit::with('auditPlan.cabang')->latest()->get();
+        $auditPlans  = AuditPlan::where('status_approval', 'approved')->with('cabang')->get();
+        return view('monitoring.index', compact('monitorings', 'auditPlans'));
+    }
+
     public function show($auditPlanId)
     {
         $monitoring = MonitoringAudit::where('audit_plan_id', $auditPlanId)->get();
         return response()->json(['status' => 'success', 'data' => $monitoring]);
     }
 
-    // Melakukan sinkronisasi/rekapitulasi otomatis monitoring
     public function syncMonitoring(Request $request, $auditPlanId)
     {
         $auditPlan = AuditPlan::with('kertasKerjaAudits.temuanAudits.tindakLanjuts')->findOrFail($auditPlanId);
@@ -37,18 +42,15 @@ class MonitoringAuditController extends Controller
         }
 
         $monitoring = MonitoringAudit::updateOrCreate(
+            ['audit_plan_id' => $auditPlanId, 'jenis_monitoring' => 'terstruktur'],
             [
-                'audit_plan_id' => $auditPlanId,
-                'jenis_monitoring' => 'terstruktur',
-            ],
-            [
-                'total_temuan' => $totalTemuan,
-                'total_tl_selesai' => $totalSelesai,
-                'total_tl_pending' => $totalPending,
+                'total_temuan'      => $totalTemuan,
+                'total_tl_selesai'  => $totalSelesai,
+                'total_tl_pending'  => $totalPending,
                 'catatan_monitoring' => $request->catatan_monitoring ?? 'Rekapitulasi otomatis sistem',
             ]
         );
 
-        return response()->json(['status' => 'success', 'message' => 'Data monitoring berhasil di-sync.', 'data' => $monitoring]);
+        return back()->with('success', 'Data monitoring berhasil di-sync.');
     }
 }
