@@ -1,8 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-// Import Seluruh Controller yang Sudah Dibuat
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CabangController;
 use App\Http\Controllers\AuditPlanController;
 use App\Http\Controllers\ParameterAuditController;
@@ -13,175 +12,100 @@ use App\Http\Controllers\TindakLanjutController;
 use App\Http\Controllers\MonitoringAuditController;
 use App\Http\Controllers\ScoringAuditController;
 use App\Http\Controllers\LaporanAuditController;
+use App\Http\Controllers\DashboardController;
 
-/*
-|--------------------------------------------------------------------------
-| Web & API Routes - Aplikasi Resident Auditor (RA) PT Bank Sulteng
-|--------------------------------------------------------------------------
-*/
+// Auth
+Route::get('/', fn() => redirect()->route('login'));
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// UI Routes
-Route::get('/', function () {
-    return view('auth.login');
-})->name('login');
+// Protected Routes
+Route::middleware('auth')->group(function () {
 
-Route::post('/login', function (\Illuminate\Http\Request $request) {
-    // Dummy login: langsung redirect ke dashboard
-    return redirect()->route('dashboard');
-})->name('login.post');
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->name('dashboard');
+    // ==========================================
+    // MASTER DATA
+    // ==========================================
+    Route::prefix('cabangs')->name('cabang.')->middleware('role:kadiv_skai,kabag_ra')->group(function () {
+        Route::get('/', [CabangController::class, 'index'])->name('index');
+        Route::post('/', [CabangController::class, 'store'])->name('store');
+        Route::get('/{id}', [CabangController::class, 'show'])->name('show');
+    });
 
-// ==========================================
-// 1. MASTER DATA & STRUKTUR CABANG
-// ==========================================
-Route::prefix('cabangs')->group(function () {
-    Route::get('/', [CabangController::class, 'index'])->name('cabang.index');           // Lihat semua cabang & anak cabang
-    Route::post('/', [CabangController::class, 'store']);          // Tambah cabang
-    Route::get('/{id}', [CabangController::class, 'show']);        // Detail cabang
+    // ==========================================
+    // 1. INPUT PARAMETER (RKAT RA)
+    // ==========================================
+    Route::prefix('parameters')->name('parameter.')->group(function () {
+        Route::get('/', [ParameterAuditController::class, 'index'])->name('index');
+        Route::post('/', [ParameterAuditController::class, 'store'])->name('store')->middleware('role:kadiv_skai,kabag_ra');
+        Route::put('/{id}', [ParameterAuditController::class, 'update'])->name('update')->middleware('role:kadiv_skai,kabag_ra');
+        Route::delete('/{id}', [ParameterAuditController::class, 'destroy'])->name('destroy')->middleware('role:kadiv_skai,kabag_ra');
+    });
+
+    // ==========================================
+    // 2. PENJADWALAN AUDIT RA
+    // ==========================================
+    Route::prefix('audit-plans')->name('audit-plan.')->group(function () {
+        Route::get('/', [AuditPlanController::class, 'index'])->name('index');
+        Route::get('/create', [AuditPlanController::class, 'create'])->name('create')->middleware('role:kadiv_skai,kabag_ra');
+        Route::post('/', [AuditPlanController::class, 'store'])->name('store')->middleware('role:kadiv_skai,kabag_ra');
+        Route::get('/{id}', [AuditPlanController::class, 'show'])->name('show');
+        Route::post('/{id}/approve', [AuditPlanController::class, 'approve'])->name('approve')->middleware('role:kadiv_skai,kabag_ra,ra');
+    });
+
+    // ==========================================
+    // 3. PELAKSANAAN AUDIT (KKA)
+    // ==========================================
+    Route::prefix('kka')->name('kka.')->group(function () {
+        Route::get('/', [KertasKerjaAuditController::class, 'indexAll'])->name('index');
+        Route::get('/plan/{auditPlanId}', [KertasKerjaAuditController::class, 'index'])->name('byPlan');
+        Route::get('/create', [KertasKerjaAuditController::class, 'create'])->name('create')->middleware('role:ra');
+        Route::post('/', [KertasKerjaAuditController::class, 'store'])->name('store')->middleware('role:ra');
+        Route::get('/{id}', [KertasKerjaAuditController::class, 'show'])->name('show');
+        Route::post('/{id}/review', [KertasKerjaAuditController::class, 'review'])->name('review')->middleware('role:kabag_ra,kadiv_skai');
+    });
+
+    // ==========================================
+    // 4. TEMUAN AUDIT
+    // ==========================================
+    Route::prefix('temuans')->name('temuan.')->group(function () {
+        Route::get('/', [TemuanAuditController::class, 'indexAll'])->name('index');
+        Route::get('/kka/{kkaId}', [TemuanAuditController::class, 'index'])->name('byKka');
+        Route::get('/create', [TemuanAuditController::class, 'create'])->name('create')->middleware('role:ra');
+        Route::post('/', [TemuanAuditController::class, 'store'])->name('store')->middleware('role:ra');
+        Route::get('/{id}', [TemuanAuditController::class, 'show'])->name('show');
+    });
+
+    // ==========================================
+    // 5. MONITORING TINDAK LANJUT
+    // ==========================================
+    Route::prefix('tindak-lanjut')->name('tindak-lanjut.')->group(function () {
+        Route::get('/', [TindakLanjutController::class, 'index'])->name('index');
+        Route::post('/respon', [TindakLanjutController::class, 'storeRespon'])->name('respon')->middleware('role:auditee,ra');
+        Route::post('/{id}/verifikasi', [TindakLanjutController::class, 'verifikasiRa'])->name('verifikasi')->middleware('role:ra');
+    });
+
+    Route::prefix('monitoring')->name('monitoring.')->group(function () {
+        Route::get('/', [MonitoringAuditController::class, 'index'])->name('index');
+        Route::get('/plan/{auditPlanId}', [MonitoringAuditController::class, 'show'])->name('show');
+        Route::post('/sync/{auditPlanId}', [MonitoringAuditController::class, 'syncMonitoring'])->name('sync');
+    });
+
+    // ==========================================
+    // 6. SCORING & LAPORAN
+    // ==========================================
+    Route::prefix('scoring')->name('scoring.')->group(function () {
+        Route::get('/', [ScoringAuditController::class, 'index'])->name('index');
+        Route::post('/kalkulasi', [ScoringAuditController::class, 'hitungSkor'])->name('kalkulasi')->middleware('role:kadiv_skai,kabag_ra');
+    });
+
+    Route::prefix('laporan')->name('laporan.')->group(function () {
+        Route::get('/', [LaporanAuditController::class, 'index'])->name('index');
+        Route::get('/plan/{auditPlanId}', [LaporanAuditController::class, 'show'])->name('show');
+        Route::post('/generate', [LaporanAuditController::class, 'generate'])->name('generate')->middleware('role:kabag_ra,kadiv_skai');
+        Route::post('/{id}/approve', [LaporanAuditController::class, 'approve'])->name('approve')->middleware('role:kabag_ra,kadiv_skai');
+    });
 });
-
-Route::prefix('parameters')->group(function () {
-    Route::get('/', [ParameterAuditController::class, 'index']);   // Parameter KAT/RA
-    Route::post('/', [ParameterAuditController::class, 'store']);  // Tambah parameter
-});
-
-// ==========================================
-// 2. SIKLUS PERENCANAAN AUDIT (AUDIT PLAN)
-// ==========================================
-Route::prefix('audit-plans')->group(function () {
-    Route::get('/', [AuditPlanController::class, 'index'])->name('rencana.input');               // List Audit Plan
-    Route::post('/', [AuditPlanController::class, 'store']);              // Buat Audit Plan baru
-    Route::post('/{id}/approve', [AuditPlanController::class, 'approve']); // Approval Berjenjang (RA -> Kabag -> Kadiv)
-});
-
-// ==========================================
-// 3. SIKLUS PELAKSANAAN AUDIT (KKA & KHA)
-// ==========================================
-Route::prefix('kka')->group(function () {
-    Route::get('/plan/{auditPlanId}', [KertasKerjaAuditController::class, 'index']); // KKA per Audit Plan
-    Route::post('/', [KertasKerjaAuditController::class, 'store']);                  // Buat KKA baru
-    Route::post('/{id}/review', [KertasKerjaAuditController::class, 'review']);      // Review KKA oleh Kabag/Kadiv
-});
-
-Route::prefix('kha')->group(function () {
-    Route::get('/kka/{kkaId}', [KertasHasilAuditController::class, 'index']);      // KHA per KKA
-    Route::post('/', [KertasHasilAuditController::class, 'store']);                // Simpan/Update KHA
-    Route::post('/{id}/approve', [KertasHasilAuditController::class, 'approve']);   // Approval KHA
-});
-
-// ==========================================
-// 4. TEMUAN AUDIT & MONITORING TINDAK LANJUT
-// ==========================================
-Route::prefix('temuans')->group(function () {
-    Route::get('/kka/{kkaId}', [TemuanAuditController::class, 'index']); // Temuan per KKA
-    Route::post('/', [TemuanAuditController::class, 'store']);           // Catat Temuan Audit
-});
-
-Route::prefix('tindak-lanjut')->group(function () {
-    Route::post('/respon', [TindakLanjutController::class, 'storeRespon']);             // Auditee Upload Bukti TL
-    Route::post('/{id}/verifikasi', [TindakLanjutController::class, 'verifikasiRa']);    // RA Verifikasi TL
-});
-
-Route::prefix('monitoring')->group(function () {
-    Route::get('/plan/{auditPlanId}', [MonitoringAuditController::class, 'show']);           // Data Monitoring
-    Route::post('/sync/{auditPlanId}', [MonitoringAuditController::class, 'syncMonitoring']); // Sinkronisasi Otomatis
-});
-
-// ==========================================
-// 5. SCORING AKHIR & LAPORAN AUDIT
-// ==========================================
-Route::prefix('scoring')->group(function () {
-    Route::post('/kalkulasi', [ScoringAuditController::class, 'hitungSkor']); // Hitung Otomatis Skor & Peringkat
-});
-
-Route::prefix('laporan')->group(function () {
-    Route::get('/plan/{auditPlanId}', [LaporanAuditController::class, 'show']);      // Lihat Laporan
-    Route::post('/generate', [LaporanAuditController::class, 'generate']);            // Buat Draft Laporan
-    Route::post('/{id}/approve', [LaporanAuditController::class, 'approve']);         // Approval Laporan (Kadiv SKAI)
-});
-
-// UI Routes (Wired to Database using Generic List View)
-Route::get('/rencana/scoring', function () { 
-    $data = \App\Models\ParameterAudit::all();
-    return view('generic-list', [
-        'title' => 'Scoring Parameter Audit',
-        'columns' => ['Parameter', 'Bobot', 'Deskripsi'],
-        'fields' => ['nama_parameter', 'bobot', 'deskripsi'],
-        'data' => $data
-    ]); 
-})->name('rencana.scoring');
-
-Route::get('/rencana/approval', function () { 
-    $data = \App\Models\AuditPlan::with('cabang', 'raUser')->where('status_approval', '!=', 'draft')->get();
-    return view('generic-list', [
-        'title' => 'Approval Audit Plan',
-        'columns' => ['Tahun Periode', 'Jadwal Mulai', 'Jadwal Selesai', 'Status Approval'],
-        'fields' => ['tahun_periode', 'jadwal_mulai', 'jadwal_selesai', 'status_approval'],
-        'data' => $data
-    ]); 
-})->name('rencana.approval');
-
-Route::get('/pelaksanaan/penugasan', function () { 
-    $data = \App\Models\KertasKerjaAudit::with('auditPlan')->get();
-    return view('generic-list', [
-        'title' => 'Penugasan Audit (KKA)',
-        'columns' => ['Bidang Audit', 'Sub Bidang', 'Tanggal Pemeriksaan', 'Status'],
-        'fields' => ['bidang_audit', 'sub_bidang', 'tanggal_pemeriksaan', 'status_kka'],
-        'data' => $data
-    ]); 
-})->name('pelaksanaan.penugasan');
-
-Route::get('/pelaksanaan/audit', function () { 
-    // Jika KertasHasilAudit belum ada, ini bisa error. Kita akan skip relasi with() jika error atau biarkan all()
-    // KertasHasilAudit mungkin belum dibuat model-nya sesuai di struktur folder atau fields beda. Kita cek fields yang umum.
-    $data = class_exists(\App\Models\KertasHasilAudit::class) ? \App\Models\KertasHasilAudit::all() : [];
-    return view('generic-list', [
-        'title' => 'Pelaksanaan Audit (KHA)',
-        'columns' => ['ID', 'KKA ID', 'Status', 'Tanggal Dibuat'],
-        'fields' => ['id', 'kka_id', 'status_kha', 'created_at'],
-        'data' => $data
-    ]); 
-})->name('pelaksanaan.audit');
-
-Route::get('/tindak-lanjut/monitoring', function () { 
-    $data = \App\Models\TemuanAudit::all();
-    return view('generic-list', [
-        'title' => 'Monitoring Temuan',
-        'columns' => ['Deskripsi Temuan', 'Tingkat Risiko', 'Target Penyelesaian', 'Status'],
-        'fields' => ['deskripsi_temuan', 'tingkat_risiko', 'target_penyelesaian', 'status_temuan'],
-        'data' => $data
-    ]); 
-})->name('tindaklanjut.monitoring');
-
-Route::get('/tindak-lanjut/penyelesaian', function () { 
-    $data = \App\Models\TindakLanjut::all();
-    return view('generic-list', [
-        'title' => 'Penyelesaian Tindak Lanjut',
-        'columns' => ['Status Verifikasi', 'Tanggal Dibuat'],
-        'fields' => ['status_verifikasi', 'created_at'],
-        'data' => $data
-    ]); 
-})->name('tindaklanjut.penyelesaian');
-
-Route::get('/reporting/sistem', function () { 
-    $data = \App\Models\ScoringAudit::all();
-    return view('generic-list', [
-        'title' => 'Sistem Skor',
-        'columns' => ['Total Skor', 'Peringkat', 'Keterangan'],
-        'fields' => ['total_skor', 'peringkat', 'keterangan'],
-        'data' => $data
-    ]); 
-})->name('reporting.sistem');
-
-Route::get('/reporting/laporan', function () { 
-    $data = \App\Models\LaporanAudit::all();
-    return view('generic-list', [
-        'title' => 'Laporan Audit',
-        'columns' => ['Nomor Laporan', 'Tanggal Laporan', 'Status'],
-        'fields' => ['nomor_laporan', 'tanggal_laporan', 'status_laporan'],
-        'data' => $data
-    ]); 
-})->name('reporting.laporan');

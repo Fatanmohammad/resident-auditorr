@@ -3,45 +3,72 @@
 namespace App\Http\Controllers;
 
 use App\Models\KertasKerjaAudit;
+use App\Models\AuditPlan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class KertasKerjaAuditController extends Controller
 {
+    public function indexAll()
+    {
+        $user = Auth::user();
+        $query = KertasKerjaAudit::with(['auditPlan.cabang', 'auditPlan.raUser', 'temuanAudits']);
+
+        if ($user->role === 'ra') {
+            $query->whereHas('auditPlan', fn($q) => $q->where('ra_user_id', $user->id));
+        }
+
+        $kkas = $query->latest()->get();
+        return view('kka.index', compact('kkas'));
+    }
+
     public function index($auditPlanId)
     {
-        $kka = KertasKerjaAudit::where('audit_plan_id', $auditPlanId)->with(['kertasHasilAudit', 'temuanAudits'])->get();
+        $kka = KertasKerjaAudit::where('audit_plan_id', $auditPlanId)
+            ->with(['temuanAudits', 'kertasHasilAudit'])->get();
         return response()->json(['status' => 'success', 'data' => $kka]);
+    }
+
+    public function create()
+    {
+        $user = Auth::user();
+        $auditPlans = AuditPlan::where('ra_user_id', $user->id)
+            ->where('status_approval', 'approved')
+            ->with('cabang')->get();
+        return view('kka.create', compact('auditPlans'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'audit_plan_id' => 'required|exists:audit_plans,id',
-            'bidang_audit' => 'required|string',
-            'sub_bidang' => 'nullable|string',
+            'audit_plan_id'       => 'required|exists:audit_plans,id',
+            'bidang_audit'        => 'required|string',
+            'sub_bidang'          => 'nullable|string',
             'tanggal_pemeriksaan' => 'required|date',
-            'sample_pemeriksaan' => 'nullable|string',
+            'sample_pemeriksaan'  => 'nullable|string',
         ]);
-
         $validated['status_kka'] = 'draft';
-        $kka = KertasKerjaAudit::create($validated);
+        KertasKerjaAudit::create($validated);
+        return redirect()->route('kka.index')->with('success', 'KKA berhasil dicatat.');
+    }
 
-        return response()->json(['status' => 'success', 'message' => 'KKA berhasil dicatat.', 'data' => $kka], 201);
+    public function show($id)
+    {
+        $kka = KertasKerjaAudit::with(['auditPlan.cabang', 'temuanAudits.tindakLanjuts', 'kertasHasilAudit'])->findOrFail($id);
+        return view('kka.show', compact('kka'));
     }
 
     public function review(Request $request, $id)
     {
         $kka = KertasKerjaAudit::findOrFail($id);
         $request->validate([
-            'status_kka' => 'required|in:reviewed_kabag,approved_kadiv,revisi',
-            'catatan_kabag' => 'nullable|string'
+            'status_kka'    => 'required|in:reviewed_kabag,approved_kadiv,revisi',
+            'catatan_kabag' => 'nullable|string',
         ]);
-
         $kka->update([
-            'status_kka' => $request->status_kka,
-            'catatan_kabag' => $request->catatan_kabag
+            'status_kka'    => $request->status_kka,
+            'catatan_kabag' => $request->catatan_kabag,
         ]);
-
-        return response()->json(['status' => 'success', 'message' => 'Review KKA berhasil diperbarui.', 'data' => $kka]);
+        return back()->with('success', 'Review KKA berhasil diperbarui.');
     }
 }

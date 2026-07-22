@@ -9,20 +9,35 @@ class ParameterAuditController extends Controller
 {
     public function index()
     {
-        $parameters = ParameterAudit::all();
-        return response()->json(['status' => 'success', 'data' => $parameters]);
+        $parameters = ParameterAudit::latest()->get();
+        return view('parameter.index', compact('parameters'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'nama_parameter' => 'required|string|max:255',
-            'bobot' => 'required|numeric|min:0|max:100',
-            'deskripsi' => 'nullable|string',
+            'bobot'          => 'required|numeric|min:0|max:100',
+            'deskripsi'      => 'nullable|string',
         ]);
+        ParameterAudit::create($validated);
+        return back()->with('success', 'Parameter berhasil ditambahkan.');
+    }
 
-        $parameter = ParameterAudit::create($validated);
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'nama_parameter' => 'required|string|max:255',
+            'bobot'          => 'required|numeric|min:0|max:100',
+            'deskripsi'      => 'nullable|string',
+        ]);
+        ParameterAudit::findOrFail($id)->update($validated);
+        return back()->with('success', 'Parameter berhasil diperbarui.');
+    }
 
-        return response()->json(['status' => 'success', 'message' => 'Parameter audit berhasil ditambahkan.', 'data' => $parameter], 201);
+    public function destroy($id)
+    {
+        ParameterAudit::findOrFail($id)->delete();
+        return back()->with('success', 'Parameter berhasil dihapus.');
     }
 }

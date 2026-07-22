@@ -3,61 +3,75 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditPlan;
+use App\Models\Cabang;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AuditPlanController extends Controller
 {
-    // Tampilkan semua jadwal audit plan
     public function index()
     {
-        $auditPlans = AuditPlan::with(['cabang', 'raUser'])->get();
+        $user = Auth::user();
+        $query = AuditPlan::with(['cabang', 'raUser']);
+
+        // RA hanya lihat audit plan miliknya
+        if ($user->role === 'ra') {
+            $query->where('ra_user_id', $user->id);
+        }
+
+        $auditPlans = $query->latest()->get();
         return view('audit-plan.index', compact('auditPlans'));
     }
 
-    // Buat Audit Plan baru oleh RA
+    public function create()
+    {
+        $cabangs = Cabang::where('tipe', '!=', 'pusat')->get();
+        $raUsers = User::where('role', 'ra')->with('cabang')->get();
+        return view('audit-plan.create', compact('cabangs', 'raUsers'));
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'cabang_id' => 'required|exists:cabangs,id',
-            'ra_user_id' => 'required|exists:users,id',
-            'tahun_periode' => 'required|integer',
-            'jadwal_mulai' => 'required|date',
-            'jadwal_selesai' => 'required|date',
+            'cabang_id'      => 'required|exists:cabangs,id',
+            'ra_user_id'     => 'required|exists:users,id',
+            'tahun_periode'  => 'required|integer|min:2020|max:2099',
+            'jadwal_mulai'   => 'required|date',
+            'jadwal_selesai' => 'required|date|after:jadwal_mulai',
         ]);
-
         $validated['status_approval'] = 'draft';
-        $auditPlan = AuditPlan::create($validated);
-
-        return response()->json(['status' => 'success', 'message' => 'Audit Plan berhasil dibuat sebagai Draft.', 'data' => $auditPlan], 201);
+        AuditPlan::create($validated);
+        return redirect()->route('audit-plan.index')->with('success', 'Audit Plan berhasil dibuat.');
     }
 
-    // Approval Berjenjang: RA -> Kabag RA -> Kadiv SKAI
+    public function show($id)
+    {
+        $auditPlan = AuditPlan::with(['cabang', 'raUser', 'kertasKerjaAudits.temuanAudits', 'scoringAudit', 'laporanAudit'])->findOrFail($id);
+        return view('audit-plan.show', compact('auditPlan'));
+    }
+
     public function approve(Request $request, $id)
     {
         $auditPlan = AuditPlan::findOrFail($id);
         $request->validate([
-            'action' => 'required|in:submit_kabag,approve_kabag,approve_kadiv,reject',
-            'catatan_revisi' => 'nullable|string'
+            'action'         => 'required|in:submit_kabag,approve_kabag,approve_kadiv,reject',
+            'catatan_revisi' => 'nullable|string',
         ]);
 
-        switch ($request->action) {
-            case 'submit_kabag':
-                $auditPlan->status_approval = 'waiting_kabag_approval';
-                break;
-            case 'approve_kabag':
-                $auditPlan->status_approval = 'waiting_kadiv_approval';
-                break;
-            case 'approve_kadiv':
-                $auditPlan->status_approval = 'approved';
-                break;
-            case 'reject':
-                $auditPlan->status_approval = 'rejected';
-                $auditPlan->catatan_revisi = $request->catatan_revisi;
-                break;
-        }
+        $map = [
+            'submit_kabag'  => 'waiting_kabag_approval',
+            'approve_kabag' => 'waiting_kadiv_approval',
+            'approve_kadiv' => 'approved',
+            'reject'        => 'rejected',
+        ];
 
+        $auditPlan->status_approval = $map[$request->action];
+        if ($request->action === 'reject') {
+            $auditPlan->catatan_revisi = $request->catatan_revisi;
+        }
         $auditPlan->save();
 
-        return response()->json(['status' => 'success', 'message' => 'Status Audit Plan berhasil diperbarui.', 'data' => $auditPlan]);
+        return back()->with('success', 'Status Audit Plan berhasil diperbarui.');
     }
 }

@@ -29,6 +29,11 @@ class TemuanAudit extends Model
         return $this->belongsTo(KertasKerjaAudit::class, 'kka_id');
     }
 
+    public function kka(): BelongsTo
+    {
+        return $this->belongsTo(KertasKerjaAudit::class, 'kka_id');
+    }
+
     // Relasi ke Tindak Lanjut oleh Auditee[cite: 1]
     public function tindakLanjuts(): HasMany
     {

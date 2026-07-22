@@ -1,62 +1,62 @@
-<div class="sidebar">
-    <div class="sidebar-header" style="justify-content: center; height: 70px; padding: 0 1rem;">
-        <img src="{{ asset('img/logo.png') }}" alt="Logo Bank Sulteng" style="height: 38px; width: auto; object-fit: contain;">
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <img src="{{ asset('img/logo.png') }}" alt="Logo Bank Sulteng">
     </div>
-    
+
     <div class="sidebar-nav">
         <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-            <i class="bi bi-speedometer2 nav-icon"></i>
-            Dashboard
+            <i class="bi bi-speedometer2 nav-icon"></i> Dashboard
         </a>
-        
+
+        @if(in_array(auth()->user()->role, ['kadiv_skai', 'kabag_ra']))
         <div class="nav-group-title">Master Data</div>
         <a href="{{ route('cabang.index') }}" class="nav-item {{ request()->routeIs('cabang.*') ? 'active' : '' }}">
-            <i class="bi bi-building nav-icon"></i>
-            Master Cabang
+            <i class="bi bi-building nav-icon"></i> Master Cabang
         </a>
-        
-        <div class="nav-group-title">Rencana Audit</div>
-        <a href="{{ route('rencana.input') }}" class="nav-item {{ request()->routeIs('rencana.input') ? 'active' : '' }}">
-            <i class="bi bi-file-earmark-plus nav-icon"></i>
-            Input Rencana Audit
+        @endif
+
+        <div class="nav-group-title">1. Input Parameter</div>
+        <a href="{{ route('parameter.index') }}" class="nav-item {{ request()->routeIs('parameter.*') ? 'active' : '' }}">
+            <i class="bi bi-sliders nav-icon"></i> Parameter RKAT
         </a>
-        <a href="{{ route('rencana.scoring') }}" class="nav-item {{ request()->routeIs('rencana.scoring') ? 'active' : '' }}">
-            <i class="bi bi-star nav-icon"></i>
-            Scoring Parameter
+
+        <div class="nav-group-title">2. Penjadwalan Audit</div>
+        <a href="{{ route('audit-plan.index') }}" class="nav-item {{ request()->routeIs('audit-plan.*') ? 'active' : '' }}">
+            <i class="bi bi-calendar3 nav-icon"></i> Audit Plan
         </a>
-        <a href="{{ route('rencana.approval') }}" class="nav-item {{ request()->routeIs('rencana.approval') ? 'active' : '' }}">
-            <i class="bi bi-check2-circle nav-icon"></i>
-            Approval Audit Plan
+
+        <div class="nav-group-title">3. Pelaksanaan Audit</div>
+        <a href="{{ route('kka.index') }}" class="nav-item {{ request()->routeIs('kka.*') ? 'active' : '' }}">
+            <i class="bi bi-journal-check nav-icon"></i> Kartu Kerja Audit
         </a>
-        
-        <div class="nav-group-title">Pelaksanaan Audit</div>
-        <a href="{{ route('pelaksanaan.penugasan') }}" class="nav-item {{ request()->routeIs('pelaksanaan.penugasan') ? 'active' : '' }}">
-            <i class="bi bi-card-checklist nav-icon"></i>
-            Penugasan Audit
+        <a href="{{ route('temuan.index') }}" class="nav-item {{ request()->routeIs('temuan.*') ? 'active' : '' }}">
+            <i class="bi bi-exclamation-triangle nav-icon"></i> Temuan Audit
         </a>
-        <a href="{{ route('pelaksanaan.audit') }}" class="nav-item {{ request()->routeIs('pelaksanaan.audit') ? 'active' : '' }}">
-            <i class="bi bi-gear nav-icon"></i>
-            Pelaksanaan Audit
+
+        <div class="nav-group-title">4. Monitoring</div>
+        <a href="{{ route('monitoring.index') }}" class="nav-item {{ request()->routeIs('monitoring.*') ? 'active' : '' }}">
+            <i class="bi bi-graph-up nav-icon"></i> Monitoring Temuan
         </a>
-        
-        <div class="nav-group-title">Tindak Lanjut</div>
-        <a href="{{ route('tindaklanjut.monitoring') }}" class="nav-item {{ request()->routeIs('tindaklanjut.monitoring') ? 'active' : '' }}">
-            <i class="bi bi-eye nav-icon"></i>
-            Monitoring Temuan
+        <a href="{{ route('tindak-lanjut.index') }}" class="nav-item {{ request()->routeIs('tindak-lanjut.*') ? 'active' : '' }}">
+            <i class="bi bi-tools nav-icon"></i> Tindak Lanjut
         </a>
-        <a href="{{ route('tindaklanjut.penyelesaian') }}" class="nav-item {{ request()->routeIs('tindaklanjut.penyelesaian') ? 'active' : '' }}">
-            <i class="bi bi-tools nav-icon"></i>
-            Penyelesaian
+
+        <div class="nav-group-title">5. Scoring & Laporan</div>
+        <a href="{{ route('scoring.index') }}" class="nav-item {{ request()->routeIs('scoring.*') ? 'active' : '' }}">
+            <i class="bi bi-bar-chart-line nav-icon"></i> Scoring RA
         </a>
-        
-        <div class="nav-group-title">Reporting</div>
-        <a href="{{ route('reporting.sistem') }}" class="nav-item {{ request()->routeIs('reporting.sistem') ? 'active' : '' }}">
-            <i class="bi bi-bar-chart nav-icon"></i>
-            Sistem Skor
+        <a href="{{ route('laporan.index') }}" class="nav-item {{ request()->routeIs('laporan.*') ? 'active' : '' }}">
+            <i class="bi bi-file-earmark-text nav-icon"></i> Laporan Audit
         </a>
-        <a href="{{ route('reporting.laporan') }}" class="nav-item {{ request()->routeIs('reporting.laporan') ? 'active' : '' }}">
-            <i class="bi bi-file-text nav-icon"></i>
-            Laporan
-        </a>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="user-badge">
+            <div class="avatar-sm">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</div>
+            <div>
+                <div class="user-badge-name">{{ auth()->user()->name }}</div>
+                <div class="user-badge-role">{{ strtoupper(str_replace('_', ' ', auth()->user()->role)) }}</div>
+            </div>
+        </div>
     </div>
 </div>
