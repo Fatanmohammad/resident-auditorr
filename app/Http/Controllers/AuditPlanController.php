@@ -11,7 +11,7 @@ class AuditPlanController extends Controller
     public function index()
     {
         $auditPlans = AuditPlan::with(['cabang', 'raUser'])->get();
-        return response()->json(['status' => 'success', 'data' => $auditPlans]);
+        return view('audit-plan.index', compact('auditPlans'));
     }
 
     // Buat Audit Plan baru oleh RA
