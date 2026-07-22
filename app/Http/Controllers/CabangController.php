@@ -11,7 +11,7 @@ class CabangController extends Controller
     public function index()
     {
         $cabangs = Cabang::with(['anakCabang', 'parentCabang'])->get();
-        return response()->json(['status' => 'success', 'data' => $cabangs]);
+        return view('cabang.index', compact('cabangs'));
     }
 
     // Menambah cabang/anak cabang baru
