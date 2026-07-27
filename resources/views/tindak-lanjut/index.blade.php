@@ -7,9 +7,58 @@
         <h1>Monitoring Tindak Lanjut</h1>
         <p>Pantau status penyelesaian tindak lanjut temuan audit</p>
     </div>
-</div>
 
+{{-- Untuk Auditee: Tampilkan daftar temuan yang perlu ditindaklanjuti --}}
+@if(auth()->user()->role === 'auditee' && $temuans->count() > 0)
+<div class="card" style="margin-bottom: 1.25rem; border-left: 4px solid var(--bs-yellow);">
+    <div class="card-header">
+        <div class="card-title" style="color: #92400e;">⚠️ Temuan yang Perlu Ditindaklanjuti</div>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Cabang</th>
+                    <th>Temuan</th>
+                    <th>Kategori</th>
+                    <th>Target Selesai</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($temuans as $temuan)
+                <tr>
+                    <td><strong>{{ $temuan->kka?->auditPlan?->cabang?->nama_cabang ?? '-' }}</strong></td>
+                    <td>{{ $temuan->judul_temuan }}</td>
+                    <td>
+                        @php $cls = match($temuan->kategori) { 'signifikan'=>'badge-danger','berulang'=>'badge-warning',default=>'badge-info' }; @endphp
+                        <span class="badge {{ $cls }}">{{ ucfirst($temuan->kategori) }}</span>
+                    </td>
+                    <td>{{ $temuan->target_selesai_tl ? \Carbon\Carbon::parse($temuan->target_selesai_tl)->format('d M Y') : '-' }}</td>
+                    <td>
+                        <a href="{{ route('temuan.show', $temuan->id) }}" class="btn btn-primary btn-sm"><i class="bi bi-arrow-right"></i> Upload TL</a>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+@endif
+
+{{-- Jika Auditee tidak ada temuan yang perlu ditindaklanjuti --}}
+@if(auth()->user()->role === 'auditee' && $temuans->count() === 0 && $tindakLanjuts->count() === 0)
 <div class="card">
+    <div class="empty-state" style="padding: 3rem;">
+        <i class="bi bi-check-circle" style="font-size: 3rem; color: #16a34a;"></i>
+        <p style="font-size: 1rem; font-weight: 600; color: #065f46; margin-top: 0.75rem;">Belum ada temuan yang perlu ditindaklanjuti</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Jika ada temuan baru, akan muncul di sini.</p>
+    </div>
+@endif
+
+{{-- Tabel Riwayat Tindak Lanjut --}}
+@if($tindakLanjuts->count() > 0)
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">Riwayat Tindak Lanjut</div>
     <div class="table-wrapper">
         <table class="data-table">
             <thead>
@@ -24,7 +73,7 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse($tindakLanjuts as $tl)
+                @foreach($tindakLanjuts as $tl)
                 <tr>
                     <td><strong>{{ $tl->temuan?->kka?->auditPlan?->cabang?->nama_cabang ?? '-' }}</strong></td>
                     <td>{{ $tl->temuan?->judul_temuan ?? '-' }}</td>
@@ -45,13 +94,11 @@
                         @endif
                     </td>
                 </tr>
-                @empty
-                <tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox"></i><p>Belum ada data tindak lanjut.</p></div></td></tr>
-                @endforelse
+                @endforeach
             </tbody>
         </table>
     </div>
-</div>
+@endif
 
 @if(auth()->user()->role === 'ra')
 <div class="modal-overlay" id="modalVerif">
@@ -75,14 +122,12 @@
                     <label class="form-label">Catatan Verifikasi</label>
                     <textarea name="catatan_verifikasi_ra" class="form-textarea" placeholder="Catatan hasil verifikasi..."></textarea>
                 </div>
-            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('modalVerif').classList.remove('open')">Batal</button>
                 <button type="submit" class="btn btn-primary">Simpan Verifikasi</button>
             </div>
         </form>
     </div>
-</div>
 @endif
 @endsection
 

@@ -55,8 +55,10 @@
                     </td>
                     <td style="display: flex; gap: 0.4rem;">
                         <a href="{{ route('kka.show', $kka->id) }}" class="btn btn-outline btn-sm"><i class="bi bi-eye"></i></a>
-                        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']) && $kka->status_kka === 'draft')
+                        @if(auth()->user()->role === 'kabag_ra' && $kka->status_kka === 'draft')
                         <button class="btn btn-yellow btn-sm" onclick="openReview({{ $kka->id }})"><i class="bi bi-check-lg"></i> Review</button>
+                        @elseif(auth()->user()->role === 'kadiv_skai' && $kka->status_kka === 'reviewed_kabag')
+                        <button class="btn btn-yellow btn-sm" onclick="openReview({{ $kka->id }})"><i class="bi bi-check-lg"></i> Approve</button>
                         @endif
                     </td>
                 </tr>
@@ -66,7 +68,6 @@
             </tbody>
         </table>
     </div>
-</div>
 
 {{-- Modal Review KKA --}}
 @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
@@ -84,7 +85,7 @@
                     <select name="status_kka" class="form-select" required>
                         @if(auth()->user()->role === 'kabag_ra')
                         <option value="reviewed_kabag">Reviewed Kabag</option>
-                        @else
+                        @elseif(auth()->user()->role === 'kadiv_skai')
                         <option value="approved_kadiv">Approved Kadiv</option>
                         @endif
                         <option value="revisi">Perlu Revisi</option>
@@ -94,14 +95,12 @@
                     <label class="form-label">Catatan</label>
                     <textarea name="catatan_kabag" class="form-textarea" placeholder="Catatan review..."></textarea>
                 </div>
-            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('modalReview').classList.remove('open')">Batal</button>
                 <button type="submit" class="btn btn-primary">Simpan Review</button>
             </div>
         </form>
     </div>
-</div>
 @endif
 @endsection
 
@@ -112,4 +111,6 @@ function openReview(id) {
     document.getElementById('modalReview').classList.add('open');
 }
 </script>
-@endpush
+@endpush</｜｜DSML｜｜parameter>
+</invoke>
+</｜｜DSML｜｜tool_calls>
