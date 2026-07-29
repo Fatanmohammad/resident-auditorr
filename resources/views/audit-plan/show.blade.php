@@ -10,61 +10,92 @@
     <a href="{{ route('audit-plan.index') }}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Kembali</a>
 </div>
 
-<div class="grid grid-cols-2" style="margin-bottom: 1.25rem;">
-    <div class="card">
-        <div class="card-header"><div class="card-title">Informasi Audit Plan</div></div>
-        <div class="card-body">
-            <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
-                <tr><td style="padding: 0.5rem 0; color: var(--text-muted); width: 40%;">Cabang</td><td><strong>{{ $auditPlan->cabang?->nama_cabang ?? '-' }}</strong></td></tr>
-                <tr><td style="padding: 0.5rem 0; color: var(--text-muted);">Resident Auditor</td><td>{{ $auditPlan->raUser?->name ?? '-' }}</td></tr>
-                <tr><td style="padding: 0.5rem 0; color: var(--text-muted);">Tahun Periode</td><td>{{ $auditPlan->tahun_periode }}</td></tr>
-                <tr><td style="padding: 0.5rem 0; color: var(--text-muted);">Jadwal Mulai</td><td>{{ \Carbon\Carbon::parse($auditPlan->jadwal_mulai)->format('d M Y') }}</td></tr>
-                <tr><td style="padding: 0.5rem 0; color: var(--text-muted);">Jadwal Selesai</td><td>{{ \Carbon\Carbon::parse($auditPlan->jadwal_selesai)->format('d M Y') }}</td></tr>
-                <tr><td style="padding: 0.5rem 0; color: var(--text-muted);">Status</td>
-                    <td>
-                        @php $cls = match($auditPlan->status_approval) { 'approved'=>'badge-success','rejected'=>'badge-danger','draft'=>'badge-gray',default=>'badge-warning' }; @endphp
-                        <span class="badge {{ $cls }}">{{ strtoupper(str_replace('_',' ',$auditPlan->status_approval)) }}</span>
-                    </td>
-                </tr>
-                @if($auditPlan->catatan_revisi)
-                <tr><td style="padding: 0.5rem 0; color: var(--text-muted);">Catatan Revisi</td><td style="color: #dc2626;">{{ $auditPlan->catatan_revisi }}</td></tr>
-                @endif
-            </table>
-        </div>
-    </div>
+@php $status = $auditPlan->status_approval; @endphp
 
-    <div class="card">
-        <div class="card-header"><div class="card-title">Alur Approval</div></div>
-        <div class="card-body">
-            <div class="approval-flow">
-                <div class="approval-step {{ in_array($auditPlan->status_approval, ['waiting_kabag_approval','waiting_kadiv_approval','approved']) ? 'done' : ($auditPlan->status_approval === 'draft' ? 'active' : '') }}">
-                    <i class="bi bi-person"></i> RA
-                </div>
-                <span class="approval-arrow"><i class="bi bi-arrow-right"></i></span>
-                <div class="approval-step {{ in_array($auditPlan->status_approval, ['waiting_kadiv_approval','approved']) ? 'done' : ($auditPlan->status_approval === 'waiting_kabag_approval' ? 'active' : '') }}">
-                    <i class="bi bi-person-check"></i> Kabag RA
-                </div>
-                <span class="approval-arrow"><i class="bi bi-arrow-right"></i></span>
-                <div class="approval-step {{ $auditPlan->status_approval === 'approved' ? 'done' : ($auditPlan->status_approval === 'waiting_kadiv_approval' ? 'active' : '') }}">
-                    <i class="bi bi-shield-check"></i> Kadiv SKAI
-                </div>
+{{-- Info Card --}}
+<div class="card" style="margin-bottom: 1.25rem; max-width: 640px;">
+    <div class="card-header"><div class="card-title">Informasi Audit Plan</div></div>
+    <div class="card-body">
+        <table style="width:100%; font-size:0.875rem; border-collapse:collapse;">
+            <tr><td style="padding:0.5rem 0; color:var(--text-muted); width:40%;">Cabang</td><td><strong>{{ $auditPlan->cabang?->nama_cabang ?? '-' }}</strong></td></tr>
+            <tr><td style="padding:0.5rem 0; color:var(--text-muted);">Resident Auditor</td><td>{{ $auditPlan->raUser?->name ?? '-' }}</td></tr>
+            <tr><td style="padding:0.5rem 0; color:var(--text-muted);">Tahun Periode</td><td>{{ $auditPlan->tahun_periode }}</td></tr>
+            <tr><td style="padding:0.5rem 0; color:var(--text-muted);">Jadwal Mulai</td><td>{{ \Carbon\Carbon::parse($auditPlan->jadwal_mulai)->format('d M Y') }}</td></tr>
+            <tr><td style="padding:0.5rem 0; color:var(--text-muted);">Jadwal Selesai</td><td>{{ \Carbon\Carbon::parse($auditPlan->jadwal_selesai)->format('d M Y') }}</td></tr>
+            <tr>
+                <td style="padding:0.5rem 0; color:var(--text-muted);">Status</td>
+                <td>
+                    @php
+                        $cls = match($status) {
+                            'approved'               => 'badge-success',
+                            'rejected'               => 'badge-danger',
+                            'draft'                  => 'badge-gray',
+                            'waiting_kabag_approval' => 'badge-warning',
+                            'waiting_kadiv_approval' => 'badge-purple',
+                            default                  => 'badge-info',
+                        };
+                        $label = match($status) {
+                            'approved'               => 'Approved',
+                            'rejected'               => 'Ditolak',
+                            'draft'                  => 'Draft',
+                            'waiting_kabag_approval' => 'Menunggu Kabag RA',
+                            'waiting_kadiv_approval' => 'Menunggu Kadiv SKAI',
+                            default                  => $status,
+                        };
+                    @endphp
+                    <span class="badge {{ $cls }}">{{ $label }}</span>
+                </td>
+            </tr>
+            @if($auditPlan->catatan_revisi)
+            <tr>
+                <td style="padding:0.5rem 0; color:var(--text-muted);">Catatan Revisi</td>
+                <td>
+                    <div style="padding:0.5rem 0.75rem; background:#fff7ed; border-left:3px solid #f59e0b; border-radius:0 var(--radius-sm) var(--radius-sm) 0; font-size:0.82rem; color:#92400e;">
+                        {{ $auditPlan->catatan_revisi }}
+                    </div>
+                </td>
+            </tr>
+            @endif
+        </table>
+
+        {{-- Tombol Aksi Approval --}}
+        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+        <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+            @if(auth()->user()->role === 'kabag_ra' && $status === 'waiting_kabag_approval')
+            <div style="display: flex; gap: 0.75rem;">
+                <form action="{{ route('audit-plan.approve', $auditPlan->id) }}" method="POST" style="flex:1;">
+                    @csrf
+                    <input type="hidden" name="action" value="approve_kabag">
+                    <button type="submit" class="btn btn-primary" style="width:100%;"><i class="bi bi-check-lg"></i> Setujui</button>
+                </form>
+                <button type="button" class="btn btn-outline" style="flex:1; border-color:#f59e0b; color:#92400e;" onclick="document.getElementById('modalReject').classList.add('open')">
+                    <i class="bi bi-x-lg"></i> Tolak
+                </button>
             </div>
 
-            @if($auditPlan->scoringAudit)
-            <div style="margin-top: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: var(--radius-md); border: 1px solid #bbf7d0;">
-                <div style="font-size: 0.75rem; color: var(--text-muted);">Skor Akhir</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: var(--bs-blue-dark);">{{ $auditPlan->scoringAudit->skor_akhir }}</div>
-                <div style="font-size: 0.8rem; color: #065f46;">{{ $auditPlan->scoringAudit->peringkat_ra }}</div>
+            @elseif(auth()->user()->role === 'kadiv_skai' && $status === 'waiting_kadiv_approval')
+            <div style="display: flex; gap: 0.75rem;">
+                <form action="{{ route('audit-plan.approve', $auditPlan->id) }}" method="POST" style="flex:1;">
+                    @csrf
+                    <input type="hidden" name="action" value="approve_kadiv">
+                    <button type="submit" class="btn btn-primary" style="width:100%;"><i class="bi bi-check2-all"></i> Setujui</button>
+                </form>
+                <button type="button" class="btn btn-outline" style="flex:1; border-color:#f59e0b; color:#92400e;" onclick="document.getElementById('modalReject').classList.add('open')">
+                    <i class="bi bi-x-lg"></i> Tolak
+                </button>
             </div>
+
             @endif
         </div>
+        @endif
     </div>
 </div>
 
+{{-- KKA Table --}}
 <div class="card">
     <div class="card-header">
         <div class="card-title">Kartu Kerja Audit (KKA)</div>
-        @if(auth()->user()->role === 'ra')
+        @if(auth()->user()->role === 'ra' && $status === 'approved')
         <a href="{{ route('kka.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Tambah KKA</a>
         @endif
     </div>
@@ -93,4 +124,31 @@
         </table>
     </div>
 </div>
+
+{{-- Modal Reject --}}
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+<div class="modal-overlay" id="modalReject">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Tolak Audit Plan</div>
+            <button class="modal-close" onclick="document.getElementById('modalReject').classList.remove('open')">&times;</button>
+        </div>
+        <form action="{{ route('audit-plan.approve', $auditPlan->id) }}" method="POST">
+            @csrf
+            <input type="hidden" name="action" value="reject">
+            <div class="modal-body">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Berikan catatan revisi agar PIMSIE dapat memperbaiki Audit Plan.</p>
+                <div class="form-group">
+                    <label class="form-label">Catatan Revisi <span style="color:#dc2626;">*</span></label>
+                    <textarea name="catatan_revisi" class="form-textarea" required placeholder="Tuliskan alasan penolakan..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('modalReject').classList.remove('open')">Batal</button>
+                <button type="submit" class="btn btn-danger" style="background:#dc2626; color:#fff;">Tolak Audit Plan</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 @endsection

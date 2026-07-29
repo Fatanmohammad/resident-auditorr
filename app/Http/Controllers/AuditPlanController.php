@@ -40,7 +40,7 @@ class AuditPlanController extends Controller
             'jadwal_mulai'   => 'required|date',
             'jadwal_selesai' => 'required|date|after:jadwal_mulai',
         ]);
-        $validated['status_approval'] = 'draft';
+        $validated['status_approval'] = 'waiting_kabag_approval';
         AuditPlan::create($validated);
         return redirect()->route('audit-plan.index')->with('success', 'Audit Plan berhasil dibuat.');
     }
@@ -55,12 +55,11 @@ class AuditPlanController extends Controller
     {
         $auditPlan = AuditPlan::findOrFail($id);
         $request->validate([
-            'action'         => 'required|in:submit_kabag,approve_kabag,approve_kadiv,reject',
+            'action' => 'required|in:approve_kabag,approve_kadiv,reject',
             'catatan_revisi' => 'nullable|string',
         ]);
 
         $map = [
-            'submit_kabag'  => 'waiting_kabag_approval',
             'approve_kabag' => 'waiting_kadiv_approval',
             'approve_kadiv' => 'approved',
             'reject'        => 'rejected',

@@ -21,7 +21,7 @@ return new class extends Migration
             
             // Kolom cabang_id tanpa foreign key dulu agar tidak crash
             $table->unsignedBigInteger('cabang_id')->nullable();
-            $table->enum('role', ['ra', 'kabag_ra', 'kadiv_skai', 'auditee'])->default('ra');
+            $table->enum('role', ['ra', 'kabag_ra', 'kadiv_skai', 'auditee', 'pimsie'])->default('ra');
             
             $table->rememberToken();
             $table->timestamps();
