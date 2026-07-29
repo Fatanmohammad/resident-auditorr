@@ -72,13 +72,5 @@
 
     </div>
 
-    <div class="sidebar-footer">
-        <div class="user-badge">
-            <div class="avatar-sm">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</div>
-            <div>
-                <div class="user-badge-name">{{ auth()->user()->name }}</div>
-                <div class="user-badge-role">{{ strtoupper(str_replace('_', ' ', auth()->user()->role)) }}</div>
-            </div>
-        </div>
-    </div>
+
 </div>
