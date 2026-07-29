@@ -46,18 +46,18 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==========================================
-    // 2. PENJADWALAN AUDIT RA
+    // 2. PENJADWALAN AUDIT RA — hanya PIMSIE yang buat, Kabag & Kadiv yang approve
     // ==========================================
     Route::prefix('audit-plans')->name('audit-plan.')->group(function () {
         Route::get('/', [AuditPlanController::class, 'index'])->name('index');
-        Route::get('/create', [AuditPlanController::class, 'create'])->name('create')->middleware('role:kadiv_skai,kabag_ra');
-        Route::post('/', [AuditPlanController::class, 'store'])->name('store')->middleware('role:kadiv_skai,kabag_ra');
+        Route::get('/create', [AuditPlanController::class, 'create'])->name('create')->middleware('role:pimsie');
+        Route::post('/', [AuditPlanController::class, 'store'])->name('store')->middleware('role:pimsie');
         Route::get('/{id}', [AuditPlanController::class, 'show'])->name('show');
-        Route::post('/{id}/approve', [AuditPlanController::class, 'approve'])->name('approve')->middleware('role:kadiv_skai,kabag_ra,ra');
+        Route::post('/{id}/approve', [AuditPlanController::class, 'approve'])->name('approve')->middleware('role:kadiv_skai,kabag_ra');
     });
 
     // ==========================================
-    // 3. PELAKSANAAN AUDIT (KKA)
+    // 3. PELAKSANAAN AUDIT (KKA) — PIMSIE hanya lihat
     // ==========================================
     Route::prefix('kka')->name('kka.')->group(function () {
         Route::get('/', [KertasKerjaAuditController::class, 'indexAll'])->name('index');
@@ -69,7 +69,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==========================================
-    // 4. TEMUAN AUDIT
+    // 4. TEMUAN AUDIT — PIMSIE lihat temuan signifikan & berulang
     // ==========================================
     Route::prefix('temuans')->name('temuan.')->group(function () {
         Route::get('/', [TemuanAuditController::class, 'indexAll'])->name('index');
@@ -95,7 +95,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==========================================
-    // 6. SCORING & LAPORAN
+    // 6. SCORING & LAPORAN — PIMSIE bisa tarik laporan
     // ==========================================
     Route::prefix('scoring')->name('scoring.')->group(function () {
         Route::get('/', [ScoringAuditController::class, 'index'])->name('index');

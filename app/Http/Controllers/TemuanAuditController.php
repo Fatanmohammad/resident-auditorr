@@ -16,6 +16,9 @@ class TemuanAuditController extends Controller
 
         if ($user->role === 'ra') {
             $query->whereHas('kka.auditPlan', fn($q) => $q->where('ra_user_id', $user->id));
+        } elseif ($user->role === 'pimsie') {
+            // PIMSIE hanya lihat temuan signifikan & berulang
+            $query->whereIn('kategori', ['signifikan', 'berulang']);
         }
 
         $temuans = $query->latest()->get();
