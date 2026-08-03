@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditPlan;
-use App\Models\Cabang;
 use App\Models\User;
+use App\Models\Unit;
+use App\Models\RawMetric;
+use App\Models\CoverageSummary;
+use App\Models\ScheduledVisit;
+use App\Models\FinalAuditPlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,29 +16,33 @@ class AuditPlanController extends Controller
 {
     public function index()
     {
-        $user = Auth::user();
-        $query = AuditPlan::with(['cabang', 'raUser']);
-
-        // RA hanya lihat audit plan miliknya
+        $user  = Auth::user();
+        $query = AuditPlan::with(['raUser']);
         if ($user->role === 'ra') {
             $query->where('ra_user_id', $user->id);
         }
+        $auditPlans     = $query->latest()->get();
+        $unitCount      = Unit::where('is_active', true)->count();
+        $rawMetricCount = RawMetric::count();
+        $coverageCount  = CoverageSummary::count();
+        $scheduleCount  = ScheduledVisit::count();
+        $finalPlanCount = FinalAuditPlan::count();
 
-        $auditPlans = $query->latest()->get();
-        return view('audit-plan.index', compact('auditPlans'));
+        return view('audit-plan.index', compact(
+            'auditPlans', 'unitCount', 'rawMetricCount',
+            'coverageCount', 'scheduleCount', 'finalPlanCount'
+        ));
     }
 
     public function create()
     {
-        $cabangs = Cabang::where('tipe', '!=', 'pusat')->get();
-        $raUsers = User::where('role', 'ra')->with('cabang')->get();
-        return view('audit-plan.create', compact('cabangs', 'raUsers'));
+        $raUsers = User::where('role', 'ra')->get();
+        return view('audit-plan.create', compact('raUsers'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'cabang_id'      => 'required|exists:cabangs,id',
             'ra_user_id'     => 'required|exists:users,id',
             'tahun_periode'  => 'required|integer|min:2020|max:2099',
             'jadwal_mulai'   => 'required|date',
@@ -47,7 +55,7 @@ class AuditPlanController extends Controller
 
     public function show($id)
     {
-        $auditPlan = AuditPlan::with(['cabang', 'raUser', 'kertasKerjaAudits.temuanAudits', 'scoringAudit', 'laporanAudit'])->findOrFail($id);
+        $auditPlan = AuditPlan::with(['raUser'])->findOrFail($id);
         return view('audit-plan.show', compact('auditPlan'));
     }
 
