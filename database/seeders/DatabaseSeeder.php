@@ -98,5 +98,11 @@ class DatabaseSeeder extends Seeder
             'bobot' => 60.00,
             'deskripsi' => 'Persentase penyelesaian Tindak Lanjut oleh Auditee',
         ]);
+
+        // 4. Master Setup Modul Audit Plan (SOP 01)
+        $this->call([
+            MasterSetupSeeder::class,
+            RaSeeder::class,
+        ]);
     }
 }

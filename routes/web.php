@@ -2,17 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CabangController;
-use App\Http\Controllers\AuditPlanController;
-use App\Http\Controllers\ParameterAuditController;
-use App\Http\Controllers\KertasKerjaAuditController;
-use App\Http\Controllers\KertasHasilAuditController;
-use App\Http\Controllers\TemuanAuditController;
-use App\Http\Controllers\TindakLanjutController;
-use App\Http\Controllers\MonitoringAuditController;
-use App\Http\Controllers\ScoringAuditController;
-use App\Http\Controllers\LaporanAuditController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AuditPlanController;
+use App\Http\Controllers\UnitController;
+use App\Http\Controllers\RawMetricController;
+use App\Http\Controllers\CriticalOverrideController;
+use App\Http\Controllers\CoverageController;
+use App\Http\Controllers\SchedulingController;
+use App\Http\Controllers\FinalAuditPlanController;
 
 // Auth
 Route::get('/', fn() => redirect()->route('login'));
@@ -20,33 +17,12 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// Protected Routes
 Route::middleware('auth')->group(function () {
 
-    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // ==========================================
-    // MASTER DATA
-    // ==========================================
-    Route::prefix('cabangs')->name('cabang.')->middleware('role:kadiv_skai,kabag_ra')->group(function () {
-        Route::get('/', [CabangController::class, 'index'])->name('index');
-        Route::post('/', [CabangController::class, 'store'])->name('store');
-        Route::get('/{id}', [CabangController::class, 'show'])->name('show');
-    });
-
-    // ==========================================
-    // 1. INPUT PARAMETER (RKAT RA)
-    // ==========================================
-    Route::prefix('parameters')->name('parameter.')->group(function () {
-        Route::get('/', [ParameterAuditController::class, 'index'])->name('index');
-        Route::post('/', [ParameterAuditController::class, 'store'])->name('store')->middleware('role:kadiv_skai,kabag_ra');
-        Route::put('/{id}', [ParameterAuditController::class, 'update'])->name('update')->middleware('role:kadiv_skai,kabag_ra');
-        Route::delete('/{id}', [ParameterAuditController::class, 'destroy'])->name('destroy')->middleware('role:kadiv_skai,kabag_ra');
-    });
-
-    // ==========================================
-    // 2. PENJADWALAN AUDIT RA — hanya PIMSIE yang buat, Kabag & Kadiv yang approve
+    // AUDIT PLAN (approval workflow)
     // ==========================================
     Route::prefix('audit-plans')->name('audit-plan.')->group(function () {
         Route::get('/', [AuditPlanController::class, 'index'])->name('index');
@@ -57,55 +33,55 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==========================================
-    // 3. PELAKSANAAN AUDIT (KKA) — PIMSIE hanya lihat
+    // SOP 01 — MODUL AUDIT PLAN BARU
     // ==========================================
-    Route::prefix('kka')->name('kka.')->group(function () {
-        Route::get('/', [KertasKerjaAuditController::class, 'indexAll'])->name('index');
-        Route::get('/plan/{auditPlanId}', [KertasKerjaAuditController::class, 'index'])->name('byPlan');
-        Route::get('/create', [KertasKerjaAuditController::class, 'create'])->name('create')->middleware('role:ra');
-        Route::post('/', [KertasKerjaAuditController::class, 'store'])->name('store')->middleware('role:ra');
-        Route::get('/{id}', [KertasKerjaAuditController::class, 'show'])->name('show');
-        Route::post('/{id}/review', [KertasKerjaAuditController::class, 'review'])->name('review')->middleware('role:kabag_ra,kadiv_skai');
+
+    // Master Unit
+    Route::prefix('units')->name('units.')->middleware('role:kadiv_skai,kabag_ra,pimsie')->group(function () {
+        Route::get('/', [UnitController::class, 'index'])->name('index');
+        Route::get('/create', [UnitController::class, 'create'])->name('create');
+        Route::post('/', [UnitController::class, 'store'])->name('store');
+        Route::get('/{unit}', [UnitController::class, 'show'])->name('show');
+        Route::get('/{unit}/edit', [UnitController::class, 'edit'])->name('edit');
+        Route::put('/{unit}', [UnitController::class, 'update'])->name('update');
     });
 
-    // ==========================================
-    // 4. TEMUAN AUDIT — PIMSIE lihat temuan signifikan & berulang
-    // ==========================================
-    Route::prefix('temuans')->name('temuan.')->group(function () {
-        Route::get('/', [TemuanAuditController::class, 'indexAll'])->name('index');
-        Route::get('/kka/{kkaId}', [TemuanAuditController::class, 'index'])->name('byKka');
-        Route::get('/create', [TemuanAuditController::class, 'create'])->name('create')->middleware('role:ra');
-        Route::post('/', [TemuanAuditController::class, 'store'])->name('store')->middleware('role:ra');
-        Route::get('/{id}', [TemuanAuditController::class, 'show'])->name('show');
+    // Raw Metrics
+    Route::prefix('raw-metrics')->name('raw-metrics.')->middleware('role:kabag_ra,ra')->group(function () {
+        Route::get('/{unit}/form', [RawMetricController::class, 'create'])->name('create');
+        Route::post('/{unit}', [RawMetricController::class, 'store'])->name('store');
     });
 
-    // ==========================================
-    // 5. MONITORING TINDAK LANJUT
-    // ==========================================
-    Route::prefix('tindak-lanjut')->name('tindak-lanjut.')->group(function () {
-        Route::get('/', [TindakLanjutController::class, 'index'])->name('index');
-        Route::post('/respon', [TindakLanjutController::class, 'storeRespon'])->name('respon')->middleware('role:auditee,ra');
-        Route::post('/{id}/verifikasi', [TindakLanjutController::class, 'verifikasiRa'])->name('verifikasi')->middleware('role:ra');
+    // Critical Override
+    Route::prefix('critical-override')->name('critical-override.')->middleware('role:kabag_ra,kadiv_skai')->group(function () {
+        Route::post('/{unit}', [CriticalOverrideController::class, 'store'])->name('store');
+        Route::patch('/{override}/status', [CriticalOverrideController::class, 'updateStatus'])->name('status');
     });
 
-    Route::prefix('monitoring')->name('monitoring.')->group(function () {
-        Route::get('/', [MonitoringAuditController::class, 'index'])->name('index');
-        Route::get('/plan/{auditPlanId}', [MonitoringAuditController::class, 'show'])->name('show');
-        Route::post('/sync/{auditPlanId}', [MonitoringAuditController::class, 'syncMonitoring'])->name('sync');
+    // Coverage
+    Route::prefix('coverage')->name('coverage.')->middleware('role:kabag_ra,kadiv_skai')->group(function () {
+        Route::get('/{unit}', [CoverageController::class, 'show'])->name('show');
+        Route::post('/{unit}', [CoverageController::class, 'store'])->name('store');
+        Route::post('/assign-all', [CoverageController::class, 'assignAll'])->name('assign-all');
     });
 
-    // ==========================================
-    // 6. SCORING & LAPORAN — PIMSIE bisa tarik laporan
-    // ==========================================
-    Route::prefix('scoring')->name('scoring.')->group(function () {
-        Route::get('/', [ScoringAuditController::class, 'index'])->name('index');
-        Route::post('/kalkulasi', [ScoringAuditController::class, 'hitungSkor'])->name('kalkulasi')->middleware('role:kadiv_skai,kabag_ra');
+    // Scheduling
+    Route::prefix('scheduling')->name('scheduling.')->middleware('role:kabag_ra,kadiv_skai,pimsie')->group(function () {
+        Route::get('/', [SchedulingController::class, 'index'])->name('index');
+        Route::post('/generate-all', [SchedulingController::class, 'generateAll'])->name('generate-all')->middleware('role:kabag_ra,kadiv_skai');
+        Route::post('/{unit}/override-frequency', [SchedulingController::class, 'overrideFrequency'])->name('override-frequency')->middleware('role:kabag_ra,kadiv_skai');
+        Route::patch('/visit/{visit}/override', [SchedulingController::class, 'overrideVisit'])->name('override-visit')->middleware('role:kabag_ra,kadiv_skai');
+        Route::patch('/visit/{visit}/status', [SchedulingController::class, 'updateVisitStatus'])->name('visit-status');
+        Route::get('/capacity', [SchedulingController::class, 'capacity'])->name('capacity');
+        Route::get('/{unit}', [SchedulingController::class, 'unitSchedule'])->name('unit');
     });
 
-    Route::prefix('laporan')->name('laporan.')->group(function () {
-        Route::get('/', [LaporanAuditController::class, 'index'])->name('index');
-        Route::get('/plan/{auditPlanId}', [LaporanAuditController::class, 'show'])->name('show');
-        Route::post('/generate', [LaporanAuditController::class, 'generate'])->name('generate')->middleware('role:kabag_ra,kadiv_skai');
-        Route::post('/{id}/approve', [LaporanAuditController::class, 'approve'])->name('approve')->middleware('role:kabag_ra,kadiv_skai');
+    // Final Audit Plan
+    Route::prefix('final-audit-plan')->name('final-audit-plan.')->group(function () {
+        Route::get('/', [FinalAuditPlanController::class, 'index'])->name('index');
+        Route::get('/change-log', [FinalAuditPlanController::class, 'changeLog'])->name('change-log');
+        Route::post('/change-log', [FinalAuditPlanController::class, 'storeChangeLog'])->name('change-log.store');
+        Route::post('/generate-all', [FinalAuditPlanController::class, 'generateAll'])->name('generate-all')->middleware('role:kabag_ra,kadiv_skai');
+        Route::get('/{finalAuditPlan}', [FinalAuditPlanController::class, 'show'])->name('show');
     });
 });
