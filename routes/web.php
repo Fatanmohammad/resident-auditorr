@@ -37,16 +37,22 @@ Route::middleware('auth')->group(function () {
     // ==========================================
 
     // Master Unit
-    Route::prefix('units')->name('units.')->middleware('role:kadiv_skai,kabag_ra,pimsie')->group(function () {
+    Route::prefix('units')->name('units.')->middleware('role:kadiv_skai,kabag_ra,pimsie,ra')->group(function () {
         Route::get('/', [UnitController::class, 'index'])->name('index');
-        Route::get('/create', [UnitController::class, 'create'])->name('create');
-        Route::post('/', [UnitController::class, 'store'])->name('store');
+        Route::get('/create', [UnitController::class, 'create'])->name('create')->middleware('role:kadiv_skai,kabag_ra');
+        Route::post('/', [UnitController::class, 'store'])->name('store')->middleware('role:kadiv_skai,kabag_ra');
         Route::get('/{unit}', [UnitController::class, 'show'])->name('show');
-        Route::get('/{unit}/edit', [UnitController::class, 'edit'])->name('edit');
-        Route::put('/{unit}', [UnitController::class, 'update'])->name('update');
+        Route::get('/{unit}/edit', [UnitController::class, 'edit'])->name('edit')->middleware('role:kadiv_skai,kabag_ra');
+        Route::put('/{unit}', [UnitController::class, 'update'])->name('update')->middleware('role:kadiv_skai,kabag_ra');
     });
 
-    // Raw Metrics
+    // Risk Scoring index
+    Route::get('/risk-scoring', [UnitController::class, 'riskScoringIndex'])->name('risk-scoring.index')->middleware('role:kadiv_skai,kabag_ra,ra,pimsie');
+
+    // Assignment RA index
+    Route::get('/assignment-ra', [CoverageController::class, 'assignmentIndex'])->name('assignment-ra.index')->middleware('role:kadiv_skai,kabag_ra,ra,pimsie');
+
+// Raw Metrics
     Route::prefix('raw-metrics')->name('raw-metrics.')->middleware('role:kabag_ra,ra')->group(function () {
         Route::get('/{unit}/form', [RawMetricController::class, 'create'])->name('create');
         Route::post('/{unit}', [RawMetricController::class, 'store'])->name('store');
@@ -54,15 +60,18 @@ Route::middleware('auth')->group(function () {
 
     // Critical Override
     Route::prefix('critical-override')->name('critical-override.')->middleware('role:kabag_ra,kadiv_skai')->group(function () {
+        Route::get('/', [CriticalOverrideController::class, 'index'])->name('index');
         Route::post('/{unit}', [CriticalOverrideController::class, 'store'])->name('store');
         Route::patch('/{override}/status', [CriticalOverrideController::class, 'updateStatus'])->name('status');
     });
 
-    // Coverage
+// Coverage
     Route::prefix('coverage')->name('coverage.')->middleware('role:kabag_ra,kadiv_skai')->group(function () {
+        Route::get('/', [CoverageController::class, 'index'])->name('index');
+        Route::post('/generate-all', [CoverageController::class, 'generateAll'])->name('generate-all');
+        Route::post('/assign-all', [CoverageController::class, 'assignAll'])->name('assign-all');
         Route::get('/{unit}', [CoverageController::class, 'show'])->name('show');
         Route::post('/{unit}', [CoverageController::class, 'store'])->name('store');
-        Route::post('/assign-all', [CoverageController::class, 'assignAll'])->name('assign-all');
     });
 
     // Scheduling

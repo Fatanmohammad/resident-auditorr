@@ -15,12 +15,8 @@
             <i class="bi bi-lightning-charge"></i> Generate Semua
         </button>
     </form>
-    @endif
-</div>
-
-@if(session('success'))
-<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
 @endif
+</div>
 
 <div class="card">
     <div class="card-header">

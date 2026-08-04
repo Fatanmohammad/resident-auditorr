@@ -232,7 +232,7 @@ class CoverageSeeder extends Seeder
                 'primary_ra_id'    => $primary ? $raId($primary) : null,
                 'backup_ra_id'     => $backup  ? $raId($backup)  : null,
                 'resident_base'    => DB::table('units')->where('id', $uid)->value('base_ra_unit'),
-                'assignment_status'=> $primary ? 'Aktif' : 'Pending',
+                'assignment_status'=> 'Aktif',
                 'valid_from'       => 2026,
                 'valid_to'         => 2026,
                 'notes'            => $primary ? 'Assignment otomatis dari Base RA Unit' : 'Perlu Mapping RA',

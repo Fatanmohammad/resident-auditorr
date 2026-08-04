@@ -10,10 +10,6 @@
     <a href="{{ route('scheduling.index', ['period'=>$period]) }}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Kembali</a>
 </div>
 
-@if(session('success'))
-<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
-@endif
-
 {{-- Info Frekuensi --}}
 @if($freq)
 <div class="card" style="margin-bottom:1.25rem;max-width:640px;">
@@ -93,7 +89,7 @@
             <div class="modal-title">Override Frekuensi</div>
             <button class="modal-close" onclick="document.getElementById('modalFreq').classList.remove('open')">&times;</button>
         </div>
-        <form action="{{ route('scheduling.override-frequency', $unit) }}" method="POST">
+<form action="{{ route('scheduling.override-frequency', $unit) }}" method="POST">
             @csrf
             <input type="hidden" name="period" value="{{ $period }}">
             <div class="modal-body">
@@ -104,6 +100,10 @@
                         <option value="{{ $f }}" {{ $freq?->manual_override_frequency===$f?'selected':'' }}>{{ $f }}</option>
                         @endforeach
                     </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alasan Persetujuan</label>
+                    <textarea name="reason" class="form-textarea" placeholder="Alasan perubahan frekuensi..."></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -121,7 +121,7 @@
             <div class="modal-title">Override Tanggal Kunjungan</div>
             <button class="modal-close" onclick="document.getElementById('modalVisit').classList.remove('open')">&times;</button>
         </div>
-        <form id="formVisit" method="POST">
+<form id="formVisit" method="POST">
             @csrf @method('PATCH')
             <div class="modal-body">
                 <div class="form-group">
@@ -135,6 +135,10 @@
                 <div class="form-group">
                     <label class="form-label">Catatan</label>
                     <textarea name="manual_notes" class="form-textarea" placeholder="Alasan perubahan jadwal..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alasan Persetujuan</label>
+                    <textarea name="reason" class="form-textarea" placeholder="Alasan persetujuan perubahan jadwal..."></textarea>
                 </div>
             </div>
             <div class="modal-footer">

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class RawMetricController extends Controller
 {
-    public function __construct(private RiskScoringService $scoringService) {}
+public function __construct(private RiskScoringService $scoringService) {}
 
     public function create(Unit $unit)
     {

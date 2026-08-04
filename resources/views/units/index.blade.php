@@ -12,10 +12,6 @@
     @endif
 </div>
 
-@if(session('success'))
-<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
-@endif
-
 <div class="card">
     <div class="table-wrapper">
         <table class="data-table">
@@ -49,11 +45,11 @@
                             {{ $unit->is_active ? 'Aktif' : 'Nonaktif' }}
                         </span>
                     </td>
-                    <td style="display:flex;gap:0.4rem;">
+<td style="display:flex;gap:0.4rem;">
                         <a href="{{ route('units.show', $unit) }}" class="btn btn-outline btn-sm" title="Detail"><i class="bi bi-eye"></i></a>
                         @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
                         <a href="{{ route('units.edit', $unit) }}" class="btn btn-outline btn-sm" title="Edit"><i class="bi bi-pencil"></i></a>
-                        <a href="{{ route('raw-metrics.create', $unit) }}" class="btn btn-outline btn-sm" title="Input Raw Metrics"><i class="bi bi-input-cursor-text"></i></a>
+                        <a href="{{ route('raw-metrics.create', $unit) }}" class="btn btn-outline btn-sm" title="Input Data Mentah"><i class="bi bi-input-cursor-text"></i></a>
                         @endif
                     </td>
                 </tr>

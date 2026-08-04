@@ -82,9 +82,10 @@ class SchedulingService
         $freq = OnsiteFrequency::where('unit_id', $unit->id)->where('period', $period)->first();
         if (!$freq || $freq->final_visits_per_year <= 0) return;
 
-        $year         = DB::table('calendar_params')->where('param_key', 'audit_plan_year')->value('param_value') ?? $period;
+$year         = DB::table('calendar_params')->where('param_key', 'audit_plan_year')->value('param_value') ?? $period;
         $durationDays = OnsiteFrequency::labelToDurationDays($freq->final_frequency_label);
-        $globalIndex  = $freq->visit_sequence_start - 1; // 0-based
+        // Pastikan index tidak negatif (unit yang sebelumnya visit_sequence_start = 0, mis. KC/Tidak Terjadwal)
+        $globalIndex  = max(0, $freq->visit_sequence_start - 1); // 0-based
 
         for ($v = 1; $v <= $freq->final_visits_per_year; $v++) {
             $month = $this->recommendedMonth($freq->final_frequency_label, $v);

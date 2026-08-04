@@ -33,22 +33,24 @@ class MasterSetupSeeder extends Seeder
             ['metric_key' => 'npl_ratio',                   'bidang' => 'kredit',       'weight' => 0.40, 'label' => 'Rasio NPL'],
             ['metric_key' => 'credit_deviation',            'bidang' => 'kredit',       'weight' => 0.25, 'label' => 'Penyimpangan/Deviasi Kredit'],
             // Bidang E - TI/ATM
-            ['metric_key' => 'atm_dispute',                 'bidang' => 'ti_atm',       'weight' => 0.30, 'label' => 'Selisih/Dispute ATM'],
+['metric_key' => 'atm_dispute',                 'bidang' => 'ti_atm',       'weight' => 0.30, 'label' => 'Selisih/Dispute ATM'],
             ['metric_key' => 'atm_downtime_hours',          'bidang' => 'ti_atm',       'weight' => 0.20, 'label' => 'Downtime ATM (Jam)'],
-            ['metric_key' => 'critical_ti_incident',        'bidang' => 'ti_atm',       'weight' => 0.15, 'label' => 'Insiden TI Kritikal'],
-            ['metric_key' => 'unusual_user_reset',          'bidang' => 'ti_atm',       'weight' => 0.10, 'label' => 'Reset/Buka Blokir User Tidak Lazim'],
+            ['metric_key' => 'critical_ti_incident',        'bidang' => 'ti_atm',       'weight' => 0.30, 'label' => 'Insiden TI Kritikal'],
+            ['metric_key' => 'unusual_user_reset',          'bidang' => 'ti_atm',       'weight' => 0.20, 'label' => 'Reset/Buka Blokir User Tidak Lazim'],
             // Bidang F - Monitoring TL
-            ['metric_key' => 'ra_onsite_tl_overdue',        'bidang' => 'monitoring_tl','weight' => 0.20, 'label' => 'Temuan RA Onsite Overdue'],
-            ['metric_key' => 'ra_offsite_tl_overdue',       'bidang' => 'monitoring_tl','weight' => 0.25, 'label' => 'Temuan RA Offsite Overdue'],
-            ['metric_key' => 'skai_tl_overdue',             'bidang' => 'monitoring_tl','weight' => 0.10, 'label' => 'Temuan SKAI Overdue'],
-            ['metric_key' => 'regulator_tl_overdue',        'bidang' => 'monitoring_tl','weight' => 0.10, 'label' => 'Temuan Regulator Overdue'],
+            ['metric_key' => 'ra_onsite_tl_overdue',        'bidang' => 'monitoring_tl','weight' => 0.15, 'label' => 'Temuan RA Onsite Overdue'],
+            ['metric_key' => 'ra_offsite_tl_overdue',       'bidang' => 'monitoring_tl','weight' => 0.10, 'label' => 'Temuan RA Offsite Overdue'],
+            ['metric_key' => 'skai_tl_overdue',             'bidang' => 'monitoring_tl','weight' => 0.20, 'label' => 'Temuan SKAI Overdue'],
+            ['metric_key' => 'regulator_tl_overdue',        'bidang' => 'monitoring_tl','weight' => 0.25, 'label' => 'Temuan Regulator Overdue'],
             ['metric_key' => 'kap_tl_overdue',              'bidang' => 'monitoring_tl','weight' => 0.10, 'label' => 'Temuan KAP Overdue'],
             ['metric_key' => 'avg_response_days',           'bidang' => 'monitoring_tl','weight' => 0.10, 'label' => 'Rata-Rata Hari Respons TL'],
-            ['metric_key' => 'tl_response_quality',         'bidang' => 'monitoring_tl','weight' => 0.15, 'label' => 'Kualitas Respons dan Bukti TL'],
         ];
-        foreach ($fieldWeights as $fw) {
+foreach ($fieldWeights as $fw) {
             DB::table('field_weights')->updateOrInsert(['metric_key' => $fw['metric_key']], array_merge($fw, ['created_at' => now(), 'updated_at' => now()]));
         }
+
+        // Hapus bobot yang TIDAK ada di SPEC A.1 (tl_response_quality = checklist kualitatif, tanpa bobot numerik)
+        DB::table('field_weights')->where('metric_key', 'tl_response_quality')->delete();
 
         // ===================== BIDANG WEIGHTS (A.4) =====================
         $bidangWeights = [

@@ -13,6 +13,30 @@ class ChangeLog extends Model
 
     protected $casts = ['date' => 'date'];
 
-    public function unit()      { return $this->belongsTo(Unit::class); }
+public function unit()      { return $this->belongsTo(Unit::class); }
     public function createdBy() { return $this->belongsTo(User::class, 'created_by'); }
+
+    /**
+     * Helper untuk mencatat perubahan manual ke Change Log (audit trail).
+     * Dipanggil dari semua controller yang melakukan perubahan/override.
+     */
+    public static function record(
+        string $sheetArea,
+        string $changeDescription,
+        ?string $reason = null,
+        ?int $unitId = null,
+        ?string $approvedBy = null,
+        string $status = 'Implemented'
+    ): self {
+        return self::create([
+            'date'               => now(),
+            'sheet_area'         => $sheetArea,
+            'change_description' => $changeDescription,
+            'reason'             => $reason,
+            'approved_by'        => $approvedBy ?? (auth()->user()->name ?? '-'),
+            'status'             => $status,
+            'unit_id'            => $unitId,
+            'created_by'         => auth()->id(),
+        ]);
+    }
 }

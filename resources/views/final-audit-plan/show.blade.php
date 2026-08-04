@@ -10,10 +10,6 @@
     <a href="{{ route('final-audit-plan.index') }}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Kembali</a>
 </div>
 
-@if(session('success'))
-<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
-@endif
-
 <div class="grid grid-cols-2" style="margin-bottom:1.25rem;">
     {{-- Info Unit & Plan --}}
     <div class="card">

@@ -307,7 +307,279 @@ Lihat Lampiran A untuk nilai lengkap. Kelompok parameter:
 
 ---
 
-## 4. LOGIKA KALKULASI (BUSINESS RULES) — DETAIL PER LANGKAH
+## 3B. STRUKTUR NAVIGASI & DETAIL TIAP MENU (PRESENTATION LAYER)
+
+> Bagian ini melengkapi §3 (Model Data) dengan lapisan UI: menu apa saja yang ada di modul Audit Plan, apa isi tiap halaman, field mana read-only vs editable, dan menu itu memetakan ke entitas mana. Dashboard diletakkan di **level aplikasi** (di luar modul Audit Plan), karena dia menampilkan agregat lintas-modul, bukan cuma dari Audit Plan.
+
+### Struktur menu final
+
+```
+📁 AUDIT PLAN
+│
+├── 🏢 Data Unit
+├── ⚠️ Penilaian Risiko
+│     ├── Input Data Mentah
+│     ├── Hasil Skor & Kategori
+│     └── Trigger Darurat
+├── 👤 Assignment RA
+├── 🔍 Coverage Offsite
+│     ├── Setup Fungsi Unit
+│     └── Detail per Data Code
+├── 📅 Jadwal Onsite
+│     ├── Frekuensi per Unit
+│     └── Kalender Kunjungan
+├── 📈 Kapasitas RA
+├── ✅ Final Audit Plan
+├── 📜 Change Log
+└── ⚙️ Pengaturan Modul
+```
+
+---
+
+### 3B.1 Data Unit
+**Entitas**: `units` (§3.1)
+**Tujuan**: kelola daftar master unit kerja.
+
+**Tampilan utama**: tabel semua unit.
+| Kolom | Read-only / Editable |
+|---|---|
+| Kode Unit | Editable saat create, read-only setelahnya |
+| Nama Unit | Editable |
+| Jenis Unit (KC/KCP/KCPLK/Payment Point) | Editable (dropdown) |
+| Kantor Induk | Editable |
+| Wilayah | Editable |
+| Status Aktif/Nonaktif | Editable (toggle) |
+| Base RA Unit | Editable (dropdown dari daftar cabang di mapping RA) |
+| Jarak dari Kantor Induk (km) | Editable |
+| Kategori Volume Transaksi | **Read-only** — computed dari skor risiko |
+| Keterangan | **Read-only** — computed |
+
+**Fitur**: tambah/edit/nonaktifkan unit; filter per jenis unit/wilayah/status aktif; **badge warning** kalau `base_ra_unit` tidak ketemu di mapping RA (link langsung ke Assignment RA untuk lihat detail).
+
+**Aksi**: Create, Edit, Nonaktifkan (soft-delete, bukan hapus permanen — supaya histori tetap ada).
+
+---
+
+### 3B.2 Penilaian Risiko
+
+#### 3B.2.a Input Data Mentah
+**Entitas**: `raw_metrics` (§3.2)
+**Tujuan**: tempat RA/Bagian RA input angka kejadian mentah per unit per periode.
+
+**Tampilan utama**: form per unit (pilih unit dulu dari dropdown/search), dibagi 6 tab/section sesuai bidang:
+- Tab Riwayat Pemeriksaan RA (7 field)
+- Tab Kas/Teller (4 field)
+- Tab CS/DPK/APU-PPT (3 field)
+- Tab Kredit (3 field)
+- Tab TI/ATM (4 field)
+- Tab Monitoring TL (7 field, termasuk 1 field checklist kualitatif)
+
+Semua field **editable**, semua angka **wajib non-negatif** (validasi), field rasio (NPL) wajib 0-1.
+
+**Fitur penting yang TIDAK ada di Excel tapi WAJIB ada di aplikasi**: pilihan **periode** (misal "Tahun 2027" / "Triwulan 3 2027") supaya input baru tidak menimpa data lama — simpan sebagai histori, bukan overwrite (lihat §7 poin 3).
+
+**Aksi**: Simpan draft, Submit (kunci setelah submit, perubahan berikutnya butuh approval — opsional tergantung kebijakan organisasi kamu), Lihat histori input periode sebelumnya.
+
+#### 3B.2.b Hasil Skor & Kategori
+**Entitas**: `risk_component_scores` + `risk_scoring` (§3.4, §3.5) — **digabung satu halaman**
+**Tujuan**: menampilkan hasil kalkulasi otomatis, murni read-only.
+
+**Dari mana asal angkanya**: 6 kolom skor bidang dihitung dari `raw_metrics` (angka yang diinput di menu "Input Data Mentah") dikalikan bobot indikator per bidang — rumus lengkapnya ada di **§4.2** dan daftar bobotnya di **Lampiran A.1**. Skor Weighted Final adalah gabungan 6 skor bidang itu dikalikan bobot bidang-ke-final yang berbeda per jenis unit — rumusnya di **§4.3** dan tabelnya di **Lampiran A.4**. Kategori Awal adalah hasil pemetaan Skor Weighted ke salah satu dari 5 rentang (§4.4, Lampiran A.5). Kategori Final memperhitungkan override darurat kalau ada (§4.5).
+
+**Tampilan utama**: tabel semua unit dengan kolom:
+| Kolom | Isi |
+|---|---|
+| Kode/Nama Unit | — |
+| 6 kolom skor bidang | Riwayat RA, Kas/Teller, CS/DPK, Kredit, TI/ATM, Monitoring TL — semua 0-100, dari `raw_metrics` × bobot §4.2 |
+| Skor Weighted Final | Gabungan 6 skor bidang × bobot per jenis unit, §4.3 |
+| Kategori Awal | Pemetaan skor ke rentang, §4.4 |
+| Override Aktif? | Ya/Tidak, dicek ke `critical_overrides`, dengan link ke Trigger Darurat kalau Ya |
+| Kategori Final | Override menang jika aktif, §4.5 — badge warna (merah=High, kuning=Moderate, hijau=Low) |
+| Prioritas | Rank 1-5, hasil pemetaan Kategori Final |
+
+Semua kolom **read-only** — tidak ada tombol edit di sini, karena ini murni tampilan hasil. Kalau user mau ubah angka, mereka diarahkan ke "Input Data Mentah".
+
+**Fitur**: sort berdasarkan Skor Weighted (lihat unit paling berisiko duluan), filter per kategori, **klik nama unit → drill-down** menampilkan rincian perhitungan per unit — daftar 6 bidang beserta angka mentah, bobot, dan kontribusi masing-masing ke skor final (persis pola perhitungan yang dijelaskan di §4.2-§4.3), supaya user bisa lihat persis kenapa angka akhirnya keluar segitu, bukan cuma percaya hasil jadi.
+
+#### 3B.2.c Trigger Darurat
+**Entitas**: `critical_overrides` (§3.6)
+**Tujuan**: catat kejadian darurat yang memaksa kategori jadi High.
+
+**Tampilan utama**: tabel daftar trigger + form tambah baru.
+| Field | Editable? |
+|---|---|
+| Unit | Editable (dropdown, wajib) |
+| Tanggal Trigger | Editable |
+| Jenis Trigger | Editable — **dropdown 8 pilihan tetap**: Fraud Indicator, Selisih Kas Material, Dokumen/Agunan Hilang, User Sistem Tidak Sah, Transaksi Tanpa Otorisasi, TL High/Critical Overdue, Penolakan Data RA, Repeat Finding Critical |
+| Deskripsi | Editable, text bebas |
+| Status | Editable — **dropdown 3 pilihan**: Aktif, Tidak Aktif, Selesai |
+| Disetujui Oleh | Editable |
+| Catatan | Editable |
+
+**Fitur**: filter status "Aktif" saja (default view); setiap perubahan status otomatis tercatat ke Change Log.
+
+---
+
+### 3B.3 Assignment RA
+**Entitas**: `ra_assignments` (§3.9), dibentuk dari `units` + `branch_ra_mapping` (§3.1, §3.8)
+**Tujuan**: menampilkan siapa RA (Primary & Backup) yang bertanggung jawab atas tiap unit.
+
+**Dari mana asal datanya (rantai sumbernya, bukan diketik langsung di menu ini)**:
+1. Setiap unit di `units` punya field `base_ra_unit` — nama kantor cabang tempat unit itu "menempel" secara administratif (diisi manual di menu **Data Unit**, bukan di sini).
+2. Nama cabang itu dicocokkan ke tabel `branch_ra_mapping` (dikelola di **Pengaturan Modul**) untuk mendapat `primary_ra_id` dan `backup_ra_id`.
+3. Hasil pencocokan 2 langkah itulah yang muncul di halaman ini — jadi field Primary RA/Backup RA di menu ini **read-only**, bukan diketik manual di sini. Kalau mau ganti RA suatu cabang secara permanen, perubahan dilakukan di **Pengaturan Modul → Daftar RA & Mapping Cabang**, bukan diklik-edit satu-satu di halaman ini.
+4. **Kategori Risiko** yang ikut ditampilkan di tabel ini datanya dari `risk_scoring` (§3.5) — murni untuk konteks visual, TIDAK ikut menentukan hasil assignment (assignment murni berbasis lokasi geografis, bukan skor risiko — lihat aturan bisnis §4.6 dan §6.7).
+
+**Tampilan utama**: tabel semua unit.
+| Kolom | Read-only / Editable | Sumber |
+|---|---|---|
+| Kode/Nama Unit | Read-only | `units` |
+| Kategori Risiko | Read-only, hanya konteks | `risk_scoring` |
+| Resident Base | Read-only | `units.base_ra_unit` |
+| Primary RA | Read-only (hasil lookup otomatis) | `branch_ra_mapping.primary_ra_id` |
+| Backup RA | Read-only, **bisa kosong** | `branch_ra_mapping.backup_ra_id` |
+| Status Assignment | Read-only, selalu "Aktif" | computed |
+| Berlaku Mulai — Sampai | Editable oleh Admin (periode tahunan) | `ra_assignments.valid_from/valid_to` |
+| Catatan | Read-only, muncul otomatis | computed: "Perlu Mapping RA" jika `base_ra_unit` tidak ketemu di `branch_ra_mapping` |
+
+**Fitur khusus di halaman ini**:
+- **Badge warning** pada baris yang Backup RA-nya kosong (ingat temuan §6.2 — mayoritas cabang di data sumber memang tidak punya backup).
+- **Badge warning kedua** pada baris berstatus "Perlu Mapping RA" — unit ini butuh perhatian karena base RA unit-nya belum terdaftar di mapping, sehingga tidak ada Primary RA yang bisa ditentukan otomatis.
+- **Filter per RA** — pilih 1 RA, tampilkan semua unit yang jadi tanggung jawabnya (berguna buat RA itu sendiri cek portofolio unitnya, atau Bagian RA cek beban kerja kasar sebelum buka menu Kapasitas RA).
+- **Form override manual** (khusus kasus khusus, misal RA cuti mendadak dan unitnya perlu dialihkan sementara) — mengisi field override di `ra_assignments` yang menimpa hasil lookup otomatis untuk unit spesifik itu saja, tanpa mengubah mapping cabang secara permanen. Setiap override ini **wajib otomatis tercatat** ke Change Log (§3B.8).
+
+**Aksi**: Lihat detail (klik baris → tampilkan histori assignment unit ini kalau ada), Set Override Manual, Filter per RA/status.
+
+---
+
+### 3B.4 Coverage Offsite
+
+#### 3B.4.a Setup Fungsi Unit
+**Entitas**: `coverage_setup` (§3.10)
+**Tujuan**: tentukan fungsi apa saja yang aktif di tiap unit.
+
+**Tampilan utama**: tabel unit × 8 area, tiap sel **dropdown editable** (Ya/Tidak/Event):
+Teller/Kas, CS/DPK, Kredit, ATM, Biaya/Jurnal, APU/FDS, TI Event, Pengaduan/Aset.
+
+**Fitur**: 2 kolom (Kredit, ATM) punya **nilai default otomatis** saat unit baru dibuat (berdasarkan jenis unit — lihat §4.7), tapi tetap bisa dioverride manual di sini kapan saja.
+
+#### 3B.4.b Detail per Data Code
+**Entitas**: `coverage_summary` + `coverage_detail` (§3.11, §3.13) — **digabung, drill-down**
+**Tujuan**: lihat skor kelengkapan coverage per unit, lalu drill-down ke 19 data code.
+
+**Tampilan utama (level 1 — daftar unit)**:
+| Kolom | Isi |
+|---|---|
+| Unit | — |
+| Jumlah Area Aktif | X dari 8 |
+| Coverage Score | persentase |
+| Status Coverage | badge: Lengkap / Cukup / Perlu Lengkapi Setup / Nonaktif |
+
+Semua **read-only** (computed dari Setup Fungsi Unit).
+
+**Klik unit → level 2 (detail 19 data code)**: tabel data code, area, mode coverage final (H+1/Event-based/Onsite-Periodik/Tidak), dan flag masuk SOP02/SOP04 — semua **read-only**.
+
+---
+
+### 3B.5 Jadwal Onsite
+
+#### 3B.5.a Frekuensi per Unit
+**Entitas**: `onsite_frequency` (§3.15)
+**Tujuan**: lihat & override frekuensi kunjungan onsite.
+
+**Tampilan utama**: tabel unit dengan kolom:
+| Kolom | Editable? |
+|---|---|
+| Kategori Risiko | Read-only |
+| Frekuensi Otomatis | Read-only |
+| Override Manual | **Editable** — dropdown **hanya 5 pilihan**: Bulanan, Triwulanan, Semesteran, Tahunan, Tidak Terjadwal |
+| Frekuensi Final | Read-only (override jika ada, else otomatis) |
+| Dasar Penetapan | Read-only, teks otomatis |
+
+**Catatan UI penting**: untuk unit `unit_type = KC`, tampilkan badge khusus **"Resident Daily Review"** alih-alih angka "0x/tahun" polos — supaya user tidak salah kira KC "tidak diawasi" (lihat §6.6).
+
+#### 3B.5.b Kalender Kunjungan
+**Entitas**: `scheduled_visits` (§3.16)
+**Tujuan**: lihat & kelola jadwal kunjungan onsite riil.
+
+**Tampilan utama**: **tampilan kalender visual** (bulan/minggu), bukan tabel mentah seperti Excel — tiap kunjungan muncul sebagai event dengan nama unit, RA, durasi.
+
+| Field per kunjungan | Editable? |
+|---|---|
+| Unit, RA, Kunjungan ke- | Read-only |
+| Tanggal Mulai/Selesai Otomatis | Read-only |
+| Override Tanggal Manual | Editable (date picker) |
+| Tanggal Final | Read-only (override jika ada) |
+| **Status** | **Editable — dropdown 5 pilihan**: Planned, In Progress, Completed, Postponed, Cancelled |
+| Catatan | Editable |
+
+**Fitur**: filter per RA/bulan/status; drag-and-drop reschedule (opsional, langsung update override tanggal); klik event → detail unit lengkap.
+
+---
+
+### 3B.6 Kapasitas RA
+**Entitas**: `ra_capacity` (§3.17)
+**Tujuan**: pantau beban kerja tiap RA per bulan.
+
+**Tampilan utama**: tabel/chart per RA × 12 bulan.
+| Kolom | Isi |
+|---|---|
+| RA | — |
+| Bulan | — |
+| Jumlah Unit Daily Offsite | — |
+| Estimasi Hari Offsite | — |
+| Jumlah & Total Hari Kunjungan Terjadwal | — |
+| Total Beban Hari | — |
+| Utilisasi (%) | — dengan progress bar visual |
+| Status Kapasitas | badge: OK (hijau) / Warning (kuning) / Over Capacity (merah) |
+
+Semua **read-only** (full computed). **Fitur**: notifikasi otomatis ke Bagian RA kalau ada RA berstatus "Over Capacity"; klik RA → lihat breakdown unit mana saja yang berkontribusi ke beban.
+
+---
+
+### 3B.7 Final Audit Plan
+**Entitas**: `final_audit_plan` (§3.18)
+**Tujuan**: output resmi rencana audit tahunan, siap di-approve.
+
+**Tampilan utama**: tabel semua unit, gabungan info dari semua modul sebelumnya (RA, kategori risiko, coverage, frekuensi, status).
+
+**Fitur**: tombol **"Approve"** per unit atau bulk-approve; unit dengan `plan_status = "Draft - Lengkapi Mapping RA"` tidak bisa di-approve sampai Assignment RA-nya dibereskan (validasi blocking); **export ke PDF/Excel** untuk dibagikan ke manajemen.
+
+---
+
+### 3B.8 Change Log
+**Entitas**: `change_log` (§3.19)
+**Tujuan**: audit trail seluruh perubahan manual di modul ini.
+
+**Tampilan utama**: tabel read-only, terisi **otomatis** setiap ada perubahan di Trigger Darurat, override manual (frekuensi/kalender/assignment), atau perubahan di Pengaturan Modul — user tidak mengetik langsung ke sini kecuali menambahkan alasan tambahan.
+
+| Kolom | Isi |
+|---|---|
+| Tanggal, Area/Sheet, Unit | — |
+| Deskripsi Perubahan | — |
+| Alasan | Editable saat pertama kali dicatat (form kecil muncul otomatis begitu user melakukan override di modul lain) |
+| Disetujui Oleh | — |
+| **Status** | **Dropdown 4 pilihan**: Draft, Approved, Rejected, Implemented |
+
+**Fitur**: filter per unit/tanggal/area; ini menu yang paling penting untuk kepatuhan/audit eksternal, jadi pastikan **tidak ada cara menghapus entri** (append-only).
+
+---
+
+### 3B.9 Pengaturan Modul
+**Entitas**: `master_setup` + `field_weights` + `frequency_matrix` + `data_codes` + `ras` + `branch_ra_mapping` (§3.3, §3.7, §3.8, §3.12, §3.14)
+**Akses**: **Admin only** — submenu ini disembunyikan sepenuhnya dari role selain Admin (bukan cuma di-disable).
+
+**Tampilan utama**: beberapa tab konfigurasi:
+- Tab **Bobot Skoring**: 26 bobot indikator (Lampiran A.1) + 6×5 tabel bobot bidang-ke-skor-final per jenis unit (Lampiran A.4) — semua editable, **tapi ubah ini WAJIB otomatis masuk Change Log** karena dampaknya besar ke semua unit sekaligus
+- Tab **Ambang Kategori Risiko**: 5 rentang skor (Lampiran A.5) — editable
+- Tab **Matriks Frekuensi**: 5×4 tabel (Lampiran A.3) — editable
+- Tab **Daftar RA & Mapping Cabang**: CRUD daftar RA + mapping ke cabang (Lampiran A.7) — editable
+- Tab **Data Code**: CRUD 19 data code + area + mode default (Lampiran A.2) — editable
+- Tab **Parameter Kalender & Kapasitas**: tahun audit plan, durasi kunjungan, hari kerja efektif, ambang warning (Lampiran A.6) — editable
+
+**Peringatan khusus untuk tab Bobot Skoring**: berdasarkan temuan §6.4 dan §A.4, di file Excel sumber ada 2 tabel bobot "fosil" (9-komponen dan Faktor Skor poin-absolut) yang tidak pernah dipakai. **Jangan tampilkan kedua tabel fosil ini di UI Pengaturan** kecuali sudah dikonfirmasi ke pemilik SOP mau dipakai — kalau ditampilkan berdampingan dengan tabel yang aktif, ini bisa membingungkan Admin baru yang tidak tahu mana yang benar-benar berpengaruh ke kalkulasi.
+
+---
 
 ### 4.1 Kategori Volume Transaksi (di `units`, computed)
 ```
@@ -606,7 +878,9 @@ Konversi label → hari durasi kunjungan: Bulanan=2 hari, Triwulanan=5 hari, Sem
 | Monitoring TL | 15% | 15% | 15% | 20% | 25% |
 | **Total** | 100% | 100% | 100% | 100% | 100% |
 
-*(Formula juga menyediakan cabang untuk kode jenis unit "KCU" dan "PP" sebagai alias — kemungkinan singkatan alternatif untuk KC dan Payment Point yang dipakai di sebagian data. Untuk kode "KP" (Kantor Pusat) dan jenis unit lain di luar 5 kategori ini, semua bobot = 0%.)*
+*(Formula juga menyediakan cabang untuk kode jenis unit "KCU" dan "PP" sebagai **alias**: `KCU` selalu mendapat bobot identik persis dengan `KC` di keenam bidang — bukan kategori terpisah. `PP` selalu mendapat bobot identik persis dengan `Payment Point` — juga alias, bukan kategori terpisah.
+
+`KP` **BUKAN alias dari Payment Point** meski singkatannya mirip — ini kemungkinan besar singkatan **"Kantor Pusat"**, ditulis sebagai cabang `SWITCH` yang eksplisit dan terpisah, dengan bobot **0% di semua 6 bidang tanpa kecuali**. Ini disengaja (bukan sekadar jatuh ke default karena kode tidak dikenali) — artinya unit berjenis "KP" akan SELALU mendapat skor risiko weighted = 0, apapun data mentahnya. Kemungkinan Kantor Pusat memang sengaja dikecualikan dari skema skoring risiko unit cabang ini. Kode jenis unit lain yang benar-benar tidak dikenali (di luar 7 cabang eksplisit ini) jatuh ke default 0% lewat jalur berbeda — secara hasil angka sama-sama 0%, tapi secara desain artinya beda: "sengaja dikecualikan" vs "tidak dikenali sistem".)*
 
 **✅ KLARIFIKASI FINAL soal ambiguitas "6 bidang vs 9 komponen" (sudah diverifikasi tuntas ke level formula, bukan dugaan lagi):**
 

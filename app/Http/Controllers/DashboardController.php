@@ -21,9 +21,28 @@ class DashboardController extends Controller
         $jadwalSelesai = AuditPlan::where('status_approval', 'approved')->count();
         $totalFinalPlan = FinalAuditPlan::count();
 
+        // §5 — Agregat dashboard
+        $period    = date('Y');
+        $units     = Unit::where('is_active', true)->get();
+        $riskDist  = $units->groupBy(fn($u) => $u->latestRiskScoring($period)?->final_category ?? 'Belum Dinilai')
+            ->map->count();
+        $typeDist  = $units->groupBy('unit_type')->map->count();
+
+        $freqDist = \App\Models\OnsiteFrequency::where('period', $period)
+            ->get()
+            ->groupBy(fn($f) => $f->is_resident_daily_review ? 'Resident Daily Review' : ($f->final_frequency_label ?? 'Tidak Terjadwal'))
+            ->map->count();
+
+        $planStats = [
+            'total'    => $totalFinalPlan,
+            'approved' => FinalAuditPlan::where('period', $period)->where('plan_status', 'Approved')->count(),
+            'draft'    => FinalAuditPlan::where('period', $period)->where('plan_status', 'Draft - Lengkapi Mapping RA')->count(),
+        ];
+
         return view('dashboard', compact(
             'user', 'totalRa', 'totalUnit',
-            'jadwalAktif', 'totalJadwal', 'jadwalSelesai', 'totalFinalPlan'
+            'jadwalAktif', 'totalJadwal', 'jadwalSelesai', 'totalFinalPlan',
+            'riskDist', 'typeDist', 'freqDist', 'planStats'
         ));
     }
 }

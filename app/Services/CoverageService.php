@@ -38,12 +38,22 @@ class CoverageService
         );
     }
 
-    /**
+/**
      * Assign RA untuk semua unit aktif sekaligus
      */
     public function assignAllRa(int $year): void
     {
         Unit::where('is_active', true)->each(fn($unit) => $this->assignRa($unit, $year));
+    }
+
+    /**
+     * Compute coverage summary + detail untuk semua unit aktif sekaligus (§4.8, §4.9)
+     */
+    public function generateAllCoverage(int $period): void
+    {
+        Unit::where('is_active', true)->each(function ($unit) use ($period) {
+            $this->computeCoverageSummary($unit, $period);
+        });
     }
 
     /**

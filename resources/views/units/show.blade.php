@@ -7,18 +7,17 @@
         <h1>{{ $unit->unit_name }}</h1>
         <p>{{ $unit->unit_code }} — {{ $unit->unit_type }}</p>
     </div>
-    <div style="display:flex;gap:0.5rem;">
+<div style="display:flex;gap:0.5rem;">
         @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
-        <a href="{{ route('raw-metrics.create', ['unit' => $unit, 'period' => $period]) }}" class="btn btn-primary btn-sm"><i class="bi bi-input-cursor-text"></i> Input Raw Metrics</a>
         <a href="{{ route('coverage.show', $unit) }}" class="btn btn-outline btn-sm"><i class="bi bi-grid-3x3-gap"></i> Coverage Setup</a>
         @endif
+        @if(request('from') === 'risk-scoring')
+        <a href="{{ route('risk-scoring.index', ['period' => $period]) }}" class="btn btn-outline btn-sm"><i class="bi bi-arrow-left"></i> Kembali ke Penilaian Risiko</a>
+        @else
         <a href="{{ route('units.index') }}" class="btn btn-outline btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
+        @endif
     </div>
 </div>
-
-@if(session('success'))
-<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
-@endif
 
 <div class="grid grid-cols-2" style="margin-bottom:1.25rem;">
     <div class="card">

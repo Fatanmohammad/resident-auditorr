@@ -7,6 +7,7 @@ use App\Models\Ra;
 use App\Models\OnsiteFrequency;
 use App\Models\ScheduledVisit;
 use App\Models\RaCapacity;
+use App\Models\ChangeLog;
 use App\Services\SchedulingService;
 use Illuminate\Http\Request;
 
@@ -42,9 +43,10 @@ class SchedulingController extends Controller
     // Override frekuensi manual untuk satu unit
     public function overrideFrequency(Request $request, Unit $unit)
     {
-        $request->validate([
+$request->validate([
             'period'                    => 'required|integer',
             'manual_override_frequency' => 'required|in:Bulanan,Triwulanan,Semesteran,Tahunan,Tidak Terjadwal',
+            'reason'                    => 'nullable|string',
         ]);
 
         $period = $request->integer('period');
@@ -57,10 +59,18 @@ class SchedulingController extends Controller
         $this->schedulingService->computeFrequency($unit, $period);
         $this->schedulingService->generateSchedule($unit, $period);
 
-        $assignment = $unit->raAssignment;
+$assignment = $unit->raAssignment;
         if ($assignment?->primaryRa) {
             $this->schedulingService->computeRaCapacity($assignment->primaryRa, $period);
         }
+
+        // Catat ke Change Log
+        ChangeLog::record(
+            sheetArea: 'Jadwal Onsite',
+            changeDescription: "Override frekuensi unit {$unit->unit_name} ({$unit->unit_code}) menjadi '{$request->manual_override_frequency}' untuk periode {$period}",
+            reason: $request->input('reason'),
+            unitId: $unit->id,
+        );
 
         return back()->with('success', 'Override frekuensi disimpan dan jadwal diperbarui.');
     }
@@ -68,10 +78,11 @@ class SchedulingController extends Controller
     // Override tanggal kunjungan manual
     public function overrideVisit(Request $request, ScheduledVisit $visit)
     {
-        $request->validate([
+$request->validate([
             'manual_override_start' => 'required|date',
             'manual_override_end'   => 'required|date|after_or_equal:manual_override_start',
-            'manual_notes'          => 'nullable|string',
+            'manual_notes'           => 'nullable|string',
+            'reason'                 => 'nullable|string',
         ]);
 
         $start    = $request->manual_override_start;
@@ -93,6 +104,14 @@ class SchedulingController extends Controller
             $this->schedulingService->computeRaCapacity($assignment->primaryRa, $visit->period);
         }
 
+        // Catat ke Change Log
+        ChangeLog::record(
+            sheetArea: 'Jadwal Onsite',
+            changeDescription: "Override tanggal kunjungan ke-{$visit->visit_number} unit {$visit->unit->unit_name} ({$visit->unit->unit_code}) menjadi {$start} s/d {$end}",
+            reason: $request->input('reason'),
+            unitId: $visit->unit_id,
+        );
+
         return back()->with('success', 'Jadwal kunjungan diperbarui.');
     }
 
@@ -100,7 +119,17 @@ class SchedulingController extends Controller
     public function updateVisitStatus(Request $request, ScheduledVisit $visit)
     {
         $request->validate(['status' => 'required|in:Planned,In Progress,Completed,Postponed,Cancelled']);
+        $oldStatus = $visit->status;
         $visit->update(['status' => $request->status]);
+
+        // Catat ke Change Log
+        ChangeLog::record(
+            sheetArea: 'Jadwal Onsite',
+            changeDescription: "Ubah status kunjungan ke-{$visit->visit_number} unit {$visit->unit->unit_name} ({$visit->unit->unit_code}) dari '{$oldStatus}' menjadi '{$request->status}'",
+            reason: $request->input('reason'),
+            unitId: $visit->unit_id,
+        );
+
         return back()->with('success', 'Status kunjungan diperbarui.');
     }
 

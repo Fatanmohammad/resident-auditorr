@@ -18,7 +18,9 @@ class Unit extends Model
     public function riskScorings() { return $this->hasMany(RiskScoring::class); }
     public function criticalOverrides() { return $this->hasMany(CriticalOverride::class); }
     public function raAssignment() { return $this->hasOne(RaAssignment::class); }
-    public function coverageSetup() { return $this->hasOne(CoverageSetup::class); }
+public function coverageSetup() { return $this->hasOne(CoverageSetup::class); }
+    public function coverageSummaries() { return $this->hasMany(CoverageSummary::class); }
+    public function coverageDetails() { return $this->hasMany(CoverageDetail::class); }
     public function onsiteFrequency() { return $this->hasOne(OnsiteFrequency::class); }
 
     public function latestRiskScoring(?int $period = null)

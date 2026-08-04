@@ -18,10 +18,6 @@
     @endif
 </div>
 
-@if(session('success'))
-<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
-@endif
-
 {{-- Dashboard Agregat --}}
 <div class="grid grid-cols-4" style="margin-bottom:1.25rem;">
     <div class="stat-card">

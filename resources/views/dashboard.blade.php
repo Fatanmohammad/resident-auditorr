@@ -48,6 +48,53 @@
     </div>
 </div>
 
+{{-- Distrribusi Risiko & Frekuensi (§5) --}}
+<div class="grid grid-cols-2" style="margin-bottom:1.5rem;">
+    <div class="card">
+        <div class="card-header"><div class="card-title">Distribusi Kategori Risiko</div></div>
+        <div class="card-body">
+            @foreach(['High','Moderate to High','Moderate','Low to Moderate','Low','Belum Dinilai'] as $cat)
+            @php
+                $count = $riskDist[$cat] ?? 0;
+                $pct   = $totalUnit > 0 ? round($count / $totalUnit * 100) : 0;
+                $cls   = match($cat) { 'High'=>'badge-danger','Moderate to High'=>'badge-warning','Moderate'=>'badge-info','Low to Moderate'=>'badge-purple','Belum Dinilai'=>'badge-gray',default=>'badge-gray' };
+            @endphp
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;">
+                <span class="badge {{ $cls }}" style="width:130px;justify-content:center;">{{ $cat }}</span>
+                <div style="flex:1;background:#f3f4f6;border-radius:9999px;height:8px;">
+                    <div style="width:{{ $pct }}%;background:var(--bs-blue);height:8px;border-radius:9999px;"></div>
+                </div>
+                <span style="font-size:0.8rem;font-weight:600;color:var(--text-main);width:30px;text-align:right;">{{ $count }}</span>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    <div>
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-header"><div class="card-title">Distribusi Jenis Unit</div></div>
+            <div class="card-body">
+                @foreach($typeDist as $type => $count)
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--border-color);font-size:0.82rem;">
+                    <span>{{ $type }}</span>
+                    <span class="badge badge-info">{{ $count }} unit</span>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><div class="card-title">Distribusi Frekuensi Onsite</div></div>
+            <div class="card-body">
+                @foreach($freqDist as $freq => $count)
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--border-color);font-size:0.82rem;">
+                    <span>{{ $freq }}</span>
+                    <span class="badge badge-info">{{ $count }} unit</span>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- Audit Plan terkini + shortcut --}}
 <div class="grid grid-cols-2">
     <div class="card">

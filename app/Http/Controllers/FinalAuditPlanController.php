@@ -68,24 +68,30 @@ class FinalAuditPlanController extends Controller
         $this->schedulingService->computeAllCapacities($period);
         $this->planService->generateAll($period);
 
-        ChangeLog::create([
-            'date'               => now(),
-            'sheet_area'         => 'Final Audit Plan',
-            'change_description' => "Generate Final Audit Plan periode {$period}",
-            'reason'             => 'Generate otomatis via sistem',
-            'approved_by'        => Auth::user()->name,
-            'status'             => 'Implemented',
-            'created_by'         => Auth::id(),
-        ]);
+ChangeLog::record(
+            sheetArea: 'Final Audit Plan',
+            changeDescription: "Generate Final Audit Plan periode {$period} untuk semua unit aktif — termasuk assignment RA, frekuensi, jadwal, dan kapasitas",
+            reason: $request->input('reason', 'Generate otomatis via sistem'),
+        );
 
         return back()->with('success', "Final Audit Plan periode {$period} berhasil digenerate.");
     }
 
-    // Change Log
+// Change Log
     public function changeLog()
     {
-        $logs = ChangeLog::with(['unit', 'createdBy'])->latest()->paginate(20);
-        return view('final-audit-plan.change-log', compact('logs'));
+        $area  = request('area');
+        $status = request('status');
+
+        $logs = ChangeLog::with(['unit', 'createdBy'])
+            ->when($area, fn($q) => $q->where('sheet_area', $area))
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->latest()
+            ->paginate(20);
+
+        $areas = ChangeLog::select('sheet_area')->distinct()->orderBy('sheet_area')->pluck('sheet_area');
+
+        return view('final-audit-plan.change-log', compact('logs', 'areas', 'area', 'status'));
     }
 
     public function storeChangeLog(Request $request)

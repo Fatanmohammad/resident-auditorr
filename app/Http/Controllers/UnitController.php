@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Unit;
 use App\Models\BranchRaMapping;
+use App\Models\ChangeLog;
 use Illuminate\Http\Request;
 
 class UnitController extends Controller
@@ -23,7 +24,7 @@ class UnitController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+$validated = $request->validate([
             'unit_code'               => 'required|string|unique:units,unit_code',
             'unit_name'               => 'required|string',
             'unit_type'               => 'required|in:KC,KCU,KCP,KCPLK,Payment Point',
@@ -32,9 +33,19 @@ class UnitController extends Controller
             'base_ra_unit'            => 'nullable|string',
             'distance_from_parent_km' => 'nullable|numeric|min:0',
             'is_active'               => 'boolean',
+            'reason'                  => 'nullable|string',
         ]);
-        $validated['is_active'] = $request->boolean('is_active', true);
-        Unit::create($validated);
+$validated['is_active'] = $request->boolean('is_active', true);
+        $unit = Unit::create($validated);
+
+        // Catat ke Change Log
+        ChangeLog::record(
+            sheetArea: 'Master Unit',
+            changeDescription: "Tambah unit baru {$unit->unit_name} ({$unit->unit_code}) — tipe {$unit->unit_type}",
+            reason: $request->input('reason'),
+            unitId: $unit->id,
+        );
+
         return redirect()->route('units.index')->with('success', 'Unit berhasil ditambahkan.');
     }
 
@@ -55,7 +66,7 @@ class UnitController extends Controller
 
     public function update(Request $request, Unit $unit)
     {
-        $validated = $request->validate([
+$validated = $request->validate([
             'unit_name'               => 'required|string',
             'unit_type'               => 'required|in:KC,KCU,KCP,KCPLK,Payment Point',
             'parent_office'           => 'nullable|string',
@@ -63,9 +74,32 @@ class UnitController extends Controller
             'base_ra_unit'            => 'nullable|string',
             'distance_from_parent_km' => 'nullable|numeric|min:0',
             'is_active'               => 'boolean',
+            'reason'                  => 'nullable|string',
         ]);
-        $validated['is_active'] = $request->boolean('is_active', true);
+$validated['is_active'] = $request->boolean('is_active', true);
         $unit->update($validated);
+
+        // Catat ke Change Log
+        ChangeLog::record(
+            sheetArea: 'Master Unit',
+            changeDescription: "Update unit {$unit->unit_name} ({$unit->unit_code}) — tipe {$unit->unit_type}, base RA unit: {$unit->base_ra_unit}",
+            reason: $request->input('reason'),
+            unitId: $unit->id,
+        );
+
         return redirect()->route('units.index')->with('success', 'Unit berhasil diperbarui.');
+    }
+
+    public function riskScoringIndex()
+    {
+        $period = request('period', date('Y'));
+        $units  = Unit::with([
+            'riskScorings'      => fn($q) => $q->where('period', $period),
+            'criticalOverrides' => fn($q) => $q->where('status', 'Aktif'),
+        ])->where('is_active', true)
+          ->orderByRaw("FIELD(unit_type,'KC','KCU','KCP','KCPLK','Payment Point')")
+          ->get();
+
+        return view('risk-scoring.index', compact('units', 'period'));
     }
 }
