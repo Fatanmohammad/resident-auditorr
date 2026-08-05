@@ -7,6 +7,7 @@ use App\Models\CoverageSetup;
 use App\Models\ChangeLog;
 use App\Services\CoverageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CoverageController extends Controller
 {
@@ -106,14 +107,21 @@ public function assignAll(Request $request)
         return back()->with('success', "Assignment RA untuk tahun {$year} berhasil diproses.");
     }
 
-    public function assignmentIndex()
+public function assignmentIndex()
     {
-        $period      = request('period', date('Y'));
-        $assignments = \App\Models\RaAssignment::with(['unit', 'primaryRa', 'backupRa'])
+        $period = request('period', date('Y'));
+
+        $query = \App\Models\RaAssignment::with(['unit', 'primaryRa', 'backupRa'])
             ->where('valid_from', '<=', $period)
-            ->where('valid_to', '>=', $period)
-            ->get()
-            ->sortBy('unit.unit_name');
+            ->where('valid_to', '>=', $period);
+
+        // RA hanya melihat assignment untuk unit di cabangnya + anak cabangnya
+        $allowedCabangIds = Auth::user()->cabangIdYangDapatDiakses();
+        if ($allowedCabangIds !== null) {
+            $query->whereHas('unit', fn($q) => $q->whereIn('cabang_id', $allowedCabangIds));
+        }
+
+        $assignments = $query->get()->sortBy('unit.unit_name');
 
         $riskScorings = \App\Models\RiskScoring::where('period', $period)
             ->pluck('final_category', 'unit_id');

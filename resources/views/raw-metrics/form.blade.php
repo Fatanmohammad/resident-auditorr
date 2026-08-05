@@ -2,12 +2,17 @@
 @section('title', 'Input Raw Metrics')
 
 @section('content')
+@php
+    $backUrl = (auth()->user()->role === 'ra')
+        ? route('raw-metrics.index')
+        : route('units.show', $unit);
+@endphp
 <div class="page-header">
     <div class="page-header-title">
         <h1>Input Raw Metrics</h1>
         <p>{{ $unit->unit_name }} — {{ $unit->unit_code }}</p>
     </div>
-    <a href="{{ route('units.show', $unit) }}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Kembali</a>
+    <a href="{{ $backUrl }}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Kembali</a>
 </div>
 
 <form action="{{ route('raw-metrics.store', $unit) }}" method="POST">
@@ -157,8 +162,8 @@ $hideTi = in_array($unit->unit_type, ['Payment Point']);
 </div>
 
 <div style="margin-top:1.25rem;display:flex;gap:0.75rem;">
-    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Simpan & Hitung Skor</button>
-    <a href="{{ route('units.show', $unit) }}" class="btn btn-outline">Batal</a>
+<button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Simpan & Hitung Skor</button>
+    <a href="{{ $backUrl }}" class="btn btn-outline">Batal</a>
 </div>
 </form>
 @endsection

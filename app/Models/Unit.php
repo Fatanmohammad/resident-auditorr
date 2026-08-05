@@ -6,13 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Unit extends Model
 {
-    protected $fillable = [
+protected $fillable = [
         'unit_code', 'unit_name', 'unit_type', 'parent_office', 'region',
-        'is_active', 'base_ra_unit', 'distance_from_parent_km',
+        'is_active', 'base_ra_unit', 'cabang_id', 'distance_from_parent_km',
         'transaction_volume_category', 'auto_description',
     ];
 
     protected $casts = ['is_active' => 'boolean'];
+
+    public function cabang() { return $this->belongsTo(Cabang::class, 'cabang_id'); }
 
     public function rawMetrics() { return $this->hasMany(RawMetric::class); }
     public function riskScorings() { return $this->hasMany(RiskScoring::class); }

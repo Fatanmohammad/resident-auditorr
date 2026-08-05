@@ -15,21 +15,33 @@ class CoverageService
     /**
      * Compute RA assignment untuk satu unit (§4.6)
      * Murni geografis: unit.base_ra_unit → branch_ra_mapping → primary/backup RA
+     *
+     * @param int|null $primaryOverride  Jika diisi, nilai primary dipaksa (untuk distribusi 2 RA)
+     * @param int|null $backupOverride   Jika diisi, nilai backup dipaksa (untuk distribusi 2 RA)
+     * @param string|null $noteOverride  Catatan tambahan untuk distribusi
      */
-    public function assignRa(Unit $unit, int $year): RaAssignment
+    public function assignRa(Unit $unit, int $year, ?int $primaryOverride = null, ?int $backupOverride = null, ?string $noteOverride = null): RaAssignment
     {
         $mapping = BranchRaMapping::where('branch_name', $unit->base_ra_unit)->first();
+
+        $hasTwoRa = $mapping && $mapping->primary_ra_id && $mapping->backup_ra_id;
+
+        // Untuk cabang ber-2 RA gunakan nilai distribusi (override), cabang lain pakai mapping asli
+        $primaryRaId = $hasTwoRa ? ($primaryOverride ?? $mapping->primary_ra_id) : $mapping?->primary_ra_id;
+        $backupRaId  = $hasTwoRa ? ($backupOverride  ?? $mapping->backup_ra_id)  : $mapping?->backup_ra_id;
 
         $notes = null;
         if (!$mapping) {
             $notes = 'Perlu Mapping RA — Lengkapi Master Setup';
+        } elseif ($hasTwoRa && $noteOverride) {
+            $notes = $noteOverride;
         }
 
         return RaAssignment::updateOrCreate(
             ['unit_id' => $unit->id, 'valid_from' => $year],
             [
-                'primary_ra_id'     => $mapping?->primary_ra_id,
-                'backup_ra_id'      => $mapping?->backup_ra_id,
+                'primary_ra_id'     => $primaryRaId,
+                'backup_ra_id'      => $backupRaId,
                 'resident_base'     => $unit->base_ra_unit,
                 'assignment_status' => 'Aktif',
                 'valid_to'          => $year,
@@ -38,12 +50,49 @@ class CoverageService
         );
     }
 
-/**
-     * Assign RA untuk semua unit aktif sekaligus
+    /**
+     * Assign RA untuk semua unit aktif sekaligus (§4.6 + distribusi 2 RA)
+     *
+     * Untuk cabang yang memiliki 2 RA (primary + backup), unit-unit di bawah cabang
+     * tersebut dibagi (rotasi) merata antara kedua RA sehingga beban kerja terbagi.
+     * Cabang dengan 1 RA tidak diubah.
      */
     public function assignAllRa(int $year): void
     {
-        Unit::where('is_active', true)->each(fn($unit) => $this->assignRa($unit, $year));
+        $units = Unit::where('is_active', true)->orderBy('base_ra_unit')->get();
+
+        // Kelompokkan unit berdasarkan base_ra_unit (cabang tempat RA berkedudukan)
+        $groups = $units->groupBy('base_ra_unit');
+
+        foreach ($groups as $baseRaUnit => $groupUnits) {
+            $mapping = BranchRaMapping::where('branch_name', $baseRaUnit)->first();
+
+            // Cabang yang punya 2 RA → distribusi beban merata antar RA
+            if ($mapping && $mapping->primary_ra_id && $mapping->backup_ra_id && $groupUnits->count() > 1) {
+                $raIds = [$mapping->primary_ra_id, $mapping->backup_ra_id];
+                $idx = 0;
+
+                foreach ($groupUnits as $unit) {
+                    // Rotasi: unit pertama → RA1 primary, unit kedua → RA2 primary, dst.
+                    $primary = $raIds[$idx % 2];
+                    $backup  = $raIds[($idx + 1) % 2];
+                    $idx++;
+
+                    $this->assignRa(
+                        $unit,
+                        $year,
+                        $primary,
+                        $backup,
+                        "Distribusi 2 RA: primary {$primary} (backup {$backup})"
+                    );
+                }
+            } else {
+                // Cabang 1 RA (atau mapping tidak lengkap) → assign normal seperti biasa
+                foreach ($groupUnits as $unit) {
+                    $this->assignRa($unit, $year);
+                }
+            }
+        }
     }
 
     /**

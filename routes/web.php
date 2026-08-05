@@ -37,8 +37,8 @@ Route::get('/{id}', [AuditPlanController::class, 'show'])->name('show');
     // SOP 01 — MODUL AUDIT PLAN BARU
     // ==========================================
 
-// Master Unit
-    Route::prefix('units')->name('units.')->middleware('role:kadiv_skai,kabag_ra,pimsie,ra,admin')->group(function () {
+// Master Unit (RA TIDAK diizinkan — RA hanya menginput raw metrics via raw-metrics.index) 
+Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,pimsie,admin')->group(function () {
         Route::get('/', [UnitController::class, 'index'])->name('index');
         Route::get('/create', [UnitController::class, 'create'])->name('create')->middleware('role:kadiv_skai,kabag_ra,admin');
         Route::post('/', [UnitController::class, 'store'])->name('store')->middleware('role:kadiv_skai,kabag_ra,admin');
@@ -47,21 +47,21 @@ Route::get('/{id}', [AuditPlanController::class, 'show'])->name('show');
         Route::put('/{unit}', [UnitController::class, 'update'])->name('update')->middleware('role:kadiv_skai,kabag_ra,admin');
     });
 
-    // Risk Scoring index
-    Route::get('/risk-scoring', [UnitController::class, 'riskScoringIndex'])->name('risk-scoring.index')->middleware('role:kadiv_skai,kabag_ra,ra,pimsie,admin');
+    // Risk Scoring index (RA TIDAK diizinkan)
+    Route::get('/risk-scoring', [UnitController::class, 'riskScoringIndex'])->name('risk-scoring.index')->middleware('role:kadiv_skai,kabag_ra,pimsie,admin');
 
-    // Assignment RA index
-    Route::get('/assignment-ra', [CoverageController::class, 'assignmentIndex'])->name('assignment-ra.index')->middleware('role:kadiv_skai,kabag_ra,ra,pimsie,admin');
+    // Assignment RA index (RA TIDAK diizinkan)
+    Route::get('/assignment-ra', [CoverageController::class, 'assignmentIndex'])->name('assignment-ra.index')->middleware('role:kadiv_skai,kabag_ra,pimsie,admin');
 
-// Raw Metrics
+// Raw Metrics (RA memegang akses utama di sini — HANYA input raw metrics)
     Route::prefix('raw-metrics')->name('raw-metrics.')->middleware('role:kabag_ra,ra,admin')->group(function () {
+        Route::get('/', [RawMetricController::class, 'index'])->name('index');
         Route::get('/{unit}/form', [RawMetricController::class, 'create'])->name('create');
         Route::post('/{unit}', [RawMetricController::class, 'store'])->name('store');
     });
 
-    // Critical Override
+// Critical Override (hanya dipakai dari detail unit — menu terpisah sudah dihapus)
     Route::prefix('critical-override')->name('critical-override.')->middleware('role:kabag_ra,kadiv_skai,admin')->group(function () {
-        Route::get('/', [CriticalOverrideController::class, 'index'])->name('index');
         Route::post('/{unit}', [CriticalOverrideController::class, 'store'])->name('store');
         Route::patch('/{override}/status', [CriticalOverrideController::class, 'updateStatus'])->name('status');
     });

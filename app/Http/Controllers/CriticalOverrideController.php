@@ -13,21 +13,6 @@ class CriticalOverrideController extends Controller
 {
 public function __construct(private RiskScoringService $scoringService) {}
 
-    public function index()
-    {
-        $period = request('period', date('Y'));
-        $status = request('status', 'Aktif');
-
-        $overrides = CriticalOverride::with(['unit', 'createdBy'])
-            ->when($status, fn($q) => $q->where('status', $status))
-            ->latest()
-            ->get();
-
-        $units = Unit::where('is_active', true)->orderBy('unit_name')->get();
-
-        return view('critical-override.index', compact('overrides', 'units', 'period', 'status'));
-    }
-
     public function store(Request $request, Unit $unit)
     {
 $validated = $request->validate([

@@ -12,8 +12,51 @@ class RawMetricController extends Controller
 {
 public function __construct(private RiskScoringService $scoringService) {}
 
+    /**
+     * Pastikan user (khususnya role RA) berhak mengakses unit.
+     * RA hanya boleh mengakses unit di cabangnya + seluruh anak cabangnya.
+     * Operator (kabag_ra/kadiv_skai/admin) boleh mengakses semua unit.
+     */
+    private function ensureCanAccessUnit(Unit $unit): void
+    {
+        $allowedCabangIds = Auth::user()->cabangIdYangDapatDiakses();
+
+        // null = operator (akses semua); kosong = RA tanpa cabang (akses none)
+        if ($allowedCabangIds === null) {
+            return;
+        }
+
+        if (!$unit->cabang_id || !in_array($unit->cabang_id, $allowedCabangIds)) {
+            abort(403, 'Anda hanya dapat mengakses unit di cabang Anda sendiri.');
+        }
+    }
+
+/**
+     * Halaman daftar unit untuk menginput raw metrics.
+     * RA hanya melihat unit pada wilayahnya (cabang sendiri + anak cabang).
+     * Halaman ini TIDAK menampilkan skor risiko (hanya untuk input).
+     */
+    public function index()
+    {
+        $allowedCabangIds = Auth::user()->cabangIdYangDapatDiakses();
+
+        $query = Unit::withCount('rawMetrics')
+            ->where('is_active', true);
+
+        if ($allowedCabangIds !== null) {
+            $query->whereIn('units.cabang_id', $allowedCabangIds);
+        }
+
+        $period = request('period', date('Y'));
+        $units = $query->orderBy('unit_type')->orderBy('unit_name')->get();
+
+        return view('raw-metrics.index', compact('units', 'period'));
+    }
+
     public function create(Unit $unit)
     {
+        $this->ensureCanAccessUnit($unit);
+
         $period  = request('period', date('Y'));
         $existing = RawMetric::where('unit_id', $unit->id)->where('period', $period)->first();
         return view('raw-metrics.form', compact('unit', 'period', 'existing'));
@@ -21,6 +64,8 @@ public function __construct(private RiskScoringService $scoringService) {}
 
 public function store(Request $request, Unit $unit)
     {
+        $this->ensureCanAccessUnit($unit);
+
         $period = $request->integer('period', date('Y'));
 
         // Aturan validasi dasar (period + semua bidang yang selalu relevan)
@@ -92,9 +137,14 @@ public function store(Request $request, Unit $unit)
             $validated
         );
 
-        // Recompute otomatis seluruh chain scoring
+// Recompute otomatis seluruh chain scoring
         $this->scoringService->recompute($unit, $period);
 
-        return redirect()->route('units.show', $unit)->with('success', 'Raw metrics disimpan dan scoring diperbarui.');
+        // RA hanya punya akses halaman raw-metrics → arahkan kembali ke daftar input
+        $redirect = (Auth::user()->role === 'ra')
+            ? redirect()->route('raw-metrics.index', ['period' => $period])
+            : redirect()->route('units.show', $unit);
+
+        return $redirect->with('success', 'Raw metrics disimpan dan scoring diperbarui.');
     }
 }

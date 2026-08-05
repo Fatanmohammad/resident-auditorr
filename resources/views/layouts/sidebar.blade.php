@@ -10,9 +10,12 @@
             $role = auth()->user()->role;
 // Role yang boleh mengelola master data (Admin/Operasional)
             $canManage = in_array($role, ['kabag_ra', 'kadiv_skai', 'admin']);
-            // Role yang bisa input raw metrics & override (admin = akses sama seperti kabag_ra)
+// Role yang bisa input raw metrics & override (admin = akses sama seperti kabag_ra)
             $canInput  = in_array($role, ['kabag_ra', 'ra', 'admin']);
-            $canView   = in_array($role, ['kabag_ra', 'kadiv_skai', 'ra', 'pimsie', 'admin']);
+// Audit Plan & submenunya (termasuk Data Unit) tampil untuk semua akun terkait termasuk RA
+$canView   = in_array($role, ['ra', 'kabag_ra', 'kadiv_skai', 'pimsie', 'admin']);
+            // RA hanya melihat submenu Data Unit di dalam Audit Plan (sesuai kebutuhan)
+            $isRa = $role === 'ra';
         @endphp
 
         <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
@@ -21,7 +24,7 @@
 
         {{-- ===================== AUDIT PLAN (parent) ===================== --}}
         @if($canView)
-        <div class="nav-group open {{ request()->routeIs('units.*', 'raw-metrics.*', 'risk-scoring.index', 'critical-override.*', 'assignment-ra.*', 'coverage.*', 'scheduling.*', 'final-audit-plan.*') ? 'open' : '' }}">
+<div class="nav-group open {{ request()->routeIs('units.*', 'raw-metrics.*', 'risk-scoring.index', 'assignment-ra.*', 'coverage.*', 'scheduling.*', 'final-audit-plan.*') ? 'open' : '' }}">
             <div class="nav-group-toggle">
                 <i class="bi bi-clipboard2-pulse nav-icon"></i> Audit Plan
                 <i class="bi bi-chevron-down nav-arrow"></i>
@@ -33,18 +36,14 @@
                     <i class="bi bi-building nav-icon"></i> Data Unit
                 </a>
 
+@if(!$isRa)
                 {{-- Penilaian Risiko (sub-submenu) --}}
-                <div class="nav-subgroup {{ request()->routeIs('risk-scoring.index', 'critical-override.*') || request('from') === 'risk-scoring' ? 'open' : '' }}">
+<div class="nav-subgroup {{ request()->routeIs('risk-scoring.index') || request('from') === 'risk-scoring' ? 'open' : '' }}">
                     <div class="nav-subgroup-toggle">
                         <i class="bi bi-shield-exclamation nav-icon"></i> Penilaian Risiko
                         <i class="bi bi-chevron-down nav-subgroup-arrow"></i>
                     </div>
-                    <div class="nav-subgroup-children">
-                        @if($canManage)
-                        <a href="{{ route('critical-override.index') }}" class="nav-item {{ request()->routeIs('critical-override.*') ? 'active' : '' }}">
-                            <i class="bi bi-bell-fill nav-icon"></i> Trigger Darurat
-                        </a>
-                        @endif
+<div class="nav-subgroup-children">
                         <a href="{{ route('risk-scoring.index') }}" class="nav-item {{ request()->routeIs('risk-scoring.index') || request('from') === 'risk-scoring' ? 'active' : '' }}">
                             <i class="bi bi-bar-chart nav-icon"></i> Hasil Skor & Kategori
                         </a>
@@ -55,6 +54,7 @@
                 <a href="{{ route('assignment-ra.index') }}" class="nav-item {{ request()->routeIs('assignment-ra.*') ? 'active' : '' }}">
                     <i class="bi bi-person-check nav-icon"></i> Assignment RA
                 </a>
+                @endif
 
 {{-- Coverage Offsite --}}
                 @if($canManage)
@@ -64,6 +64,7 @@
                 @endif
 
                 {{-- Jadwal Onsite (sub-submenu) --}}
+                @if(!$isRa)
                 <div class="nav-subgroup {{ request()->routeIs('scheduling.*') ? 'open' : '' }}">
                     <div class="nav-subgroup-toggle">
                         <i class="bi bi-calendar3 nav-icon"></i> Jadwal Onsite
@@ -83,6 +84,7 @@
                 <a href="{{ route('final-audit-plan.index') }}" class="nav-item {{ request()->routeIs('final-audit-plan.index', 'final-audit-plan.show') ? 'active' : '' }}">
                     <i class="bi bi-clipboard2-check nav-icon"></i> Final Audit Plan
                 </a>
+                @endif
 
                 {{-- Change Log --}}
                 @if($canManage)

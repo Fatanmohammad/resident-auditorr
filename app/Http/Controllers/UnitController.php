@@ -6,13 +6,31 @@ use App\Models\Unit;
 use App\Models\BranchRaMapping;
 use App\Models\ChangeLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class UnitController extends Controller
 {
+    /**
+     * Terapkan filter cabang pada query unit.
+     * RA hanya melihat unit milik cabangnya + seluruh anak cabangnya.
+     * Operator (kabag_ra/kadiv_skai/admin) melihat semua unit.
+     */
+    private function scopeByBranch($query)
+    {
+        $allowedCabangIds = Auth::user()->cabangIdYangDapatDiakses();
+
+        if ($allowedCabangIds !== null) {
+            $query->whereIn('units.cabang_id', $allowedCabangIds);
+        }
+
+        return $query;
+    }
+
     public function index()
     {
-        $units = Unit::with(['riskScorings' => fn($q) => $q->where('period', date('Y'))])
-            ->orderBy('unit_type')->orderBy('unit_name')->get();
+        $units = $this->scopeByBranch(
+            Unit::with(['riskScorings' => fn($q) => $q->where('period', date('Y'))])
+        )->orderBy('unit_type')->orderBy('unit_name')->get();
         return view('units.index', compact('units'));
     }
 
@@ -49,8 +67,13 @@ $validated['is_active'] = $request->boolean('is_active', true);
         return redirect()->route('units.index')->with('success', 'Unit berhasil ditambahkan.');
     }
 
-    public function show(Unit $unit)
+public function show(Unit $unit)
     {
+        $allowedCabangIds = Auth::user()->cabangIdYangDapatDiakses();
+        if ($allowedCabangIds !== null && (!$unit->cabang_id || !in_array($unit->cabang_id, $allowedCabangIds))) {
+            abort(403, 'Anda hanya dapat mengakses unit di cabang Anda sendiri.');
+        }
+
         $period  = request('period', date('Y'));
         $scoring = $unit->riskScorings()->where('period', $period)->first();
         $cs      = $unit->hasMany(\App\Models\RiskComponentScore::class)->where('period', $period)->first();
@@ -90,14 +113,17 @@ $validated['is_active'] = $request->boolean('is_active', true);
         return redirect()->route('units.index')->with('success', 'Unit berhasil diperbarui.');
     }
 
-    public function riskScoringIndex()
+public function riskScoringIndex()
     {
         $period = request('period', date('Y'));
-        $units  = Unit::with([
+        $query  = Unit::with([
             'riskScorings'      => fn($q) => $q->where('period', $period),
             'criticalOverrides' => fn($q) => $q->where('status', 'Aktif'),
-        ])->where('is_active', true)
-          ->orderByRaw("FIELD(unit_type,'KC','KCU','KCP','KCPLK','Payment Point')")
+        ])->where('is_active', true);
+
+        $query = $this->scopeByBranch($query);
+
+        $units = $query->orderByRaw("FIELD(unit_type,'KC','KCU','KCP','KCPLK','Payment Point')")
           ->get();
 
         return view('risk-scoring.index', compact('units', 'period'));

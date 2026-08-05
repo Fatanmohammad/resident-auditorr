@@ -34,10 +34,28 @@ class User extends Authenticatable
         ];
     }
 
-    // Relasi ke Cabang tempat User ditempatkan
+// Relasi ke Cabang tempat User ditempatkan
     public function cabang(): BelongsTo
     {
         return $this->belongsTo(Cabang::class);
+    }
+
+    /**
+     * Daftar ID cabang yang boleh diakses user.
+     * - Role operator (kabag_ra, kadiv_skai, admin, pimsie) → null (semua cabang).
+     * - Role RA → cabang sendiri + seluruh anak cabangnya (rekursif).
+     */
+    public function cabangIdYangDapatDiakses(): ?array
+    {
+        if ($this->role === 'ra') {
+            if (!$this->cabang_id) {
+                return [];
+            }
+            return Cabang::idsBesertaKeturunannya($this->cabang_id)->all();
+        }
+
+        // Selain RA (kabag_ra, kadiv_skai, admin, pimsie) → akses semua
+        return null;
     }
 
     // Relasi jika user bertindak sebagai RA yang ditugaskan di Audit Plan

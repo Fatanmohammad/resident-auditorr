@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-    public function index()
+public function index()
     {
         $user        = Auth::user();
         $totalRa     = User::where('role', 'ra')->count();

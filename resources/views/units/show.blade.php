@@ -11,6 +11,9 @@
 @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
         <a href="{{ route('coverage.show', $unit) }}" class="btn btn-outline btn-sm"><i class="bi bi-grid-3x3-gap"></i> Coverage Setup</a>
         @endif
+        @if(in_array(auth()->user()->role, ['kabag_ra','ra','admin']))
+        <a href="{{ route('raw-metrics.create', $unit) }}" class="btn btn-outline btn-sm"><i class="bi bi-input-cursor-text"></i> Input Raw Metrics</a>
+        @endif
         @if(request('from') === 'risk-scoring')
         <a href="{{ route('risk-scoring.index', ['period' => $period]) }}" class="btn btn-outline btn-sm"><i class="bi bi-arrow-left"></i> Kembali ke Penilaian Risiko</a>
         @else

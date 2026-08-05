@@ -15,8 +15,12 @@
 <div class="card">
     <div class="table-wrapper">
         <table class="data-table">
-            <thead>
-                <tr><th>Kode</th><th>Nama Unit</th><th>Tipe</th><th>Kantor Induk</th><th>Base RA Unit</th><th>Vol. Transaksi</th><th>Status</th><th>Aksi</th></tr>
+<thead>
+<tr>
+                    @php $isRa = auth()->user()->role === 'ra'; @endphp
+                    <th>Kode</th><th>Nama Unit</th><th>Tipe</th><th>Kantor Induk</th><th>Base RA Unit</th>
+                    <th>Status Risiko</th><th>Status</th><th>Aksi</th>
+                </tr>
             </thead>
             <tbody>
                 @forelse($units as $unit)
@@ -33,7 +37,7 @@
                     <td><span class="badge badge-info">{{ $unit->unit_type }}</span></td>
                     <td style="font-size:0.82rem;">{{ $unit->parent_office ?? '-' }}</td>
                     <td style="font-size:0.82rem;">{{ $unit->base_ra_unit ?? '<span style="color:#dc2626;">Belum diset</span>' }}</td>
-                    <td>
+<td>
                         @if($scoring)
                             <span class="badge {{ $riskCls }}">{{ $scoring->final_category }}</span>
                         @else
@@ -46,15 +50,19 @@
                         </span>
                     </td>
 <td style="display:flex;gap:0.4rem;">
+                        @if(auth()->user()->role !== 'ra')
                         <a href="{{ route('units.show', $unit) }}" class="btn btn-outline btn-sm" title="Detail"><i class="bi bi-eye"></i></a>
+                        @endif
 @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
                         <a href="{{ route('units.edit', $unit) }}" class="btn btn-outline btn-sm" title="Edit"><i class="bi bi-pencil"></i></a>
+                        @endif
+                        @if(in_array(auth()->user()->role, ['kabag_ra','ra','admin']))
                         <a href="{{ route('raw-metrics.create', $unit) }}" class="btn btn-outline btn-sm" title="Input Data Mentah"><i class="bi bi-input-cursor-text"></i></a>
                         @endif
                     </td>
                 </tr>
-                @empty
-                <tr><td colspan="8"><div class="empty-state"><i class="bi bi-building-x"></i><p>Belum ada data unit. Tambah unit atau jalankan seeder.</p></div></td></tr>
+@empty
+<tr><td colspan="8"><div class="empty-state"><i class="bi bi-building-x"></i><p>Belum ada data unit. Tambah unit atau jalankan seeder.</p></div></td></tr>
                 @endforelse
             </tbody>
         </table>
