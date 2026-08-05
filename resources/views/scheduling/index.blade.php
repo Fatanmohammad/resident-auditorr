@@ -7,7 +7,7 @@
         <h1>Jadwal Kunjungan Onsite</h1>
         <p>Frekuensi dan jadwal kunjungan fisik per unit — Periode {{ $period }}</p>
     </div>
-    @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
     <form action="{{ route('scheduling.generate-all') }}" method="POST" style="display:inline;">
         @csrf
         <input type="hidden" name="period" value="{{ $period }}">

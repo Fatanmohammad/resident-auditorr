@@ -65,3 +65,29 @@ Koreksi array `$fieldWeights`:
 2. Verifikasi bobot baru via query (php artisan tinker / script).
 3. Buka halaman assignment-ra & risk-scoring untuk memastikan tidak error.
 4. Uji dashboard & sidebar.
+
+## STATUS: EKSEKUSI ✅
+
+Semua fase di atas sudah dieksekusi. Rincian lengkap ada di `TODO.md`.
+
+### Fase E — Pengaturan Modul (Admin only) [baru]
+- **`MasterSetupController`** (baru): `index`, `storeFieldWeights`, `storeBidangWeights` — pengelolaan bobot skoring via UI, dengan pencatatan otomatis ke Change Log.
+- **`resources/views/master-setup/index.blade.php`** (baru): form bobot indikator (Lampiran A.1) & bobot bidang (Lampiran A.4).
+- **Route `master-setup.*`** (baru, middleware `role:admin`).
+- **Menu "Pengaturan Modul"** di sidebar (hanya admin).
+- **Role `admin`** ditambahkan ke enum `users` (migration baru `2026_08_04_000001_add_admin_role_to_users_table.php`) + user admin di `DatabaseSeeder`.
+- **Audit trail**: `ChangeLog::record()` ditambahkan ke `CriticalOverrideController`, `SchedulingController`, `UnitController`, `CoverageController`, `MasterSetupController` (memenuhi spec §7.1).
+
+### Fase F — Role admin = akses kabag_ra (kecuali Pengaturan Modul) ✅
+- Admin dimasukkan ke middleware semua route operational (units, raw-metrics, critical-override, coverage, scheduling, final-audit-plan, risk-scoring, assignment-ra, audit-plan workflow).
+- `$canInput` di sidebar termasuk admin (input raw metrics & override).
+- Menu "Pengaturan Modul" tetap **khusus admin**.
+- File verifikasi sementara (verify_admin.php, verify_mastersetup.php) dihapus.
+
+### Verifikasi
+- `php -l` seluruh file yang diubah → tidak ada syntax error.
+- `php artisan view:cache` → semua blade (termasuk baru) terkompilasi tanpa error.
+- `php artisan route:list` → 46+ route terdaftar termasuk master-setup.
+- Bobot diverifikasi: TI/ATM = 1.00, Monitoring TL = 0.90 (sesuai Lampiran A.1, tanpa bobot `tl_response_quality`).
+- User admin `admin@banksulteng.co.id` / `password123` berhasil dibuat.
+- Admin & kabag_ra punya akses yang sama ke seluruh modul; hanya admin yang lihat menu "Pengaturan Modul".

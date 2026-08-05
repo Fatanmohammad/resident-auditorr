@@ -7,7 +7,7 @@
         <h1>Final Audit Plan</h1>
         <p>Output SOP 01 — Rencana Audit Tahunan Seluruh Unit Kerja</p>
     </div>
-    @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
     <form action="{{ route('final-audit-plan.generate-all') }}" method="POST" style="display:inline;">
         @csrf
         <input type="hidden" name="period" value="{{ $period }}">

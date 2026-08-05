@@ -16,9 +16,9 @@
         <form action="{{ route('coverage.store', $unit) }}" method="POST">
             @csrf
             <input type="hidden" name="period" value="{{ $period }}">
-            <div class="card-body">
+<div class="card-body">
                 @php
-                    $areas = [
+                    $allAreas = [
                         'teller_kas'     => 'Teller/Kas',
                         'cs_dpk'         => 'CS/DPK',
                         'kredit'         => 'Kredit',
@@ -28,6 +28,8 @@
                         'ti_event'       => 'TI Event',
                         'pengaduan_aset' => 'Pengaduan/Aset',
                     ];
+                    $relevant = \App\Models\CoverageSetup::relevantAreas($unit->unit_type);
+                    $areas = array_intersect_key($allAreas, array_flip($relevant));
                 @endphp
                 @foreach($areas as $field => $label)
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border-color);">
@@ -61,8 +63,8 @@
                 </div>
                 <div>
                     @php $stCls = match($summary->coverage_status) { 'Lengkap'=>'badge-success','Cukup'=>'badge-warning',default=>'badge-danger' }; @endphp
-                    <span class="badge {{ $stCls }}">{{ $summary->coverage_status }}</span>
-                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">{{ $summary->active_area_count }} dari 8 area aktif</div>
+<span class="badge {{ $stCls }}">{{ $summary->coverage_status }}</span>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">{{ $summary->active_area_count }} dari {{ count($relevant) }} area relevan aktif</div>
                 </div>
             </div>
             @php
@@ -72,6 +74,7 @@
                     'status_biaya_jurnal'=>'Biaya/Jurnal','status_apu_fds'=>'APU/FDS',
                     'status_ti_event'=>'TI Event','status_pengaduan_aset'=>'Pengaduan/Aset',
                 ];
+                $areaLabels = array_intersect_key($areaLabels, array_flip(array_map(fn($a)=>'status_'.$a, $relevant)));
             @endphp
             @foreach($areaLabels as $field => $label)
             @php $val = $summary->$field ?? 'Tidak'; $cls = match($val) { 'H+1'=>'badge-success','Event-based'=>'badge-warning',default=>'badge-gray' }; @endphp

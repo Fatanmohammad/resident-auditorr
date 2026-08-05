@@ -16,6 +16,14 @@
 
 @php
 $v = fn($key) => old($key, $existing?->$key ?? 0);
+
+// Bidang yang relevan per jenis unit:
+// - Payment Point : hanya Riwayat RA, Teller, Monitoring TL → sembunyikan CS/DPK, Kredit, & TI/ATM
+// - KCPLK         : semua kecuali Kredit → sembunyikan Kredit
+// - lainnya       : semua bidang
+$hideCsDpk = in_array($unit->unit_type, ['Payment Point']);
+$hideKredit = in_array($unit->unit_type, ['Payment Point', 'KCPLK']);
+$hideTi = in_array($unit->unit_type, ['Payment Point']);
 @endphp
 
 <div class="grid grid-cols-2" style="gap:1.25rem;">
@@ -59,6 +67,7 @@ $v = fn($key) => old($key, $existing?->$key ?? 0);
         </div>
     </div>
 
+@if(!$hideCsDpk)
     {{-- Bidang C --}}
     <div class="card">
         <div class="card-header"><div class="card-title"><i class="bi bi-people" style="color:var(--bs-blue);"></i> Bidang C — CS/DPK/APU-PPT</div></div>
@@ -75,7 +84,9 @@ $v = fn($key) => old($key, $existing?->$key ?? 0);
             @endforeach
         </div>
     </div>
+    @endif
 
+    @if(!$hideKredit)
     {{-- Bidang D --}}
     <div class="card">
         <div class="card-header"><div class="card-title"><i class="bi bi-bank" style="color:var(--bs-blue);"></i> Bidang D — Kredit</div></div>
@@ -94,7 +105,9 @@ $v = fn($key) => old($key, $existing?->$key ?? 0);
             </div>
         </div>
     </div>
+    @endif
 
+@if(!$hideTi)
     {{-- Bidang E --}}
     <div class="card">
         <div class="card-header"><div class="card-title"><i class="bi bi-cpu" style="color:var(--bs-blue);"></i> Bidang E — TI/ATM</div></div>
@@ -112,6 +125,7 @@ $v = fn($key) => old($key, $existing?->$key ?? 0);
             @endforeach
         </div>
     </div>
+    @endif
 
     {{-- Bidang F --}}
     <div class="card">

@@ -19,11 +19,12 @@ public function __construct(private RiskScoringService $scoringService) {}
         return view('raw-metrics.form', compact('unit', 'period', 'existing'));
     }
 
-    public function store(Request $request, Unit $unit)
+public function store(Request $request, Unit $unit)
     {
         $period = $request->integer('period', date('Y'));
 
-        $validated = $request->validate([
+        // Aturan validasi dasar (period + semua bidang yang selalu relevan)
+        $rules = [
             'period'                      => 'required|integer|min:2020|max:2099',
             'prior_onsite_findings'       => 'required|integer|min:0',
             'significant_findings'        => 'required|integer|min:0',
@@ -32,20 +33,10 @@ public function __construct(private RiskScoringService $scoringService) {}
             'offsite_deviation_significant'=> 'required|integer|min:0',
             'offsite_deviation_repeat'    => 'required|integer|min:0',
             'months_since_last_onsite'    => 'required|integer|min:0',
-            'reversal_correction_txn'     => 'required|integer|min:0',
+'reversal_correction_txn'     => 'required|integer|min:0',
             'cash_discrepancy'            => 'required|integer|min:0',
             'unusual_cost_journal'        => 'required|integer|min:0',
             'large_risky_cash_txn'        => 'required|integer|min:0',
-            'dpk_anomaly'                 => 'required|integer|min:0',
-            'overdue_complaints'          => 'required|integer|min:0',
-            'incomplete_cdd_edd'          => 'required|integer|min:0',
-            'debtors_col_3_5'             => 'required|integer|min:0',
-            'npl_ratio'                   => 'required|numeric|min:0|max:1',
-            'credit_deviation'            => 'required|integer|min:0',
-            'atm_dispute'                 => 'required|integer|min:0',
-            'atm_downtime_hours'          => 'required|numeric|min:0',
-            'critical_ti_incident'        => 'required|integer|min:0',
-            'unusual_user_reset'          => 'required|integer|min:0',
             'ra_onsite_tl_overdue'        => 'required|integer|min:0',
             'ra_offsite_tl_overdue'       => 'required|integer|min:0',
             'skai_tl_overdue'             => 'required|integer|min:0',
@@ -53,7 +44,45 @@ public function __construct(private RiskScoringService $scoringService) {}
             'kap_tl_overdue'              => 'required|integer|min:0',
             'avg_response_days'           => 'required|numeric|min:0',
             'tl_response_quality'         => 'required|integer|min:0|max:4',
-        ]);
+        ];
+
+        // Bidang C (CS/DPK) — tidak relevan untuk Payment Point
+        if (!in_array($unit->unit_type, ['Payment Point'])) {
+            $rules['dpk_anomaly']          = 'required|integer|min:0';
+            $rules['overdue_complaints']   = 'required|integer|min:0';
+            $rules['incomplete_cdd_edd']   = 'required|integer|min:0';
+        }
+
+        // Bidang D (Kredit) — tidak relevan untuk Payment Point & KCPLK
+        if (!in_array($unit->unit_type, ['Payment Point', 'KCPLK'])) {
+            $rules['debtors_col_3_5']      = 'required|integer|min:0';
+            $rules['npl_ratio']            = 'required|numeric|min:0|max:1';
+            $rules['credit_deviation']     = 'required|integer|min:0';
+        }
+
+        // Bidang E (TI/ATM) — tidak relevan untuk Payment Point
+        if (!in_array($unit->unit_type, ['Payment Point'])) {
+            $rules['atm_dispute']          = 'required|integer|min:0';
+            $rules['atm_downtime_hours']   = 'required|numeric|min:0';
+            $rules['critical_ti_incident'] = 'required|integer|min:0';
+            $rules['unusual_user_reset']   = 'required|integer|min:0';
+        }
+
+        $validated = $request->validate($rules);
+
+        // Isi otomatis 0 untuk bidang yang tidak relevan
+        $validated = array_merge([
+            'dpk_anomaly'          => 0,
+            'overdue_complaints'   => 0,
+            'incomplete_cdd_edd'   => 0,
+            'debtors_col_3_5'      => 0,
+            'npl_ratio'            => 0,
+            'credit_deviation'     => 0,
+            'atm_dispute'          => 0,
+            'atm_downtime_hours'   => 0,
+            'critical_ti_incident' => 0,
+            'unusual_user_reset'   => 0,
+        ], $validated);
 
         $validated['unit_id']  = $unit->id;
         $validated['input_by'] = Auth::id();

@@ -42,9 +42,10 @@ class RawMetric extends Model
         $unitType = $this->unit->unit_type;
         $bidangs  = ['riwayat_ra', 'kas_teller', 'cs_dpk', 'kredit', 'ti_atm', 'monitoring_tl'];
 
-        // Bidang yang tidak relevan per jenis unit → skor = 0
+// Bidang yang tidak relevan per jenis unit → skor = 0
+        // Payment Point: hanya Riwayat RA, Teller, Monitoring TL (cs_dpk, kredit, & ti_atm = 0)
         $notRelevant = [
-            'Payment Point' => ['cs_dpk', 'kredit'],
+            'Payment Point' => ['cs_dpk', 'kredit', 'ti_atm'],
             'KCPLK'         => ['kredit'],
         ];
 

@@ -8,7 +8,7 @@
         <p>{{ $unit->unit_code }} — {{ $unit->unit_type }}</p>
     </div>
 <div style="display:flex;gap:0.5rem;">
-        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
         <a href="{{ route('coverage.show', $unit) }}" class="btn btn-outline btn-sm"><i class="bi bi-grid-3x3-gap"></i> Coverage Setup</a>
         @endif
         @if(request('from') === 'risk-scoring')
@@ -63,8 +63,23 @@
                     @endif
                 </div>
             </div>
-            @if($cs)
-            @foreach(['Riwayat RA'=>$cs->skor_riwayat_ra,'Kas/Teller'=>$cs->skor_kas_teller,'CS/DPK'=>$cs->skor_cs_dpk,'Kredit'=>$cs->skor_kredit,'TI/ATM'=>$cs->skor_ti_atm,'Monitoring TL'=>$cs->skor_monitoring_tl] as $label => $skor)
+@if($cs)
+            @php
+            // Bidang yang tidak relevan per jenis unit → jangan tampilkan barisnya
+            $irrelevant = [];
+            if ($unit->unit_type === 'Payment Point') $irrelevant = ['cs_dpk', 'kredit', 'ti_atm'];
+            elseif ($unit->unit_type === 'KCPLK') $irrelevant = ['kredit'];
+            $bidang = [
+                'riwayat_ra'    => ['Riwayat RA', $cs->skor_riwayat_ra],
+                'kas_teller'    => ['Kas/Teller', $cs->skor_kas_teller],
+                'cs_dpk'        => ['CS/DPK', $cs->skor_cs_dpk],
+                'kredit'        => ['Kredit', $cs->skor_kredit],
+                'ti_atm'        => ['TI/ATM', $cs->skor_ti_atm],
+                'monitoring_tl' => ['Monitoring TL', $cs->skor_monitoring_tl],
+            ];
+            @endphp
+            @foreach($bidang as $key => [$label, $skor])
+            @if(in_array($key, $irrelevant)) @continue @endif
             <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;font-size:0.8rem;">
                 <span style="width:100px;color:var(--text-muted);">{{ $label }}</span>
                 <div style="flex:1;background:#e5e7eb;border-radius:9999px;height:6px;">
@@ -82,7 +97,7 @@
 </div>
 
 {{-- Critical Overrides --}}
-@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
 <div class="card" style="margin-bottom:1.25rem;">
     <div class="card-header">
         <div class="card-title">Critical Override</div>
