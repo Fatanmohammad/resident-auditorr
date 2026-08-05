@@ -79,19 +79,24 @@
 @if($scoring)
 <div class="card" style="margin-bottom:1.25rem;">
     <div class="card-header"><div class="card-title">Detail Skor Risiko — Periode {{ $finalAuditPlan->period }}</div></div>
-    <div class="card-body">
+<div class="card-body">
         <div class="grid grid-cols-3" style="gap:0.75rem;margin-bottom:1rem;">
             @php
+                // Bidang yang tidak relevan per jenis unit → jangan tampilkan
+                $irr = [];
+                if ($finalAuditPlan->unit?->unit_type === 'Payment Point') $irr = ['cs_dpk', 'kredit', 'ti_atm'];
+                elseif ($finalAuditPlan->unit?->unit_type === 'KCPLK') $irr = ['kredit'];
                 $bidangs = [
-                    'Riwayat RA'    => $cs?->skor_riwayat_ra ?? 0,
-                    'Kas/Teller'    => $cs?->skor_kas_teller ?? 0,
-                    'CS/DPK'        => $cs?->skor_cs_dpk ?? 0,
-                    'Kredit'        => $cs?->skor_kredit ?? 0,
-                    'TI/ATM'        => $cs?->skor_ti_atm ?? 0,
-                    'Monitoring TL' => $cs?->skor_monitoring_tl ?? 0,
+                    'riwayat_ra'    => ['Riwayat RA', $cs?->skor_riwayat_ra ?? 0],
+                    'kas_teller'    => ['Kas/Teller', $cs?->skor_kas_teller ?? 0],
+                    'cs_dpk'        => ['CS/DPK', $cs?->skor_cs_dpk ?? 0],
+                    'kredit'        => ['Kredit', $cs?->skor_kredit ?? 0],
+                    'ti_atm'        => ['TI/ATM', $cs?->skor_ti_atm ?? 0],
+                    'monitoring_tl' => ['Monitoring TL', $cs?->skor_monitoring_tl ?? 0],
                 ];
             @endphp
-            @foreach($bidangs as $label => $skor)
+            @foreach($bidangs as $key => [$label, $skor])
+            @if(in_array($key, $irr)) @continue @endif
             <div style="background:#f8fafc;border-radius:var(--radius-md);padding:0.75rem;border:1px solid var(--border-color);">
                 <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.25rem;">{{ $label }}</div>
                 <div style="font-size:1.4rem;font-weight:700;color:var(--bs-blue-dark);">{{ number_format($skor, 1) }}</div>
@@ -99,7 +104,7 @@
                     <div style="width:{{ min(100,$skor) }}%;background:var(--bs-blue);height:4px;border-radius:9999px;"></div>
                 </div>
             </div>
-            @endforeach
+@endforeach
         </div>
         <div style="display:flex;align-items:center;gap:1rem;padding:0.75rem;background:#f0f4f8;border-radius:var(--radius-md);">
             <div style="font-size:0.82rem;color:var(--text-muted);">Skor Weighted Final:</div>

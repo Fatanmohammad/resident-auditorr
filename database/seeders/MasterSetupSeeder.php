@@ -82,13 +82,14 @@ foreach ($fieldWeights as $fw) {
             ['unit_type' => 'KCPLK',         'bidang' => 'kredit',       'weight' => 0.00],
             ['unit_type' => 'KCPLK',         'bidang' => 'ti_atm',       'weight' => 0.05],
             ['unit_type' => 'KCPLK',         'bidang' => 'monitoring_tl','weight' => 0.20],
-            // Payment Point
-            ['unit_type' => 'Payment Point', 'bidang' => 'riwayat_ra',   'weight' => 0.20],
-            ['unit_type' => 'Payment Point', 'bidang' => 'kas_teller',   'weight' => 0.50],
-            ['unit_type' => 'Payment Point', 'bidang' => 'cs_dpk',       'weight' => 0.00],
-            ['unit_type' => 'Payment Point', 'bidang' => 'kredit',       'weight' => 0.00],
-            ['unit_type' => 'Payment Point', 'bidang' => 'ti_atm',       'weight' => 0.05],
-            ['unit_type' => 'Payment Point', 'bidang' => 'monitoring_tl','weight' => 0.25],
+// Payment Point — hanya 3 bidang relevan (Riwayat RA, Teller, Monitoring TL)
+            // Dinormalkan agar total bobot = 100% (tanpa cs_dpk, kredit, ti_atm)
+            ['unit_type' => 'Payment Point', 'bidang' => 'riwayat_ra',   'weight' => 0.2105],
+            ['unit_type' => 'Payment Point', 'bidang' => 'kas_teller',   'weight' => 0.5263],
+            ['unit_type' => 'Payment Point', 'bidang' => 'cs_dpk',       'weight' => 0.0000],
+            ['unit_type' => 'Payment Point', 'bidang' => 'kredit',       'weight' => 0.0000],
+            ['unit_type' => 'Payment Point', 'bidang' => 'ti_atm',       'weight' => 0.0000],
+            ['unit_type' => 'Payment Point', 'bidang' => 'monitoring_tl','weight' => 0.2632],
         ];
         foreach ($bidangWeights as $bw) {
             DB::table('bidang_weights')->updateOrInsert(

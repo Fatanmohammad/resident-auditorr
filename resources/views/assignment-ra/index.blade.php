@@ -15,7 +15,7 @@
                 @endfor
             </select>
         </form>
-        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
         <form action="{{ route('coverage.assign-all') }}" method="POST" style="display:inline;">
             @csrf
             <input type="hidden" name="year" value="{{ $period }}">

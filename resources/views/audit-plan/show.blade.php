@@ -58,10 +58,10 @@
             @endif
         </table>
 
-        {{-- Tombol Aksi Approval --}}
-        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+{{-- Tombol Aksi Approval (admin = akses sama seperti kabag_ra) --}}
+        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
         <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-            @if(auth()->user()->role === 'kabag_ra' && $status === 'waiting_kabag_approval')
+            @if(in_array(auth()->user()->role, ['kabag_ra','admin']) && $status === 'waiting_kabag_approval')
             <div style="display: flex; gap: 0.75rem;">
                 <form action="{{ route('audit-plan.approve', $auditPlan->id) }}" method="POST" style="flex:1;">
                     @csrf
@@ -125,8 +125,8 @@
     </div>
 </div>
 
-{{-- Modal Reject --}}
-@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+{{-- Modal Reject (admin = akses sama seperti kabag_ra) --}}
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
 <div class="modal-overlay" id="modalReject">
     <div class="modal">
         <div class="modal-header">

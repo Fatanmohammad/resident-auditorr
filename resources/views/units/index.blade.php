@@ -7,7 +7,7 @@
         <h1>Master Unit</h1>
         <p>Daftar seluruh unit kerja bank (Audit Universe)</p>
     </div>
-    @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
     <a href="{{ route('units.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Tambah Unit</a>
     @endif
 </div>
@@ -47,7 +47,7 @@
                     </td>
 <td style="display:flex;gap:0.4rem;">
                         <a href="{{ route('units.show', $unit) }}" class="btn btn-outline btn-sm" title="Detail"><i class="bi bi-eye"></i></a>
-                        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
                         <a href="{{ route('units.edit', $unit) }}" class="btn btn-outline btn-sm" title="Edit"><i class="bi bi-pencil"></i></a>
                         <a href="{{ route('raw-metrics.create', $unit) }}" class="btn btn-outline btn-sm" title="Input Data Mentah"><i class="bi bi-input-cursor-text"></i></a>
                         @endif

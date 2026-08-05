@@ -44,25 +44,27 @@ public function store(Request $request, Unit $unit)
     {
         $period = $request->integer('period', date('Y'));
 
-$validated = $request->validate([
-            'period'         => 'required|integer|min:2020|max:2099',
-            'teller_kas'     => 'required|in:Ya,Tidak,Event',
-            'cs_dpk'         => 'required|in:Ya,Tidak,Event',
-            'kredit'         => 'required|in:Ya,Tidak,Event',
-            'atm'            => 'required|in:Ya,Tidak,Event',
-            'biaya_jurnal'   => 'required|in:Ya,Tidak,Event',
-            'apu_fds'        => 'required|in:Ya,Tidak,Event',
-            'ti_event'       => 'required|in:Ya,Tidak,Event',
-            'pengaduan_aset' => 'required|in:Ya,Tidak,Event',
-            'reason'         => 'nullable|string',
-        ]);
+// Hanya area yang RELEVAN untuk jenis unit yang wajib diisi.
+        // Area tidak relevan di-set ke 'Tidak'.
+        $relevantAreas = CoverageSetup::relevantAreas($unit->unit_type);
+        $allAreas = ['teller_kas', 'cs_dpk', 'kredit', 'atm', 'biaya_jurnal', 'apu_fds', 'ti_event', 'pengaduan_aset'];
+
+        $rules = ['period' => 'required|integer|min:2020|max:2099', 'reason' => 'nullable|string'];
+        foreach ($relevantAreas as $area) {
+            $rules[$area] = 'required|in:Ya,Tidak,Event';
+        }
+
+        $validated = $request->validate($rules);
+
+        // Gabungkan area relevan + set area tidak relevan ke 'Tidak'
+        $coverageData = \Illuminate\Support\Arr::except($validated, ['period', 'reason']);
+        foreach (array_diff($allAreas, $relevantAreas) as $area) {
+            $coverageData[$area] = 'Tidak';
+        }
 
 CoverageSetup::updateOrCreate(
             ['unit_id' => $unit->id, 'period' => $period],
-            array_merge(
-                \Illuminate\Support\Arr::except($validated, ['period', 'reason']),
-                ['unit_id' => $unit->id]
-            )
+            array_merge($coverageData, ['unit_id' => $unit->id])
         );
 
         // Recompute summary + detail otomatis

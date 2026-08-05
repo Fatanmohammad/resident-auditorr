@@ -70,6 +70,10 @@
 @php
                     $scor = $unit->riskScorings->first();
                     $csRow = $unit->hasMany(\App\Models\RiskComponentScore::class)->where('period', $period)->first();
+                    // Bidang yang tidak relevan per jenis unit → tampilkan "-"
+                    $irr = [];
+                    if ($unit->unit_type === 'Payment Point') $irr = ['cs_dpk', 'kredit', 'ti_atm'];
+                    elseif ($unit->unit_type === 'KCPLK') $irr = ['kredit'];
                     $riskCls = match($scor?->final_category) {
                         'High'=>'badge-danger','Moderate to High'=>'badge-warning',
                         'Moderate'=>'badge-info','Low to Moderate'=>'badge-purple',default=>'badge-gray'
@@ -78,18 +82,19 @@
                         'High'=>'badge-danger','Moderate to High'=>'badge-warning',
                         'Moderate'=>'badge-info','Low to Moderate'=>'badge-purple',default=>'badge-gray'
                     };
+                    $fmt = fn($bidangKey, $nilai) => in_array($bidangKey, $irr) ? '<span style="color:var(--text-muted);">-</span>' : number_format($nilai, 1);
                 @endphp
                 <tr>
                     <td>
                         <strong>{{ $unit->unit_name }}</strong>
                         <div style="font-size:0.72rem;color:var(--text-muted);">{{ $unit->unit_code }} · {{ $unit->unit_type }}</div>
                     </td>
-                    <td style="text-align:center;">{{ number_format($csRow?->skor_riwayat_ra ?? 0, 1) }}</td>
-                    <td style="text-align:center;">{{ number_format($csRow?->skor_kas_teller ?? 0, 1) }}</td>
-                    <td style="text-align:center;">{{ number_format($csRow?->skor_cs_dpk ?? 0, 1) }}</td>
-                    <td style="text-align:center;">{{ number_format($csRow?->skor_kredit ?? 0, 1) }}</td>
-                    <td style="text-align:center;">{{ number_format($csRow?->skor_ti_atm ?? 0, 1) }}</td>
-                    <td style="text-align:center;">{{ number_format($csRow?->skor_monitoring_tl ?? 0, 1) }}</td>
+<td style="text-align:center;">{!! $fmt('riwayat_ra', $csRow?->skor_riwayat_ra ?? 0) !!}</td>
+                    <td style="text-align:center;">{!! $fmt('kas_teller', $csRow?->skor_kas_teller ?? 0) !!}</td>
+                    <td style="text-align:center;">{!! $fmt('cs_dpk', $csRow?->skor_cs_dpk ?? 0) !!}</td>
+                    <td style="text-align:center;">{!! $fmt('kredit', $csRow?->skor_kredit ?? 0) !!}</td>
+                    <td style="text-align:center;">{!! $fmt('ti_atm', $csRow?->skor_ti_atm ?? 0) !!}</td>
+                    <td style="text-align:center;">{!! $fmt('monitoring_tl', $csRow?->skor_monitoring_tl ?? 0) !!}</td>
                     <td style="text-align:center;font-weight:700;color:var(--bs-blue-dark);">{{ number_format($scor?->weighted_score ?? 0, 1) }}</td>
                     <td>
                         @if($scor)

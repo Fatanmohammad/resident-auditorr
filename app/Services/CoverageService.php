@@ -72,19 +72,22 @@ class CoverageService
             ], $defaults));
         }
 
-        $areas = ['teller_kas', 'cs_dpk', 'kredit', 'atm', 'biaya_jurnal', 'apu_fds', 'ti_event', 'pengaduan_aset'];
+// Hanya area yang RELEVAN untuk jenis unit yang dihitung ke coverage score.
+        // Misal: Payment Point hanya Teller/Kas; KCPLK semua kecuali Kredit.
+        $relevantAreas = CoverageSetup::relevantAreas($unit->unit_type);
         $flagToStatus = ['Ya' => 'H+1', 'Event' => 'Event-based', 'Tidak' => 'Tidak'];
 
         $statuses = [];
         $activeCount = 0;
-        foreach ($areas as $area) {
+        foreach ($relevantAreas as $area) {
             $flag = $setup->$area ?? 'Tidak';
             $status = $flagToStatus[$flag] ?? 'Tidak';
             $statuses["status_{$area}"] = $status;
             if (in_array($status, ['H+1', 'Event-based'])) $activeCount++;
         }
 
-        $score = $activeCount / 8;
+        $relevantCount = count($relevantAreas);
+        $score = $relevantCount > 0 ? $activeCount / $relevantCount : 0;
         $coverageStatus = match(true) {
             $score == 1.0  => 'Lengkap',
             $score >= 0.75 => 'Cukup',

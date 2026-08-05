@@ -18,16 +18,16 @@
 
         @php
             $steps = [
-                [
+[
                     'num'   => 1,
                     'label' => 'Master Unit',
                     'desc'  => 'Data universe unit pengawasan',
                     'icon'  => 'bi-diagram-3',
                     'done'  => $unitCount > 0,
-                    'roles' => ['kadiv_skai','kabag_ra','pimsie'],
+                    'roles' => ['kadiv_skai','kabag_ra','pimsie','admin'],
                     'links' => [
                         ['label'=>'Lihat Master Unit','url'=>route('units.index'),'icon'=>'bi-eye'],
-                        ['label'=>'Tambah Unit','url'=>route('units.create'),'icon'=>'bi-plus-lg','roles'=>['kadiv_skai','kabag_ra']],
+                        ['label'=>'Tambah Unit','url'=>route('units.create'),'icon'=>'bi-plus-lg','roles'=>['kadiv_skai','kabag_ra','admin']],
                     ],
                 ],
                 [
@@ -36,9 +36,9 @@
                     'desc'  => 'Raw metrics & risk scoring per unit',
                     'icon'  => 'bi-graph-up-arrow',
                     'done'  => $rawMetricCount > 0,
-                    'roles' => ['kadiv_skai','kabag_ra','ra'],
+                    'roles' => ['kadiv_skai','kabag_ra','ra','admin'],
                     'links' => [
-                        ['label'=>'Input Raw Metrics','url'=>route('units.index').'?action=raw-metrics','icon'=>'bi-pencil-square','roles'=>['kabag_ra','ra']],
+                        ['label'=>'Input Raw Metrics','url'=>route('units.index').'?action=raw-metrics','icon'=>'bi-pencil-square','roles'=>['kabag_ra','ra','admin']],
                     ],
                 ],
                 [
@@ -47,9 +47,9 @@
                     'desc'  => 'Coverage & assignment RA ke unit',
                     'icon'  => 'bi-person-check',
                     'done'  => $coverageCount > 0,
-                    'roles' => ['kadiv_skai','kabag_ra'],
+                    'roles' => ['kadiv_skai','kabag_ra','admin'],
                     'links' => [
-                        ['label'=>'Kelola Coverage','url'=>route('units.index').'?action=coverage','icon'=>'bi-people','roles'=>['kadiv_skai','kabag_ra']],
+                        ['label'=>'Kelola Coverage','url'=>route('units.index').'?action=coverage','icon'=>'bi-people','roles'=>['kadiv_skai','kabag_ra','admin']],
                     ],
                 ],
                 [
@@ -58,11 +58,11 @@
                     'desc'  => 'Frekuensi onsite & kapasitas RA',
                     'icon'  => 'bi-calendar-range',
                     'done'  => $scheduleCount > 0,
-                    'roles' => ['kadiv_skai','kabag_ra','pimsie'],
+                    'roles' => ['kadiv_skai','kabag_ra','pimsie','admin'],
                     'links' => [
                         ['label'=>'Lihat Jadwal','url'=>route('scheduling.index'),'icon'=>'bi-calendar3'],
-                        ['label'=>'Kapasitas RA','url'=>route('scheduling.capacity'),'icon'=>'bi-person-check','roles'=>['kadiv_skai','kabag_ra']],
-                        ['label'=>'Generate Semua','url'=>'#','icon'=>'bi-lightning-charge','roles'=>['kadiv_skai','kabag_ra'],'post'=>route('scheduling.generate-all')],
+                        ['label'=>'Kapasitas RA','url'=>route('scheduling.capacity'),'icon'=>'bi-person-check','roles'=>['kadiv_skai','kabag_ra','admin']],
+                        ['label'=>'Generate Semua','url'=>'#','icon'=>'bi-lightning-charge','roles'=>['kadiv_skai','kabag_ra','admin'],'post'=>route('scheduling.generate-all')],
                     ],
                 ],
                 [
@@ -71,11 +71,11 @@
                     'desc'  => 'Output akhir & change log',
                     'icon'  => 'bi-clipboard2-check',
                     'done'  => $finalPlanCount > 0,
-                    'roles' => ['kadiv_skai','kabag_ra','pimsie','ra'],
+                    'roles' => ['kadiv_skai','kabag_ra','pimsie','ra','admin'],
                     'links' => [
                         ['label'=>'Lihat Final Plan','url'=>route('final-audit-plan.index'),'icon'=>'bi-eye'],
                         ['label'=>'Change Log','url'=>route('final-audit-plan.change-log'),'icon'=>'bi-clock-history'],
-                        ['label'=>'Generate Final Plan','url'=>'#','icon'=>'bi-lightning-charge','roles'=>['kadiv_skai','kabag_ra'],'post'=>route('final-audit-plan.generate-all')],
+                        ['label'=>'Generate Final Plan','url'=>'#','icon'=>'bi-lightning-charge','roles'=>['kadiv_skai','kabag_ra','admin'],'post'=>route('final-audit-plan.generate-all')],
                     ],
                 ],
             ];

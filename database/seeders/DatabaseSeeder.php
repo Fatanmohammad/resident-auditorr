@@ -77,6 +77,14 @@ class DatabaseSeeder extends Seeder
             'cabang_id' => $pusat->id,
         ]);
 
+        User::firstOrCreate(['email' => 'admin@banksulteng.co.id'], [
+            'nip' => '1006',
+            'name' => 'Admin Sistem',
+            'password' => Hash::make('password123'),
+            'role' => 'admin',
+            'cabang_id' => $pusat->id,
+        ]);
+
         // 3. Parameter Penilaian Audit KAT/RA Awal
         ParameterAudit::firstOrCreate(
             ['nama_parameter' => 'Profil Risiko Kepatuhan & Operasional'],

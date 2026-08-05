@@ -8,10 +8,10 @@
     <div class="sidebar-nav">
         @php
             $role = auth()->user()->role;
-            // Role yang boleh mengelola master data (Admin/Operasional)
+// Role yang boleh mengelola master data (Admin/Operasional)
             $canManage = in_array($role, ['kabag_ra', 'kadiv_skai', 'admin']);
-            // Role yang bisa input raw metrics & override
-            $canInput  = in_array($role, ['kabag_ra', 'ra']);
+            // Role yang bisa input raw metrics & override (admin = akses sama seperti kabag_ra)
+            $canInput  = in_array($role, ['kabag_ra', 'ra', 'admin']);
             $canView   = in_array($role, ['kabag_ra', 'kadiv_skai', 'ra', 'pimsie', 'admin']);
         @endphp
 
@@ -95,10 +95,17 @@
         </div>
         @endif
 
-        {{-- Menu Audit Plan legacy (approval workflow) --}}
-        @if(in_array($role, ['pimsie', 'kadiv_skai', 'kabag_ra']))
+{{-- Menu Audit Plan legacy (approval workflow) — admin akses sama seperti kabag_ra --}}
+        @if(in_array($role, ['pimsie', 'kadiv_skai', 'kabag_ra', 'admin']))
         <a href="{{ route('audit-plan.index') }}" class="nav-item {{ request()->routeIs('audit-plan.*') ? 'active' : '' }}">
             <i class="bi bi-kanban nav-icon"></i> Audit Plan (Workflow)
+        </a>
+        @endif
+
+        {{-- Pengaturan Modul (Admin Only) --}}
+        @if($role === 'admin')
+        <a href="{{ route('master-setup.index') }}" class="nav-item {{ request()->routeIs('master-setup.*') ? 'active' : '' }}">
+            <i class="bi bi-gear nav-icon"></i> Pengaturan Modul
         </a>
         @endif
     </div>

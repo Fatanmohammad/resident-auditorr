@@ -15,7 +15,7 @@
 <div class="card" style="margin-bottom:1.25rem;max-width:640px;">
     <div class="card-header">
         <div class="card-title">Frekuensi Onsite</div>
-        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
         <button class="btn btn-outline btn-sm" onclick="document.getElementById('modalFreq').classList.add('open')"><i class="bi bi-pencil"></i> Override</button>
         @endif
     </div>
@@ -52,7 +52,7 @@
                     <td>{{ $v->final_end_date?->format('d M Y') ?? '-' }}</td>
                     <td>{{ $v->final_duration_days }} hari</td>
                     <td>
-                        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','ra']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','ra','admin']))
                         <form action="{{ route('scheduling.visit-status', $v) }}" method="POST">
                             @csrf @method('PATCH')
                             <select name="status" class="form-select" style="padding:0.2rem 0.5rem;font-size:0.75rem;width:auto;" onchange="this.form.submit()">
@@ -66,7 +66,7 @@
                         @endif
                     </td>
                     <td>
-                        @if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
                         <button class="btn btn-outline btn-sm" onclick="openOverrideVisit({{ $v->id }}, '{{ $v->final_start_date?->format('Y-m-d') }}', '{{ $v->final_end_date?->format('Y-m-d') }}')">
                             <i class="bi bi-calendar-event"></i>
                         </button>
@@ -82,7 +82,7 @@
 </div>
 
 {{-- Modal Override Frekuensi --}}
-@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai']))
+@if(in_array(auth()->user()->role, ['kabag_ra','kadiv_skai','admin']))
 <div class="modal-overlay" id="modalFreq">
     <div class="modal">
         <div class="modal-header">
