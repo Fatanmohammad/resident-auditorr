@@ -3,9 +3,9 @@
 
 @section('content')
 @php
-    $backUrl = (auth()->user()->role === 'ra')
-        ? route('raw-metrics.index')
-        : route('units.show', $unit);
+    // Tombol Kembali: menuju halaman Data Unit (units.index),
+    // tidak menampilkan informasi unit & skor risiko.
+    $backUrl = route('units.index');
 @endphp
 <div class="page-header">
     <div class="page-header-title">
@@ -15,9 +15,20 @@
     <a href="{{ $backUrl }}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Kembali</a>
 </div>
 
-<form action="{{ route('raw-metrics.store', $unit) }}" method="POST">
+<form action="{{ route('raw-metrics.store', $unit) }}" method="POST" novalidate>
 @csrf
 <input type="hidden" name="period" value="{{ $period }}">
+
+@if($errors->any())
+<div class="alert alert-error" style="margin-bottom:1rem;">
+    <i class="bi bi-exclamation-circle-fill"></i> <strong>Terjadi kesalahan:</strong>
+    <ul style="margin:0.5rem 0 0 1.25rem;">
+        @foreach($errors->all() as $err)
+        <li>{{ $err }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 
 @php
 $v = fn($key) => old($key, $existing?->$key ?? 0);

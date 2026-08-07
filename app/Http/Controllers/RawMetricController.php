@@ -137,14 +137,17 @@ public function store(Request $request, Unit $unit)
             $validated
         );
 
-// Recompute otomatis seluruh chain scoring
-        $this->scoringService->recompute($unit, $period);
+// Recompute otomatis seluruh chain scoring.
+        // Jika recompute gagal, data raw tetap tersimpan dan tidak menggagalkan redirect.
+        try {
+            $this->scoringService->recompute($unit, $period);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Recompute scoring gagal saat menyimpan raw metrics: ' . $e->getMessage());
+        }
 
-        // RA hanya punya akses halaman raw-metrics → arahkan kembali ke daftar input
-        $redirect = (Auth::user()->role === 'ra')
-            ? redirect()->route('raw-metrics.index', ['period' => $period])
-            : redirect()->route('units.show', $unit);
-
-        return $redirect->with('success', 'Raw metrics disimpan dan scoring diperbarui.');
+// Setelah menyimpan, kembali ke halaman Data Unit (units.index)
+        // dengan notifikasi sukses di bagian atas.
+        return redirect()->route('units.index')
+            ->with('success', 'Data berhasil ditambahkan.');
     }
 }
