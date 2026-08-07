@@ -103,8 +103,21 @@ class UnitSeeder extends Seeder
             ['001-pp6', 'Payment Point SAMSAT Corner Palu',                'Payment Point', 'CABANG UTAMA',           'PALU',          true,  'CABANG UTAMA',    0, 'Rendah'],
         ];
 
-        $now = now();
+$now = now();
         $rows = [];
+
+        // Petakan base_ra_unit ke cabang (kode_cabang) agar unit punya cabang_id
+        // yang sesuai dengan hirarki cabang. RA hanya bisa melihat unit pada
+        // cabangnya sendiri beserta seluruh anak cabangnya (lihat User::cabangIdYangDapatDiakses).
+        $cabangIdByKode = DB::table('cabangs')->pluck('id', 'kode_cabang');
+        $cabangKodeByBaseRa = [
+            'KANTOR PUSAT'      => 'BS-000',
+            'CABANG UTAMA'      => 'BS-001',    // KCU Palu
+            'CABANG PALU BARAT' => 'BS-001',    // area Palu di bawah KCU
+            'CABANG SIGI'       => 'BS-001-A',  // anak cabang Sigi
+            'CABANG LUWUK'      => 'BS-002',
+        ];
+
         foreach ($units as [$code, $name, $type, $parent, $region, $active, $base_ra, $distance, $vol]) {
             $isKcKcu = in_array($type, ['KC', 'KCU']);
             $rows[] = [
@@ -115,6 +128,7 @@ class UnitSeeder extends Seeder
                 'region'                     => $region,
                 'is_active'                  => $active,
                 'base_ra_unit'               => $base_ra,
+                'cabang_id'                  => $cabangIdByKode[$cabangKodeByBaseRa[$base_ra] ?? null] ?? null,
                 'distance_from_parent_km'    => $distance,
                 'transaction_volume_category'=> $vol,
                 'auto_description'           => $isKcKcu
