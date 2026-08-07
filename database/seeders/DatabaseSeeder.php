@@ -12,6 +12,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // 0. Struktur cabang lengkap + seluruh akun (19 RA + user pendukung)
+        //    Dipanggil pertama agar cabang & user tersedia sebelum seeder lain.
+        $this->call(StrukturCabangUserSeeder::class);
+
         // 1. Data Struktur Percabangan PT Bank Sulteng
         $pusat = Cabang::firstOrCreate(['kode_cabang' => 'BS-000'], [
             'nama_cabang' => 'PT Bank Sulteng Kantor Pusat',
@@ -21,18 +25,6 @@ class DatabaseSeeder extends Seeder
         $kcuPalu = Cabang::firstOrCreate(['kode_cabang' => 'BS-001'], [
             'nama_cabang' => 'Cabang Utama Palu (KCU)',
             'tipe' => 'kcu',
-            'parent_id' => $pusat->id,
-        ]);
-
-        Cabang::firstOrCreate(['kode_cabang' => 'BS-001-A'], [
-            'nama_cabang' => 'Anak Cabang Sigi',
-            'tipe' => 'anak_cabang',
-            'parent_id' => $kcuPalu->id,
-        ]);
-
-        Cabang::firstOrCreate(['kode_cabang' => 'BS-002'], [
-            'nama_cabang' => 'Cabang Luwuk',
-            'tipe' => 'cabang_a',
             'parent_id' => $pusat->id,
         ]);
 
@@ -102,6 +94,8 @@ class DatabaseSeeder extends Seeder
             RaSeeder::class,
             UnitSeeder::class,
             CoverageSeeder::class,
+            // Hubungkan unit ke cabang (cabang_id) agar akses RA per cabang berfungsi
+            CabangUnitSeeder::class,
         ]);
     }
 }
