@@ -97,6 +97,13 @@ $canView   = in_array($role, ['ra', 'kabag_ra', 'kadiv_skai', 'pimsie', 'admin']
         </div>
         @endif
 
+        {{-- Offsite Review (SOP 02) --}}
+        @if(!$isRa || $canInput)
+        <a href="{{ route('offsite-review.index') }}" class="nav-item {{ request()->routeIs('offsite-review.*') ? 'active' : '' }}">
+            <i class="bi bi-clipboard2-data nav-icon"></i> Offsite Review
+        </a>
+        @endif
+
 {{-- Menu Audit Plan legacy (approval workflow) — admin akses sama seperti kabag_ra --}}
         @if(in_array($role, ['pimsie', 'kadiv_skai', 'kabag_ra', 'admin']))
         <a href="{{ route('audit-plan.index') }}" class="nav-item {{ request()->routeIs('audit-plan.*') ? 'active' : '' }}">

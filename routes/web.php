@@ -11,6 +11,7 @@ use App\Http\Controllers\CoverageController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\FinalAuditPlanController;
 use App\Http\Controllers\MasterSetupController;
+use App\Http\Controllers\OffsiteReviewController;
 
 // Auth
 Route::get('/', fn() => redirect()->route('login'));
@@ -93,6 +94,17 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
         Route::post('/change-log', [FinalAuditPlanController::class, 'storeChangeLog'])->name('change-log.store');
         Route::post('/generate-all', [FinalAuditPlanController::class, 'generateAll'])->name('generate-all')->middleware('role:kabag_ra,kadiv_skai,admin');
         Route::get('/{finalAuditPlan}', [FinalAuditPlanController::class, 'show'])->name('show');
+    });
+
+    // ==========================================
+    // SOP 02 — OFFSITE REVIEW
+    // ==========================================
+    Route::prefix('offsite-review')->name('offsite-review.')->middleware('role:kabag_ra,kadiv_skai,ra,admin')->group(function () {
+        Route::get('/', [OffsiteReviewController::class, 'index'])->name('index');
+        Route::get('/create', [OffsiteReviewController::class, 'create'])->name('create');
+        Route::post('/', [OffsiteReviewController::class, 'store'])->name('store');
+        Route::get('/{wp}/dashboard', [OffsiteReviewController::class, 'dashboard'])->name('dashboard');
+        Route::patch('/{wp}/status', [OffsiteReviewController::class, 'updateStatus'])->name('status');
     });
 
     // ==========================================
