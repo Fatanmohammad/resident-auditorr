@@ -113,6 +113,13 @@ $canView   = in_array($role, ['ra', 'kabag_ra', 'kadiv_skai', 'pimsie', 'admin']
 
         {{-- Pengaturan Modul (Admin Only) --}}
         @if($role === 'admin')
+        <a href="{{ route('admin-offsite.index') }}" class="nav-item {{ request()->routeIs('admin-offsite.*') ? 'active' : '' }}">
+            <i class="bi bi-house-check nav-icon"></i> Admin Offsite
+        </a>
+        @endif
+
+        {{-- Pengaturan Modul (Admin Only) --}}
+        @if($role === 'admin')
         <a href="{{ route('master-setup.index') }}" class="nav-item {{ request()->routeIs('master-setup.*') ? 'active' : '' }}">
             <i class="bi bi-gear nav-icon"></i> Pengaturan Modul
         </a>

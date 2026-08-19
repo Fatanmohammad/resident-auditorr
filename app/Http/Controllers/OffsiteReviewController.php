@@ -15,8 +15,8 @@ class OffsiteReviewController extends Controller
     // Daftar semua WP Offsite
     public function index()
     {
-        $wps = WpOffsite::with(['unit', 'ra'])
-            ->orderByDesc('tahun')->orderByDesc('bulan')
+        $wps = WpOffsite::with(['unit', 'raPelaksana'])
+            ->orderByDesc('periode_mulai')
             ->paginate(20);
         return view('offsite-review.index', compact('wps'));
     }
@@ -24,7 +24,7 @@ class OffsiteReviewController extends Controller
     // Dashboard utama satu WP
     public function dashboard(WpOffsite $wp)
     {
-        $wp->load(['unit.cabang', 'ra']);
+        $wp->load(['unit.cabang', 'raPelaksana', 'reviewerBagianRa']);
 
         $stats        = $this->service->statCards($wp);
         $areaRows     = $this->service->ringkasanPerArea($wp);
@@ -48,31 +48,44 @@ class OffsiteReviewController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'unit_id'      => 'required|exists:units,id',
-            'ra_id'        => 'nullable|exists:ras,id',
-            'tahun'        => 'required|integer|min:2020|max:2099',
-            'bulan'        => 'required|integer|min:1|max:12',
-            'reviewer'     => 'nullable|string|max:100',
-            'validasi_unit'=> 'boolean',
+            'unit_id'               => 'required|exists:units,id',
+            'ra_pelaksana_id'       => 'required|exists:users,id',
+            'reviewer_bagian_ra_id' => 'nullable|exists:users,id',
+            'tahun'                 => 'required|integer|min:2020|max:2099',
+            'bulan'                 => 'required|integer|min:1|max:12',
         ]);
 
-        $bulanLabel = \Carbon\Carbon::create($validated['tahun'], $validated['bulan'])->isoFormat('MMMM Y');
-        $unit       = Unit::find($validated['unit_id']);
-        $kodeWp     = 'WP-OFF-' . $unit->unit_code . '-' . $validated['tahun'] . str_pad($validated['bulan'], 2, '0', STR_PAD_LEFT);
+        $unit = Unit::find($validated['unit_id']);
+        $tahun = $validated['tahun'];
+        $bulan = $validated['bulan'];
+        $kodeWp = 'WP-OFF-' . $unit->unit_code . '-' . $tahun . str_pad($bulan, 2, '0', STR_PAD_LEFT);
 
-        $wp = WpOffsite::create(array_merge($validated, [
-            'kode_wp'       => $kodeWp,
-            'periode_data'  => $bulanLabel,
-            'validasi_unit' => $request->boolean('validasi_unit'),
-        ]));
+        $periodeMulai  = \Carbon\Carbon::create($tahun, $bulan, 1)->startOfMonth();
+        $periodeSelesai = $periodeMulai->copy()->endOfMonth();
+
+        $wp = WpOffsite::create([
+            'kode_wp'               => $kodeWp,
+            'unit_id'               => $validated['unit_id'],
+            'kode_unit'             => $unit->unit_code,
+            'nama_unit'             => $unit->unit_name,
+            'jenis_unit'            => $unit->unit_type,
+            'kantor_induk'          => $unit->parent_office,
+            'periode_mulai'         => $periodeMulai,
+            'periode_selesai'       => $periodeSelesai,
+            'ra_pelaksana_id'       => $validated['ra_pelaksana_id'],
+            'reviewer_bagian_ra_id' => $validated['reviewer_bagian_ra_id'] ?? null,
+            'status_wp'             => 'Draft',
+            'scope_wp'              => '1 UNIT / 1 PERIODE',
+            'validasi_unit'         => 'VALID',
+        ]);
 
         return redirect()->route('offsite-review.dashboard', $wp)->with('success', 'WP Offsite berhasil dibuat.');
     }
 
-    // Update status WP
+    // Update status WP (sesuai migration enum: Draft, Aktif, Final)
     public function updateStatus(Request $request, WpOffsite $wp)
     {
-        $request->validate(['status_wp' => 'required|in:Draft,In Review,Final,Approved']);
+        $request->validate(['status_wp' => 'required|in:Draft,Aktif,Final']);
         $wp->update(['status_wp' => $request->status_wp]);
         return back()->with('success', 'Status WP diperbarui.');
     }
