@@ -12,6 +12,7 @@ use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\FinalAuditPlanController;
 use App\Http\Controllers\MasterSetupController;
 use App\Http\Controllers\OffsiteReviewController;
+use App\Http\Controllers\AdminOffsiteController;
 
 // Auth
 Route::get('/', fn() => redirect()->route('login'));
@@ -94,6 +95,17 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
         Route::post('/change-log', [FinalAuditPlanController::class, 'storeChangeLog'])->name('change-log.store');
         Route::post('/generate-all', [FinalAuditPlanController::class, 'generateAll'])->name('generate-all')->middleware('role:kabag_ra,kadiv_skai,admin');
         Route::get('/{finalAuditPlan}', [FinalAuditPlanController::class, 'show'])->name('show');
+    });
+
+    // ==========================================
+    // SOP 02 — ADMIN OFFSITE (ADMIN ONLY)
+    // ==========================================
+    Route::prefix('admin/offsite')->name('admin-offsite.')->middleware('role:admin')->group(function () {
+        Route::get('/', [AdminOffsiteController::class, 'index'])->name('index');
+        Route::get('/cabang/{cabang}', [AdminOffsiteController::class, 'cabangDetail'])->name('cabang-detail');
+        Route::get('/unit/{unit}', [AdminOffsiteController::class, 'unitDetail'])->name('unit-detail');
+        Route::post('/unit/{unit}/upload-register', [AdminOffsiteController::class, 'uploadRegister'])->name('upload-register');
+        Route::patch('/unit/{unit}/status', [AdminOffsiteController::class, 'updateStatus'])->name('update-status');
     });
 
     // ==========================================
