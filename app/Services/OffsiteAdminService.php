@@ -43,10 +43,15 @@ class OffsiteAdminService
         $query = Unit::where('is_active', true);
 
         if ($cabangId) {
-            $query->where('cabang_id', $cabangId);
-        }
+        // Ambil ID cabang ini + semua anak cabangnya (tipe = anak_cabang, parent_id = cabang ini)
+        $cabangIds = Cabang::where('id', $cabangId)
+            ->orWhere('parent_id', $cabangId)
+            ->pluck('id');
 
-        $units = $query->orderBy('unit_type')->orderBy('unit_name')->get();
+        $query->whereIn('cabang_id', $cabangIds);
+    }
+
+    $units = $query->orderBy('unit_type')->orderBy('unit_name')->get();
 
         $units = $units->map(function ($unit) use ($tahun, $bulan) {
     $rows = RegisterHarian::where('kode_unit', $unit->unit_code)
