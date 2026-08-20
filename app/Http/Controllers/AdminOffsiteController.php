@@ -62,21 +62,37 @@ class AdminOffsiteController extends Controller
      */
     public function unitDetail(Unit $unit)
     {
-        $tahun = request('tahun', date('Y'));
-        $bulan = request('bulan', date('m'));
+         $tahun = request('tahun', date('Y'));
+    $bulan = request('bulan', date('m'));
 
-        $summary = OffsiteUnitSummary::where('unit_id', $unit->id)
-            ->where('tahun', $tahun)
-            ->where('bulan', $bulan)
-            ->first();
+    $wp = \App\Models\WpOffsite::with(['raPelaksana', 'reviewerBagianRa'])
+        ->where('unit_id', $unit->id)
+        ->whereYear('periode_mulai', $tahun)
+        ->whereMonth('periode_mulai', $bulan)
+        ->first();
 
-        $uploads = OffsiteRegisterUpload::where('unit_id', $unit->id)
-            ->where('tahun', $tahun)
-            ->where('bulan', $bulan)
-            ->latest()
-            ->get();
+    if (!$wp) {
+        return view('admin-offsite.unit-detail', [
+            'unit' => $unit, 'wp' => null, 'tahun' => $tahun, 'bulan' => $bulan,
+        ]);
+    }
 
-        return view('admin-offsite.unit-detail', compact('unit', 'summary', 'uploads', 'tahun', 'bulan'));
+    $rows = $wp->registerHarian()
+        ->orderBy('tanggal_data')
+        ->orderBy('area_review')
+        ->get()
+        ->groupBy(fn($r) => $r->tanggal_data->format('Y-m-d'));
+
+    $ringkasan = [
+        'populasi'    => $wp->registerHarian()->sum('populasi_eligible'),
+        'sampel_low'  => $wp->registerHarian()->sum('sampel_low'),
+        'kka_final'   => $wp->registerHarian()->sum('kka_final'),
+        'exception'   => $wp->registerHarian()->sum('exception'),
+        'klarifikasi' => $wp->registerHarian()->sum('perlu_klarifikasi'),
+        'eskalasi'    => $wp->registerHarian()->sum('perlu_eskalasi'),
+    ];
+
+    return view('admin-offsite.unit-detail', compact('unit', 'wp', 'rows', 'ringkasan', 'tahun', 'bulan'));
     }
 
     /**
