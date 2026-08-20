@@ -49,31 +49,37 @@ class OffsiteAdminService
         $units = $query->orderBy('unit_type')->orderBy('unit_name')->get();
 
         $units = $units->map(function ($unit) use ($tahun, $bulan) {
-            // Ambil semua baris register_harian unit ini di bulan itu, ringkas jadi 1 status
-            $rows = RegisterHarian::where('kode_unit', $unit->unit_code)
-                ->whereYear('tanggal_data', $tahun)
-                ->whereMonth('tanggal_data', $bulan)
-                ->get();
+    $rows = RegisterHarian::where('kode_unit', $unit->unit_code)
+        ->whereYear('tanggal_data', $tahun)
+        ->whereMonth('tanggal_data', $bulan)
+        ->get();
 
-            $totalKlarifikasi = $rows->sum('perlu_klarifikasi');
-            $totalEskalasi = $rows->sum('perlu_eskalasi');
-            $adaBelumReview = $rows->whereIn('status_review', ['Belum Review', 'Dalam Review'])->count() > 0;
+    $totalKlarifikasi = $rows->sum('perlu_klarifikasi');
+    $totalEskalasi = $rows->sum('perlu_eskalasi');
+    $adaBelumReview = $rows->whereIn('status_review', ['Belum Review', 'Dalam Review'])->count() > 0;
 
-            $statusReview = $rows->isEmpty()
-                ? 'Tidak Ada Data'
-                : ($adaBelumReview ? 'Perlu Review' : 'Selesai Review');
+    $statusReview = $rows->isEmpty()
+        ? 'Tidak Ada Data'
+        : ($adaBelumReview ? 'Perlu Review' : 'Selesai Review');
 
-            $risikoTertinggi = $this->hitungRisikoTertinggi($rows->pluck('risiko_tertinggi')->filter()->all());
+    $risikoTertinggi = $this->hitungRisikoTertinggi($rows->pluck('risiko_tertinggi')->filter()->all());
 
-            return [
-                'unit' => $unit,
-                'status_review' => $statusReview,
-                'total_klarifikasi' => $totalKlarifikasi,
-                'total_eskalasi' => $totalEskalasi,
-                'risiko_tertinggi' => $risikoTertinggi,
-                'terakhir_update' => $rows->max('updated_at'),
-            ];
-        });
+    // Jumlah area review unik dengan risiko Moderate to High atau lebih tinggi
+    $totalAreaRisiko = $rows->whereIn('risiko_tertinggi', ['Moderate to High', 'High'])
+        ->pluck('area_review')
+        ->unique()
+        ->count();
+
+    return [
+        'unit' => $unit,
+        'status_review' => $statusReview,
+        'total_klarifikasi' => $totalKlarifikasi,
+        'total_eskalasi' => $totalEskalasi,
+        'total_area_risiko' => $totalAreaRisiko, // ⬅️ tambahan
+        'risiko_tertinggi' => $risikoTertinggi,
+        'terakhir_update' => $rows->max('updated_at'),
+    ];
+});
 
         return $units;
     }
