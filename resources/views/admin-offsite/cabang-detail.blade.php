@@ -30,7 +30,6 @@
                     <th>Kode Unit</th>
                     <th>Nama Unit</th>
                     <th>Jenis Unit</th>
-                    <th>RA</th>
                     <th>Area Risiko</th>
                     <th>Risiko Tertinggi</th>
                     <th>Status Review</th>
@@ -44,7 +43,6 @@
                         <td><code>{{ $item['unit']->unit_code }}</code></td>
                         <td>{{ $item['unit']->unit_name }}</td>
                         <td>{{ $item['unit']->unit_type }}</td>
-                        <td>{{ $item['unit']->raAssignment?->primaryRa?->ra_name ?? '-' }}</td>
                         <td>
                             <span class="badge bg-info">{{ $item['total_area_risiko'] }}</span>
                         </td>
