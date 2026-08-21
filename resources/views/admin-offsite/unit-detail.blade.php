@@ -118,6 +118,37 @@
             </div>
         </div>
 
+        {{-- 7 kartu KKA per area --}}
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Kertas Kerja Audit (KKA)</h5></div>
+    <div class="card-body">
+        <div class="row g-2">
+            @php
+                $kkaAreas = [
+                    'teller-kas' => ['Teller/Kas', $wp->kkaTellerKas()->count()],
+                    'kredit' => ['Kredit', $wp->kkaKredit()->count()],
+                    'biaya-beban' => ['Biaya/Beban', $wp->kkaBiayaBeban()->count()],
+                    'biaya-internal' => ['Biaya/Internal', $wp->kkaBiayaInternal()->count()],
+                    'pengaduan' => ['Pengaduan', $wp->kkaPengaduan()->count()],
+                    'transaksi-umum' => ['Transaksi Umum', $wp->kkaTransaksiUmum()->count()],
+                    'transfer-ku' => ['Transfer/KU', $wp->kkaTransferKu()->count()],
+                ];
+            @endphp
+            @foreach($kkaAreas as $slug => [$label, $count])
+                <div class="col-md-3">
+                    <a href="{{ route('admin-offsite.kka-index', [$wp->id, $slug]) }}" 
+                       class="card text-decoration-none {{ $count > 0 ? 'border-warning' : '' }}">
+                        <div class="card-body py-2 text-center">
+                            <div class="small text-muted">{{ $label }}</div>
+                            <div class="h5 mb-0 {{ $count > 0 ? 'text-warning' : 'text-muted' }}">{{ $count }}</div>
+                        </div>
+                    </a>
+                </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+
         <div class="card">
             <div class="card-header">
                 <div class="card-title">Register Harian Review Offsite</div>
