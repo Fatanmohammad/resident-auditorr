@@ -11,6 +11,89 @@ use Illuminate\Http\Request;
 
 class AdminOffsiteController extends Controller
 {
+    private array $kkaModels = [
+    'teller-kas'      => \App\Models\KkaTellerKas::class,
+    'kredit'          => \App\Models\KkaKredit::class,
+    'biaya-beban'     => \App\Models\KkaBiayaBeban::class,
+    'biaya-internal'  => \App\Models\KkaBiayaInternal::class,
+    'pengaduan'       => \App\Models\KkaPengaduan::class,
+    'transaksi-umum'  => \App\Models\KkaTransaksiUmum::class,
+    'transfer-ku'     => \App\Models\KkaTransferKu::class,
+    ];
+
+    private array $kkaLabels = [
+        'teller-kas'      => 'Teller/Kas',
+        'kredit'          => 'Kredit',
+        'biaya-beban'     => 'Biaya/Beban',
+        'biaya-internal'  => 'Biaya/Internal',
+        'pengaduan'       => 'Pengaduan',
+        'transaksi-umum'  => 'Transaksi Umum',
+        'transfer-ku'     => 'Transfer/KU',
+    ];
+
+    /**
+     * Daftar KKA per area untuk 1 WP
+     */
+    public function kkaIndex(\App\Models\WpOffsite $wp, string $area)
+    {
+    if (!isset($this->kkaModels[$area])) {
+        abort(404, 'Area KKA tidak dikenali.');
+    }
+
+    $model = $this->kkaModels[$area];
+    $rows = $model::where('wp_offsite_id', $wp->id)->orderBy('tanggal_data')->get();
+
+    return view('admin-offsite.kka-index', [
+        'wp' => $wp,
+        'area' => $area,
+        'areaLabel' => $this->kkaLabels[$area],
+        'rows' => $rows,
+    ]);
+}
+
+/**
+ * Detail 1 baris KKA
+ */
+public function kkaShow(\App\Models\WpOffsite $wp, string $area, int $kkaId)
+{
+    if (!isset($this->kkaModels[$area])) {
+        abort(404, 'Area KKA tidak dikenali.');
+    }
+
+    $model = $this->kkaModels[$area];
+    $kka = $model::where('wp_offsite_id', $wp->id)->findOrFail($kkaId);
+
+    return view('admin-offsite.kka-show', [
+        'wp' => $wp,
+        'area' => $area,
+        'areaLabel' => $this->kkaLabels[$area],
+        'kka' => $kka,
+    ]);
+}
+
+/**
+ * Update Catatan Reviewer saja (Admin/Reviewer HANYA boleh isi ini)
+ */
+    public function kkaUpdateReviewerNote(Request $request, \App\Models\WpOffsite $wp, string $area, int $kkaId)
+    {
+    if (!isset($this->kkaModels[$area])) {
+        abort(404, 'Area KKA tidak dikenali.');
+    }
+
+    $validated = $request->validate([
+        'catatan_reviewer' => 'nullable|string',
+    ]);
+
+    $model = $this->kkaModels[$area];
+    $kka = $model::where('wp_offsite_id', $wp->id)->findOrFail($kkaId);
+
+    $kka->update([
+        'catatan_reviewer' => $validated['catatan_reviewer'],
+        'reviewer_id' => auth()->id(),
+    ]);
+
+    return back()->with('success', 'Catatan Reviewer berhasil disimpan.');
+}
     public function __construct(private OffsiteAdminService $service) {}
 
     /**
