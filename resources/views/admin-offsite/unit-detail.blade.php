@@ -124,14 +124,15 @@
     <div class="card-body">
         <div class="row g-2">
             @php
+                $stagingData = $wp->stagingOffsite;
                 $kkaAreas = [
-                    'teller-kas' => ['Teller/Kas', $wp->kkaTellerKas()->count()],
-                    'kredit' => ['Kredit', $wp->kkaKredit()->count()],
-                    'biaya-beban' => ['Biaya/Beban', $wp->kkaBiayaBeban()->count()],
-                    'biaya-internal' => ['Biaya/Internal', $wp->kkaBiayaInternal()->count()],
-                    'pengaduan' => ['Pengaduan', $wp->kkaPengaduan()->count()],
-                    'transaksi-umum' => ['Transaksi Umum', $wp->kkaTransaksiUmum()->count()],
-                    'transfer-ku' => ['Transfer/KU', $wp->kkaTransferKu()->count()],
+                    'teller-kas'     => ['Teller/Kas', $stagingData->where('area_review', 'Teller/Kas')->count()],
+                    'kredit'         => ['Kredit', $stagingData->where('area_review', 'Kredit')->count()],
+                    'biaya-beban'    => ['Biaya/Beban', $stagingData->where('area_review', 'Biaya/Beban')->count()],
+                    'biaya-internal' => ['Biaya/Internal', $stagingData->where('area_review', 'Biaya/Internal')->count()],
+                    'pengaduan'      => ['Pengaduan', $stagingData->where('area_review', 'Pengaduan')->count()],
+                    'transaksi-umum' => ['Transaksi Umum', $stagingData->where('area_review', 'Transaksi Umum')->count()],
+                    'transfer-ku'     => ['Transfer/KU', $stagingData->where('area_review', 'Transfer/KU')->count()],
                 ];
             @endphp
             @foreach($kkaAreas as $slug => [$label, $count])
@@ -188,28 +189,28 @@
                                                 @foreach($areaRows as $row)
                                                 <tr>
                                                     <td style="font-weight: 600;">{{ $row->area_review }}</td>
-                                                    <td style="text-align: right; font-family: monospace; font-size: 0.9rem;">{{ number_format($row->populasi_eligible) }}</td>
-                                                    <td style="text-align: right; font-family: monospace; font-size: 0.9rem;">{{ number_format($row->sampel_low) }}</td>
-                                                    <td style="text-align: right; font-family: monospace; font-size: 0.9rem;">{{ number_format($row->kka_final) }}</td>
-                                                    <td style="text-align: right; font-family: monospace; font-size: 0.9rem; {{ $row->exception > 0 ? 'color: #dc2626; font-weight: bold;' : '' }}">
-                                                        {{ number_format($row->exception) }}
+                                                    <td style="text-align: right; font-family: monospace; font-size: 0.9rem;">1</td>
+                                                    <td style="text-align: right; font-family: monospace; font-size: 0.9rem;">{{ $row->sampel_low ? '1' : '0' }}</td>
+                                                    <td style="text-align: right; font-family: monospace; font-size: 0.9rem;">{{ $row->masuk_kka_final ? '1' : '0' }}</td>
+                                                    <td style="text-align: right; font-family: monospace; font-size: 0.9rem; {{ $row->exception_awal ? 'color: #dc2626; font-weight: bold;' : '' }}">
+                                                        {{ $row->exception_awal ? '1' : '0' }}
                                                     </td>
                                                     <td style="text-align: center;">
-                                                        @if($row->risiko_tertinggi === 'High')
+                                                        @if($row->risk_level === 'High')
                                                             <span class="badge badge-danger">High</span>
-                                                        @elseif(in_array($row->risiko_tertinggi, ['Moderate', 'Moderate to High']))
-                                                            <span class="badge badge-warning">{{ $row->risiko_tertinggi }}</span>
-                                                        @elseif(in_array($row->risiko_tertinggi, ['Low', 'Low to Moderate']))
-                                                            <span class="badge badge-success">{{ $row->risiko_tertinggi }}</span>
+                                                        @elseif(in_array($row->risk_level, ['Moderate', 'Moderate to High']))
+                                                            <span class="badge badge-warning">{{ $row->risk_level }}</span>
+                                                        @elseif(in_array($row->risk_level, ['Low', 'Low to Moderate']))
+                                                            <span class="badge badge-success">{{ $row->risk_level }}</span>
                                                         @else
-                                                            <span class="text-muted" style="font-size: 0.75rem;">{{ $row->risiko_tertinggi ?? '-' }}</span>
+                                                            <span class="text-muted" style="font-size: 0.75rem;">{{ $row->risk_level ?? '-' }}</span>
                                                         @endif
                                                     </td>
-                                                    <td style="color: var(--text-muted); font-size: 0.8rem;">{{ $row->hasil_awal ?? '-' }}</td>
+                                                    <td style="color: var(--text-muted); font-size: 0.8rem;">{{ $row->deskripsi_narasi ?? '-' }}</td>
                                                     <td style="text-align: center;">
-                                                        <span class="badge badge-gray">{{ $row->status_review }}</span>
+                                                        <span class="badge badge-gray">{{ $row->status_data_quality ?? 'Draft' }}</span>
                                                     </td>
-                                                    <td style="color: var(--text-muted); font-size: 0.8rem;">{{ $row->catatan_ra ?? '-' }}</td>
+                                                    <td style="color: var(--text-muted); font-size: 0.8rem;">{{ $row->catatan_validasi ?? '-' }}</td>
                                                 </tr>
                                                 @endforeach
                                             </tbody>
