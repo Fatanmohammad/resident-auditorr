@@ -14,6 +14,21 @@ use App\Http\Controllers\MasterSetupController;
 use App\Http\Controllers\OffsiteReviewController;
 use App\Http\Controllers\AdminOffsiteController;
 
+Route::get('/debug-test', function () {
+
+    $unit = \App\Models\Unit::find(2);
+
+    $wp = \App\Models\WpOffsite::where('unit_id', $unit->id)
+        ->whereYear('periode_mulai', request('tahun', date('Y')))
+        ->whereMonth('periode_mulai', request('bulan', date('m')))
+        ->first();
+
+    return response()->json([
+        'wp_found' => (bool) $wp,
+        'kode_wp' => $wp?->kode_wp,
+    ]);
+});
+
 // Auth
 Route::get('/', fn() => redirect()->route('login'));
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');

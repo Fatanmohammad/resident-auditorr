@@ -118,7 +118,7 @@
             </div>
         </div>
 
-        {{-- 7 kartu KKA per area --}}
+        {{-- 7 kartu KKA per area--}}
 <div class="card mb-4">
     <div class="card-header"><h5 class="mb-0">Kertas Kerja Audit (KKA)</h5></div>
     <div class="card-body">
