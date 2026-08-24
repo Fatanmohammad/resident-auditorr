@@ -170,16 +170,20 @@ class WpOffsite extends Model
         return $this->validasi_unit === 'VALID';
     }
 
-    public function getKodeWpAttribute(): string
+    public function getKodeWpAttribute($value): string
     {
-        if (!$this->getAttribute('kode_wp')) {
-            $format = sprintf(
-                'SOP02-%s-%s',
-                $this->kode_unit,
-                $this->periode_mulai->format('Ym')
-            );
-            $this->setAttribute('kode_wp', $format);
-        }
-        return $this->getAttribute('kode_wp');
+    if (!$value) {
+        $format = sprintf(
+            'SOP02-%s-%s',
+            $this->kode_unit,
+            $this->periode_mulai->format('Ym')
+        );
+
+        $this->attributes['kode_wp'] = $format;
+
+        return $format;
+    }
+
+    return $value;
     }
 }
