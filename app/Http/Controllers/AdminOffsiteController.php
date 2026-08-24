@@ -97,19 +97,22 @@ class AdminOffsiteController extends Controller
         }
 
         // Ambil register harian dengan proteksi aman
-        $registerQuery = method_exists($wp, 'registerHarian') ? $wp->registerHarian() : null;
+        // Ambil data langsung dari relasi stagingOffsite
+        $stagingData = $wp->stagingOffsite()->orderBy('tanggal_data')->get();
 
-        $rows = $registerQuery 
-            ? $registerQuery->orderBy('tanggal_data')->orderBy('area_review')->get()->groupBy(fn($r) => optional($r->tanggal_data)->format('Y-m-d') ?? 'N/A')
-            : collect();
+        // Grouping berdasarkan tanggal_data untuk tampilan accordion Blade
+        $rows = $stagingData->groupBy(function($item) {
+            return \Carbon\Carbon::parse($item->tanggal_data)->format('Y-m-d');
+        });
 
+        // Hitung ringkasan statistik
         $ringkasan = [
-            'populasi'    => $registerQuery ? $registerQuery->sum('populasi_eligible') : 0,
-            'sampel_low'  => $registerQuery ? $registerQuery->sum('sampel_low') : 0,
-            'kka_final'   => $registerQuery ? $registerQuery->sum('kka_final') : 0,
-            'exception'   => $registerQuery ? $registerQuery->sum('exception') : 0,
-            'klarifikasi' => $registerQuery ? $registerQuery->sum('perlu_klarifikasi') : 0,
-            'eskalasi'    => $registerQuery ? $registerQuery->sum('perlu_eskalasi') : 0,
+            'populasi'    => $stagingData->count(),
+            'sampel_low'  => $stagingData->where('sampel_low', 1)->count(),
+            'kka_final'   => $stagingData->where('masuk_kka_final', 1)->count(),
+            'exception'   => $stagingData->where('exception_awal', 1)->count(),
+            'klarifikasi' => 0,
+            'eskalasi'    => 0,
         ];
 
         return view('admin-offsite.unit-detail', compact('unit', 'wp', 'rows', 'ringkasan', 'tahun', 'bulan'));
@@ -119,21 +122,32 @@ class AdminOffsiteController extends Controller
      * Daftar KKA per area untuk 1 WP
      */
     public function kkaIndex(WpOffsite $wp, string $area)
-    {
-        if (!isset($this->kkaModels[$area])) {
-            abort(404, 'Area KKA tidak dikenali.');
-        }
-
-        $model = $this->kkaModels[$area];
-        $rows = $model::where('wp_offsite_id', $wp->id)->orderBy('tanggal_data')->get();
-
-        return view('admin-offsite.kka-index', [
-            'wp' => $wp,
-            'area' => $area,
-            'areaLabel' => $this->kkaLabels[$area],
-            'rows' => $rows,
-        ]);
+{
+    if (!isset($this->kkaLabels[$area])) {
+        abort(404, 'Area KKA tidak dikenali.');
     }
+
+    $areaLabel = $this->kkaLabels[$area];
+
+    // Ambil HANYA data yang teridentifikasi Temuan / High / Exception / Sampel Low
+    $rows = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
+        ->where('area_review', $areaLabel)
+        ->where(function ($q) {
+            $q->where('exception_awal', true)
+              ->orWhere('masuk_kka_final', true)
+              ->orWhere('risk_level', 'High')
+              ->orWhere('sampel_low', true);
+        })
+        ->orderBy('tanggal_data')
+        ->get();
+
+    return view('admin-offsite.kka-index', [
+        'wp'        => $wp,
+        'area'      => $area,
+        'areaLabel' => $areaLabel,
+        'rows'      => $rows,
+    ]);
+}
 
     /**
      * Detail 1 baris KKA

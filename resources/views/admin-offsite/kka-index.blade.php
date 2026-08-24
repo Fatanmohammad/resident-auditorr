@@ -44,8 +44,8 @@
                         <td>{{ $row->kategori_risiko_final ?? '-' }}</td>
                         <td>{{ $row->status_review ?? 'Belum Review' }}</td>
                         <td>
-                            <a href="{{ route('admin-offsite.kka-show', [$wp->id, $area, $row->kka_id]) }}" 
-                               class="btn btn-sm btn-primary">Detail</a>
+                            <a href="{{ route('admin-offsite.kka-show', [$wp->id, $area, $row->id]) }}" 
+                                class="btn btn-sm btn-primary">Detail</a>
                         </td>
                     </tr>
                     @empty
