@@ -122,32 +122,32 @@ class AdminOffsiteController extends Controller
      * Daftar KKA per area untuk 1 WP
      */
     public function kkaIndex(WpOffsite $wp, string $area)
-{
-    if (!isset($this->kkaLabels[$area])) {
-        abort(404, 'Area KKA tidak dikenali.');
+    {
+        if (!isset($this->kkaLabels[$area])) {
+            abort(404, 'Area KKA tidak dikenali.');
+        }
+
+        $areaLabel = $this->kkaLabels[$area];
+
+        // Ambil HANYA data yang teridentifikasi Temuan / High / Exception / Sampel Low
+        $rows = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
+            ->where('area_review', $areaLabel)
+            ->where(function ($q) {
+                $q->where('exception_awal', true)
+                  ->orWhere('masuk_kka_final', true)
+                  ->orWhere('risk_level', 'High')
+                  ->orWhere('sampel_low', true);
+            })
+            ->orderBy('tanggal_data')
+            ->get();
+
+        return view('admin-offsite.kka-index', [
+            'wp'        => $wp,
+            'area'      => $area,
+            'areaLabel' => $areaLabel,
+            'rows'      => $rows,
+        ]);
     }
-
-    $areaLabel = $this->kkaLabels[$area];
-
-    // Ambil HANYA data yang teridentifikasi Temuan / High / Exception / Sampel Low
-    $rows = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
-        ->where('area_review', $areaLabel)
-        ->where(function ($q) {
-            $q->where('exception_awal', true)
-              ->orWhere('masuk_kka_final', true)
-              ->orWhere('risk_level', 'High')
-              ->orWhere('sampel_low', true);
-        })
-        ->orderBy('tanggal_data')
-        ->get();
-
-    return view('admin-offsite.kka-index', [
-        'wp'        => $wp,
-        'area'      => $area,
-        'areaLabel' => $areaLabel,
-        'rows'      => $rows,
-    ]);
-}
 
     /**
      * Detail 1 baris KKA
@@ -191,5 +191,39 @@ class AdminOffsiteController extends Controller
         ]);
 
         return back()->with('success', 'Catatan Reviewer berhasil disimpan.');
+    }
+
+    /**
+     * Update Hasil Review KKA dari Form Reviewer
+     */
+    public function kkaUpdate(Request $request, WpOffsite $wp, string $area, $kkaId)
+    {
+    // 1. Cari data di Staging Offsite
+    $kka = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
+        ->where('id', $kkaId)
+        ->first();
+
+    // 2. Jika tidak ditemukan di Staging, cari di tabel spesifik KKA area
+    if (!$kka && isset($this->kkaModels[$area])) {
+        $model = $this->kkaModels[$area];
+        $kka = $model::where('wp_offsite_id', $wp->id)
+            ->where(function($q) use ($kkaId) {
+                $q->where('kka_id', $kkaId)->orWhere('id', $kkaId);
+            })
+            ->firstOrFail();
+    }
+
+    if (!$kka) {
+        return back()->with('error', 'Data KKA tidak ditemukan.');
+    }
+
+    // Admin HANYA memperbarui Status Review dan Catatan Reviewer
+    $kka->update([
+        'status_review'    => $request->status_review,
+        'catatan_reviewer' => $request->catatan_reviewer,
+        'reviewer_id'      => auth()->id(),
+    ]);
+
+    return redirect()->back()->with('success', 'Catatan Reviewer & Status Review berhasil disimpan!');
     }
 }

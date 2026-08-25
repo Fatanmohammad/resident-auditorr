@@ -123,6 +123,7 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
         Route::patch('/unit/{unit}/status', [AdminOffsiteController::class, 'updateStatus'])->name('update-status');
         Route::get('/wp/{wp}/kka/{area}', [AdminOffsiteController::class, 'kkaIndex'])->name('kka-index');
         Route::get('/wp/{wp}/kka/{area}/{kkaId}', [AdminOffsiteController::class, 'kkaShow'])->name('kka-show');
+        Route::put('/wp/{wp}/kka/{area}/{kkaId}', [AdminOffsiteController::class, 'kkaUpdate'])->name('kka-update');
         Route::patch('/wp/{wp}/kka/{area}/{kkaId}/reviewer-note', [AdminOffsiteController::class, 'kkaUpdateReviewerNote'])->name('kka-reviewer-note');
     });
 
