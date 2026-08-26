@@ -142,19 +142,20 @@
                         <div class="card-title" style="font-size: 0.9rem; color: #1d4ed8;"><i class="bi bi-pencil-square"></i> Catatan Reviewer (Admin)</div>
                     </div>
                     <div class="card-body">
+                        {{-- STATUS REVIEW: READ-ONLY (Milik RA) --}}
                         <div style="margin-bottom: 1rem;">
-                            <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); display: block; margin-bottom: 0.25rem;">Status Review</label>
-                            <select name="status_review" class="form-select" style="width: 100%; font-size: 0.85rem; padding: 0.4rem 2rem 0.4rem 0.75rem;">
-                                <option value="Belum Review" {{ old('status_review', $kka->status_review) == 'Belum Review' ? 'selected' : '' }}>Belum Review</option>
-                                <option value="Dalam Proses" {{ old('status_review', $kka->status_review) == 'Dalam Proses' ? 'selected' : '' }}>Dalam Proses</option>
-                                <option value="Selesai" {{ old('status_review', $kka->status_review) == 'Selesai' ? 'selected' : '' }}>Selesai</option>
-                                <option value="Perlu Perbaikan" {{ old('status_review', $kka->status_review) == 'Perlu Perbaikan' ? 'selected' : '' }}>Perlu Perbaikan</option>
-                            </select>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Status Review (Milik RA)</label>
+                            <input type="text" class="form-input" style="width: 100%; font-size: 0.85rem; padding: 0.4rem 0.75rem; background-color: #f8fafc; font-weight: 600;" value="{{ $kka->status_review ?? 'Belum Review' }}" readonly disabled>
+                            <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">*Status Review diubah oleh RA pelaksana.</span>
                         </div>
 
+                        {{-- CATATAN REVIEWER: Form diisi Admin --}}
                         <div style="margin-bottom: 1rem;">
                             <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); display: block; margin-bottom: 0.25rem;">Catatan Reviewer</label>
-                            <textarea name="catatan_reviewer" class="form-input" style="width: 100%; font-size: 0.85rem; padding: 0.4rem 0.75rem; resize: vertical; min-height: 150px;" placeholder="Masukkan komentar/catatan tinjauan Anda (misal: 'Perlu dilengkapi bukti tambahan' atau 'Sudah sesuai, disetujui')...">{{ old('catatan_reviewer', $kka->catatan_reviewer) }}</textarea>
+                            <textarea name="catatan_reviewer" class="form-input" style="width: 100%; font-size: 0.85rem; padding: 0.4rem 0.75rem; resize: vertical; min-height: 150px;" placeholder="Masukkan komentar/catatan tinjauan Anda (misal: 'Perlu dilengkapi bukti tambahan' atau 'Sudah sesuai')...">{{ old('catatan_reviewer', $kka->catatan_reviewer) }}</textarea>
+                            @error('catatan_reviewer')
+                                <span style="font-size: 0.75rem; color: #dc2626; margin-top: 0.25rem; display: block;">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         @if($kka->updated_at)

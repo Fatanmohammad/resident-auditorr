@@ -198,32 +198,37 @@ class AdminOffsiteController extends Controller
      */
     public function kkaUpdate(Request $request, WpOffsite $wp, string $area, $kkaId)
     {
-    // 1. Cari data di Staging Offsite
-    $kka = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
-        ->where('id', $kkaId)
-        ->first();
+        // Validasi input: Admin HANYA diizinkan mengisi Catatan Reviewer
+        $validated = $request->validate([
+            'catatan_reviewer' => 'nullable|string|max:2000',
+        ]);
 
-    // 2. Jika tidak ditemukan di Staging, cari di tabel spesifik KKA area
-    if (!$kka && isset($this->kkaModels[$area])) {
-        $model = $this->kkaModels[$area];
-        $kka = $model::where('wp_offsite_id', $wp->id)
-            ->where(function($q) use ($kkaId) {
-                $q->where('kka_id', $kkaId)->orWhere('id', $kkaId);
-            })
-            ->firstOrFail();
-    }
+        // 1. Cari data di Staging Offsite
+        $kka = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
+            ->where('id', $kkaId)
+            ->first();
 
-    if (!$kka) {
-        return back()->with('error', 'Data KKA tidak ditemukan.');
-    }
+        // 2. Jika tidak ditemukan di Staging, cari di tabel spesifik KKA area
+        if (!$kka && isset($this->kkaModels[$area])) {
+            $model = $this->kkaModels[$area];
+            $kka = $model::where('wp_offsite_id', $wp->id)
+                ->where(function($q) use ($kkaId) {
+                    $q->where('kka_id', $kkaId)->orWhere('id', $kkaId);
+                })
+                ->first();
+        }
 
-    // Admin HANYA memperbarui Status Review dan Catatan Reviewer
-    $kka->update([
-        'status_review'    => $request->status_review,
-        'catatan_reviewer' => $request->catatan_reviewer,
-        'reviewer_id'      => auth()->id(),
-    ]);
+        if (!$kka) {
+            return back()->with('error', 'Data KKA tidak ditemukan.');
+        }
 
-    return redirect()->back()->with('success', 'Catatan Reviewer & Status Review berhasil disimpan!');
+        // HANYA update catatan_reviewer dan reviewer_id
+        // status_review TIDAK BISA diubah oleh Admin (Sesuai Spesifikasi §1.4)
+        $kka->update([
+            'catatan_reviewer' => $validated['catatan_reviewer'],
+            'reviewer_id'      => auth()->id(),
+        ]);
+
+        return redirect()->back()->with('success', 'Catatan Reviewer berhasil disimpan!');
     }
 }
