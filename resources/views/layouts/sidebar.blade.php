@@ -105,7 +105,7 @@
         @endif
 
         {{-- ===================== OFFSITE REVIEW (KHUSUS ROLE RA) ===================== --}}
-        @if($isRa)
+        @if($isRa || auth()->user()->hasRole('kabag_ra') || isAdmin)
         <div class="nav-group {{ request()->routeIs('ra-offsite.*', 'offsite-review.*') ? 'open' : '' }}">
             <div class="nav-group-toggle">
                 <i class="bi bi-clipboard2-data nav-icon"></i> Offsite Review
@@ -118,9 +118,14 @@
                     <i class="bi bi-cloud-upload nav-icon"></i> Upload Data CSV
                 </a>
 
-                {{-- Register & KKA --}}
-                <a href="{{ route('offsite-review.index') }}" class="nav-item {{ request()->routeIs('offsite-review.*') && !request()->routeIs('ra-offsite.upload.*') ? 'active' : '' }}">
-                    <i class="bi bi-journal-check nav-icon"></i> Register & KKA
+                {{-- Register Harian & Review Staging --}}
+                <a href="{{ route('ra-offsite.register.index') }}" class="nav-item {{ request()->routeIs('ra-offsite.register.*') ? 'active' : '' }}">
+                    <i class="bi bi-journal-check nav-icon"></i> Register Harian & Review
+                </a>
+
+                {{-- KKA / Dashboard Review --}}
+                <a href="{{ route('offsite-review.index') }}" class="nav-item {{ request()->routeIs('offsite-review.*') && !request()->routeIs('ra-offsite.*') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-text nav-icon"></i> Dashboard & KKA Review
                 </a>
 
             </div>
