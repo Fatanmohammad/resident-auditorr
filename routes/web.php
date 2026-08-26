@@ -14,9 +14,9 @@ use App\Http\Controllers\MasterSetupController;
 use App\Http\Controllers\OffsiteReviewController;
 use App\Http\Controllers\AdminOffsiteController;
 use App\Http\Controllers\RaOffsiteUploadController;
+use App\Http\Controllers\RaOffsiteRegisterController;
 
 Route::get('/debug-test', function () {
-
     $unit = \App\Models\Unit::find(2);
 
     $wp = \App\Models\WpOffsite::where('unit_id', $unit->id)
@@ -55,8 +55,8 @@ Route::middleware('auth')->group(function () {
     // SOP 01 — MODUL AUDIT PLAN BARU
     // ==========================================
 
-// Master Unit (RA TIDAK diizinkan — RA hanya menginput raw metrics via raw-metrics.index) 
-Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,pimsie,admin')->group(function () {
+    // Master Unit (RA TIDAK diizinkan — RA hanya menginput raw metrics via raw-metrics.index) 
+    Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,pimsie,admin')->group(function () {
         Route::get('/', [UnitController::class, 'index'])->name('index');
         Route::get('/create', [UnitController::class, 'create'])->name('create')->middleware('role:kadiv_skai,kabag_ra,admin');
         Route::post('/', [UnitController::class, 'store'])->name('store')->middleware('role:kadiv_skai,kabag_ra,admin');
@@ -71,20 +71,20 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
     // Assignment RA index (RA TIDAK diizinkan)
     Route::get('/assignment-ra', [CoverageController::class, 'assignmentIndex'])->name('assignment-ra.index')->middleware('role:kadiv_skai,kabag_ra,pimsie,admin');
 
-// Raw Metrics (RA memegang akses utama di sini — HANYA input raw metrics)
+    // Raw Metrics (RA memegang akses utama di sini — HANYA input raw metrics)
     Route::prefix('raw-metrics')->name('raw-metrics.')->middleware('role:kabag_ra,ra,admin')->group(function () {
         Route::get('/', [RawMetricController::class, 'index'])->name('index');
         Route::get('/{unit}/form', [RawMetricController::class, 'create'])->name('create');
         Route::post('/{unit}', [RawMetricController::class, 'store'])->name('store');
     });
 
-// Critical Override (hanya dipakai dari detail unit — menu terpisah sudah dihapus)
+    // Critical Override (hanya dipakai dari detail unit — menu terpisah sudah dihapus)
     Route::prefix('critical-override')->name('critical-override.')->middleware('role:kabag_ra,kadiv_skai,admin')->group(function () {
         Route::post('/{unit}', [CriticalOverrideController::class, 'store'])->name('store');
         Route::patch('/{override}/status', [CriticalOverrideController::class, 'updateStatus'])->name('status');
     });
 
-// Coverage
+    // Coverage
     Route::prefix('coverage')->name('coverage.')->middleware('role:kabag_ra,kadiv_skai,admin')->group(function () {
         Route::get('/', [CoverageController::class, 'index'])->name('index');
         Route::post('/generate-all', [CoverageController::class, 'generateAll'])->name('generate-all');
@@ -104,7 +104,7 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
         Route::get('/{unit}', [SchedulingController::class, 'unitSchedule'])->name('unit');
     });
 
-// Final Audit Plan
+    // Final Audit Plan
     Route::prefix('final-audit-plan')->name('final-audit-plan.')->group(function () {
         Route::get('/', [FinalAuditPlanController::class, 'index'])->name('index');
         Route::get('/change-log', [FinalAuditPlanController::class, 'changeLog'])->name('change-log');
@@ -129,7 +129,7 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
     });
 
     // ==========================================
-    // SOP 02 — OFFSITE REVIEW
+    // SOP 02 — OFFSITE REVIEW & REGISTER (RA ONLY)
     // ==========================================
     Route::prefix('offsite-review')->name('offsite-review.')->middleware('role:kabag_ra,kadiv_skai,ra,admin')->group(function () {
         Route::get('/', [OffsiteReviewController::class, 'index'])->name('index');
@@ -139,6 +139,17 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
         Route::patch('/{wp}/status', [OffsiteReviewController::class, 'updateStatus'])->name('status');
     });
 
+    // Upload & Register Data Offsite (Khusus RA & Admin)
+    Route::prefix('ra-offsite')->name('ra-offsite.')->middleware('role:ra,admin')->group(function () {
+        // Form Upload Data CSV 5 Domain
+        Route::get('/upload', [RaOffsiteUploadController::class, 'index'])->name('upload.index');
+        Route::post('/upload', [RaOffsiteUploadController::class, 'store'])->name('upload.store');
+
+        // Register Harian & Review Transaksi Staging
+        Route::get('/register', [RaOffsiteRegisterController::class, 'index'])->name('register.index');
+        Route::put('/register/{id}', [RaOffsiteRegisterController::class, 'update'])->name('register.update');
+    });
+
     // ==========================================
     // MASTER SETUP / PENGATURAN MODUL (ADMIN ONLY)
     // ==========================================
@@ -146,11 +157,6 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
         Route::get('/', [MasterSetupController::class, 'index'])->name('index');
         Route::post('/field-weights', [MasterSetupController::class, 'storeFieldWeights'])->name('field-weights');
         Route::post('/bidang-weights', [MasterSetupController::class, 'storeBidangWeights'])->name('bidang-weights');
-    });
-
-    Route::middleware(['auth'])->group(function () {
-    Route::get('/ra/offsite/upload', [RaOffsiteUploadController::class, 'index'])->name('ra-offsite.upload.index');
-    Route::post('/ra/offsite/upload', [RaOffsiteUploadController::class, 'store'])->name('ra-offsite.upload.store');
     });
 
 });
