@@ -13,6 +13,7 @@ use App\Http\Controllers\FinalAuditPlanController;
 use App\Http\Controllers\MasterSetupController;
 use App\Http\Controllers\OffsiteReviewController;
 use App\Http\Controllers\AdminOffsiteController;
+use App\Http\Controllers\RaOffsiteUploadController;
 
 Route::get('/debug-test', function () {
 
@@ -46,7 +47,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [AuditPlanController::class, 'index'])->name('index');
         Route::get('/create', [AuditPlanController::class, 'create'])->name('create')->middleware('role:pimsie');
         Route::post('/', [AuditPlanController::class, 'store'])->name('store')->middleware('role:pimsie');
-Route::get('/{id}', [AuditPlanController::class, 'show'])->name('show');
+        Route::get('/{id}', [AuditPlanController::class, 'show'])->name('show');
         Route::post('/{id}/approve', [AuditPlanController::class, 'approve'])->name('approve')->middleware('role:kadiv_skai,kabag_ra,admin');
     });
 
@@ -146,4 +147,10 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
         Route::post('/field-weights', [MasterSetupController::class, 'storeFieldWeights'])->name('field-weights');
         Route::post('/bidang-weights', [MasterSetupController::class, 'storeBidangWeights'])->name('bidang-weights');
     });
+
+    Route::middleware(['auth'])->group(function () {
+    Route::get('/ra/offsite/upload', [RaOffsiteUploadController::class, 'index'])->name('ra-offsite.upload.index');
+    Route::post('/ra/offsite/upload', [RaOffsiteUploadController::class, 'store'])->name('ra-offsite.upload.store');
+    });
+
 });
