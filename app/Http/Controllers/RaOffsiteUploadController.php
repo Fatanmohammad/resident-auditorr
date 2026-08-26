@@ -9,6 +9,7 @@ use App\Models\WpOffsiteStaging;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Services\OffsiteDetectorEngine;
 
 class RaOffsiteUploadController extends Controller
 {
@@ -103,6 +104,11 @@ class RaOffsiteUploadController extends Controller
             }
 
             DB::commit();
+
+            if (isset($wp)) {
+                $engine = new OffsiteDetectorEngine();
+                $flagged = $engine->scan($wp, $domainType);
+            }
 
             return redirect()->back()->with('success', "Berhasil! $insertedCount baris data domain $domainType sukses diunggah dan masuk ke Staging Offsite.");
 
