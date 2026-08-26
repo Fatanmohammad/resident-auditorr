@@ -158,14 +158,59 @@ class AdminOffsiteController extends Controller
             abort(404, 'Area KKA tidak dikenali.');
         }
 
-        $model = $this->kkaModels[$area];
-        $kka = $model::where('wp_offsite_id', $wp->id)->findOrFail($kkaId);
+        $areaLabel = $this->kkaLabels[$area];
+        $modelClass = $this->kkaModels[$area];
+        $instance = new $modelClass;
+        $primaryKey = $instance->getKeyName();
+
+        // 1. Cari data di tabel KKA Spesifik memakai primary key dinamis & kka_id
+        $kka = $modelClass::where('wp_offsite_id', $wp->id)
+            ->where(function($q) use ($primaryKey, $kkaId) {
+                $q->where($primaryKey, $kkaId);
+                if ($primaryKey !== 'kka_id') {
+                    $q->orWhere('kka_id', $kkaId);
+                }
+            })
+            ->first();
+
+        // 2. Fallback: Jika belum didistribusikan ke tabel KKA area, ambil dari StagingOffsite
+        if (!$kka) {
+            $staging = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
+                ->where('id', $kkaId)
+                ->firstOrFail();
+
+            // Auto-create/sync ke tabel KKA area spesifik dengan kelengkapan field NOT NULL
+            $kka = $modelClass::firstOrCreate(
+                [
+                    'wp_offsite_id' => $wp->id,
+                    'object_id'     => $staging->object_id ?? 'STG-' . $staging->id,
+                ],
+                [
+                    'staging_id'           => $staging->id,
+                    'area_review'          => $staging->area_review ?? $areaLabel,
+                    'kode_unit'            => $staging->kode_unit ?? $wp->kode_unit,
+                    'nama_unit'            => $staging->nama_unit ?? $wp->nama_unit,
+                    'ra_id'                => $staging->ra_id ?? $wp->ra_pelaksana_id,
+                    'nama_ra'              => $staging->nama_ra,
+                    'tanggal_data'         => $staging->tanggal_data,
+                    'user_maker'           => $staging->user_maker ?? $staging->user_id ?? 'Maker',
+                    'nominal'              => $staging->nominal ?? 0,
+                    'risk_awal'            => $staging->risk_level ?? 'Low',
+                    'exception_awal'       => $staging->exception_awal ?? false,
+                    'jenis_exception_awal' => $staging->jenis_exception_awal ?? null,
+                    'sampel_low'           => $staging->sampel_low ?? false,
+                    'deskripsi_narasi'     => $staging->deskripsi_narasi ?? $staging->deskripsi ?? null,
+                    'status_review'        => $staging->status_review ?? 'Belum Review',
+                    'catatan_reviewer'     => $staging->catatan_reviewer ?? null,
+                ]
+            );
+        }
 
         return view('admin-offsite.kka-show', [
-            'wp' => $wp,
-            'area' => $area,
-            'areaLabel' => $this->kkaLabels[$area],
-            'kka' => $kka,
+            'wp'        => $wp,
+            'area'      => $area,
+            'areaLabel' => $areaLabel,
+            'kka'       => $kka,
         ]);
     }
 
