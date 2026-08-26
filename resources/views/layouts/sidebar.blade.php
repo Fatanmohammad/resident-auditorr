@@ -105,7 +105,7 @@
         @endif
 
         {{-- ===================== OFFSITE REVIEW (KHUSUS ROLE RA) ===================== --}}
-        @if($isRa || auth()->user()->hasRole('kabag_ra') || isAdmin)
+        @if($isRa || $role === 'kabag_ra' || $isAdmin)
         <div class="nav-group {{ request()->routeIs('ra-offsite.*', 'offsite-review.*') ? 'open' : '' }}">
             <div class="nav-group-toggle">
                 <i class="bi bi-clipboard2-data nav-icon"></i> Offsite Review
