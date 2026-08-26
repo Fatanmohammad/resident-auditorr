@@ -243,37 +243,44 @@ class AdminOffsiteController extends Controller
      */
     public function kkaUpdate(Request $request, WpOffsite $wp, string $area, $kkaId)
     {
-        // Validasi input: Admin HANYA diizinkan mengisi Catatan Reviewer
+        // 1. Validasi input catatan reviewer
         $validated = $request->validate([
             'catatan_reviewer' => 'nullable|string|max:2000',
         ]);
 
-        // 1. Cari data di Staging Offsite
-        $kka = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
+        $reviewerId = auth()->id();
+        $updatedData = [
+            'catatan_reviewer' => $validated['catatan_reviewer'],
+            'reviewer_id'      => $reviewerId,
+            'updated_at'       => now(), // Memaksa waktu ter-update saat ini
+        ];
+
+        // 2. Cari dan update di tabel StagingOffsite (jika ada)
+        $staging = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
             ->where('id', $kkaId)
             ->first();
 
-        // 2. Jika tidak ditemukan di Staging, cari di tabel spesifik KKA area
-        if (!$kka && isset($this->kkaModels[$area])) {
-            $model = $this->kkaModels[$area];
-            $kka = $model::where('wp_offsite_id', $wp->id)
-                ->where(function($q) use ($kkaId) {
-                    $q->where('kka_id', $kkaId)->orWhere('id', $kkaId);
+        if ($staging) {
+            $staging->update($updatedData);
+        }
+
+        // 3. Cari dan update di tabel KKA Spesifik (misal: kka_teller_kas)
+        if (isset($this->kkaModels[$area])) {
+            $modelClass = $this->kkaModels[$area];
+            $instance = new $modelClass;
+            $primaryKey = $instance->getKeyName();
+
+            $modelClass::where('wp_offsite_id', $wp->id)
+                ->where(function($q) use ($primaryKey, $kkaId, $staging) {
+                    $q->where($primaryKey, $kkaId)
+                      ->orWhere('kka_id', $kkaId);
+                    if ($staging) {
+                        $q->orWhere('staging_id', $staging->id);
+                    }
                 })
-                ->first();
+                ->update($updatedData);
         }
 
-        if (!$kka) {
-            return back()->with('error', 'Data KKA tidak ditemukan.');
-        }
-
-        // HANYA update catatan_reviewer dan reviewer_id
-        // status_review TIDAK BISA diubah oleh Admin (Sesuai Spesifikasi §1.4)
-        $kka->update([
-            'catatan_reviewer' => $validated['catatan_reviewer'],
-            'reviewer_id'      => auth()->id(),
-        ]);
-
-        return redirect()->back()->with('success', 'Catatan Reviewer berhasil disimpan!');
+        return redirect()->back()->with('updated_success', 'Catatan Reviewer berhasil disimpan!');
     }
 }

@@ -15,11 +15,21 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div style="background-color: #d1e7dd; color: #0f5132; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-            <div><i class="bi bi-check-circle-fill" style="margin-right: 0.5rem;"></i> {{ session('success') }}</div>
+    @if(session('updated_success'))
+        <div id="success-alert" style="background-color: #d1e7dd; color: #0f5132; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; transition: opacity 0.5s ease;">
+            <div><i class="bi bi-check-circle-fill" style="margin-right: 0.5rem;"></i> {{ session('updated_success') }}</div>
             <button type="button" onclick="this.parentElement.style.display='none'" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #0f5132;">&times;</button>
         </div>
+
+        <script>
+            setTimeout(function() {
+                var alertBox = document.getElementById('success-alert');
+                if (alertBox) {
+                    alertBox.style.opacity = '0';
+                    setTimeout(function() { alertBox.style.display = 'none'; }, 500);
+                }
+            }, 10000);
+        </script>
     @endif
 
     <div class="grid grid-cols-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
@@ -185,7 +195,7 @@
 
         {{-- KOLOM KANAN: Form Reviewer --}}
         <div>
-            <form action="{{ route('admin-offsite.kka-update', ['wp' => $wp->id, 'area' => $area, 'kkaId' => $kka->kka_id ?? $kka->id]) }}" method="POST">
+            <form action="{{ route('admin-offsite.kka-update', ['wp' => $wp->id, 'area' => $area, 'kkaId' => $kka->staging_id ?? $kka->kka_id ?? $kka->id]) }}" method="POST">
                 @csrf
                 @method('PUT')
 
@@ -212,7 +222,7 @@
 
                         @if($kka->updated_at)
                             <div style="color: var(--text-muted); font-size: 0.75rem; margin-bottom: 1rem;">
-                                <i class="bi bi-clock-history"></i> Terakhir diupdate: {{ \Carbon\Carbon::parse($kka->updated_at)->format('d/m/Y H:i') }}
+                                <i class="bi bi-clock-history"></i> Terakhir diupdate: {{ \Carbon\Carbon::parse($kka->updated_at)->timezone('Asia/Makassar')->format('d/m/Y H:i') }}
                             </div>
                         @endif
 
