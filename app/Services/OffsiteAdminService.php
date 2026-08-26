@@ -111,7 +111,8 @@ class OffsiteAdminService
                 'jenis_unit'      => $unit->unit_type ?? 'KC',
                 'kantor_induk'    => $unit->parent_office ?? 'KANTOR PUSAT',
                 'periode_selesai' => date('Y-m-t', strtotime("$tahun-$bulan-01")),
-                'status_wp'       => 'Draft'
+                'ra_pelaksana_id' => $unit->ra_user_id ?? auth()->id(), // <--- Tambahkan baris ini
+                'status_wp'       => 'Draft',
             ]
         );
 
