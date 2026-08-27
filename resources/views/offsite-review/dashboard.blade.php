@@ -13,6 +13,14 @@
         <p>{{ $wp->kode_wp }} &mdash; {{ $wp->periode_data }}</p>
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
+        {{-- Tombol Deteksi Anomali --}}
+        <form action="{{ route('offsite-review.run-detection', $wp->id) }}" method="POST" class="inline" style="display:inline;">
+            @csrf
+            <button type="submit" class="btn btn-sm" style="background:var(--bs-blue);color:#fff;">
+                <i class="bi bi-cpu"></i> Jalankan Deteksi Anomali
+            </button>
+        </form>
+
         <form method="POST" action="{{ route('offsite-review.status', $wp) }}">
             @csrf @method('PATCH')
             <select name="status_wp" class="form-select" style="width:auto;display:inline-block;"

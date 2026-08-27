@@ -8,42 +8,42 @@
     <div class="sidebar-nav">
         @php
             $role = auth()->user()->role;
-// Role yang boleh mengelola master data (Admin/Operasional)
-            $canManage = in_array($role, ['kabag_ra', 'kadiv_skai', 'admin']);
-// Role yang bisa input raw metrics & override (admin = akses sama seperti kabag_ra)
-            $canInput  = in_array($role, ['kabag_ra', 'ra', 'admin']);
-// Audit Plan & submenunya (termasuk Data Unit) tampil untuk semua akun terkait termasuk RA
-$canView   = in_array($role, ['ra', 'kabag_ra', 'kadiv_skai', 'pimsie', 'admin']);
-            // RA hanya melihat submenu Data Unit di dalam Audit Plan (sesuai kebutuhan)
             $isRa = $role === 'ra';
+            $isAdmin = $role === 'admin';
+            
+            // Hak Akses Audit Plan
+            $canManageMaster = in_array($role, ['kabag_ra', 'kadiv_skai', 'admin']);
+            $canViewAuditPlan = in_array($role, ['ra', 'kabag_ra', 'kadiv_skai', 'pimsie', 'admin']);
+            $canAccessWorkflow = in_array($role, ['pimsie', 'kadiv_skai', 'kabag_ra', 'admin']);
         @endphp
 
+        {{-- ===================== DASHBOARD ===================== --}}
         <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
             <i class="bi bi-speedometer2 nav-icon"></i> Dashboard
         </a>
 
-        {{-- ===================== AUDIT PLAN (parent) ===================== --}}
-        @if($canView)
-<div class="nav-group open {{ request()->routeIs('units.*', 'raw-metrics.*', 'risk-scoring.index', 'assignment-ra.*', 'coverage.*', 'scheduling.*', 'final-audit-plan.*') ? 'open' : '' }}">
+        {{-- ===================== AUDIT PLAN (SOP 01) ===================== --}}
+        @if($canViewAuditPlan)
+        <div class="nav-group {{ request()->routeIs('units.*', 'raw-metrics.*', 'risk-scoring.index', 'assignment-ra.*', 'coverage.*', 'scheduling.*', 'final-audit-plan.*') ? 'open' : '' }}">
             <div class="nav-group-toggle">
                 <i class="bi bi-clipboard2-pulse nav-icon"></i> Audit Plan
                 <i class="bi bi-chevron-down nav-arrow"></i>
             </div>
             <div class="nav-group-children">
 
-{{-- Data Unit (menggantikan Input Data Mentah) --}}
+                {{-- Data Unit --}}
                 <a href="{{ route('units.index') }}" class="nav-item {{ (request()->routeIs('units.*', 'raw-metrics.*') && request('from') !== 'risk-scoring') ? 'active' : '' }}">
                     <i class="bi bi-building nav-icon"></i> Data Unit
                 </a>
 
-@if(!$isRa)
-                {{-- Penilaian Risiko (sub-submenu) --}}
-<div class="nav-subgroup {{ request()->routeIs('risk-scoring.index') || request('from') === 'risk-scoring' ? 'open' : '' }}">
+                @if(!$isRa)
+                {{-- Penilaian Risiko --}}
+                <div class="nav-subgroup {{ request()->routeIs('risk-scoring.index') || request('from') === 'risk-scoring' ? 'open' : '' }}">
                     <div class="nav-subgroup-toggle">
                         <i class="bi bi-shield-exclamation nav-icon"></i> Penilaian Risiko
                         <i class="bi bi-chevron-down nav-subgroup-arrow"></i>
                     </div>
-<div class="nav-subgroup-children">
+                    <div class="nav-subgroup-children">
                         <a href="{{ route('risk-scoring.index') }}" class="nav-item {{ request()->routeIs('risk-scoring.index') || request('from') === 'risk-scoring' ? 'active' : '' }}">
                             <i class="bi bi-bar-chart nav-icon"></i> Hasil Skor & Kategori
                         </a>
@@ -56,14 +56,14 @@ $canView   = in_array($role, ['ra', 'kabag_ra', 'kadiv_skai', 'pimsie', 'admin']
                 </a>
                 @endif
 
-{{-- Coverage Offsite --}}
-                @if($canManage)
+                {{-- Coverage Offsite --}}
+                @if($canManageMaster)
                 <a href="{{ route('coverage.index') }}" class="nav-item {{ request()->routeIs('coverage.*') ? 'active' : '' }}">
                     <i class="bi bi-grid-3x3-gap nav-icon"></i> Coverage Offsite
                 </a>
                 @endif
 
-                {{-- Jadwal Onsite (sub-submenu) --}}
+                {{-- Jadwal Onsite --}}
                 @if(!$isRa)
                 <div class="nav-subgroup {{ request()->routeIs('scheduling.*') ? 'open' : '' }}">
                     <div class="nav-subgroup-toggle">
@@ -80,14 +80,14 @@ $canView   = in_array($role, ['ra', 'kabag_ra', 'kadiv_skai', 'pimsie', 'admin']
                     </div>
                 </div>
 
-{{-- Final Audit Plan --}}
+                {{-- Final Audit Plan --}}
                 <a href="{{ route('final-audit-plan.index') }}" class="nav-item {{ request()->routeIs('final-audit-plan.index', 'final-audit-plan.show') ? 'active' : '' }}">
                     <i class="bi bi-clipboard2-check nav-icon"></i> Final Audit Plan
                 </a>
                 @endif
 
                 {{-- Change Log --}}
-                @if($canManage)
+                @if($canManageMaster)
                 <a href="{{ route('final-audit-plan.change-log') }}" class="nav-item {{ request()->routeIs('final-audit-plan.change-log') ? 'active' : '' }}">
                     <i class="bi bi-clock-history nav-icon"></i> Change Log
                 </a>
@@ -97,45 +97,67 @@ $canView   = in_array($role, ['ra', 'kabag_ra', 'kadiv_skai', 'pimsie', 'admin']
         </div>
         @endif
 
-        {{-- Offsite Review (SOP 02) --}}
-        @if(!$isRa || $canInput)
-        <a href="{{ route('offsite-review.index') }}" class="nav-item {{ request()->routeIs('offsite-review.*') ? 'active' : '' }}">
-            <i class="bi bi-clipboard2-data nav-icon"></i> Offsite Review
-        </a>
-        @endif
-
-{{-- Menu Audit Plan legacy (approval workflow) — admin akses sama seperti kabag_ra --}}
-        @if(in_array($role, ['pimsie', 'kadiv_skai', 'kabag_ra', 'admin']))
+        {{-- Workflow Audit Plan Legacy --}}
+        @if($canAccessWorkflow)
         <a href="{{ route('audit-plan.index') }}" class="nav-item {{ request()->routeIs('audit-plan.*') ? 'active' : '' }}">
             <i class="bi bi-kanban nav-icon"></i> Audit Plan (Workflow)
         </a>
         @endif
 
-        {{-- Pengaturan Modul (Admin Only) --}}
-        @if($role === 'admin')
+        {{-- ===================== OFFSITE REVIEW (KHUSUS ROLE RA) ===================== --}}
+        @if($isRa || $role === 'kabag_ra' || $isAdmin)
+        <div class="nav-group {{ request()->routeIs('ra-offsite.*', 'offsite-review.*') ? 'open' : '' }}">
+            <div class="nav-group-toggle">
+                <i class="bi bi-clipboard2-data nav-icon"></i> Offsite Review
+                <i class="bi bi-chevron-down nav-arrow"></i>
+            </div>
+            <div class="nav-group-children">
+                
+                {{-- Upload CSV --}}
+                <a href="{{ route('ra-offsite.upload.index') }}" class="nav-item {{ request()->routeIs('ra-offsite.upload.*') ? 'active' : '' }}">
+                    <i class="bi bi-cloud-upload nav-icon"></i> Upload Data CSV
+                </a>
+
+                {{-- Register Harian & Review Staging --}}
+                <a href="{{ route('ra-offsite.register.index') }}" class="nav-item {{ request()->routeIs('ra-offsite.register.*') ? 'active' : '' }}">
+                    <i class="bi bi-journal-check nav-icon"></i> Register Harian & Review
+                </a>
+
+                {{-- Kertas Kerja Audit (KKA) --}}
+                <a href="{{ route('ra-offsite.kka.index') }}" class="nav-item {{ request()->routeIs('ra-offsite.kka.*') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-spreadsheet nav-icon"></i> Sheet KKA Offsite
+                </a>
+
+                {{-- Dashboard Review --}}
+                <a href="{{ route('offsite-review.index') }}" class="nav-item {{ request()->routeIs('offsite-review.*') && !request()->routeIs('ra-offsite.*') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-text nav-icon"></i> Dashboard & Review
+                </a>
+
+            </div>
+        </div>
+        @endif
+
+        {{-- ===================== PENGATURAN & ADMIN ===================== --}}
+        @if($isAdmin)
         <a href="{{ route('admin-offsite.index') }}" class="nav-item {{ request()->routeIs('admin-offsite.*') ? 'active' : '' }}">
             <i class="bi bi-house-check nav-icon"></i> Admin Offsite
         </a>
-        @endif
 
-        {{-- Pengaturan Modul (Admin Only) --}}
-        @if($role === 'admin')
         <a href="{{ route('master-setup.index') }}" class="nav-item {{ request()->routeIs('master-setup.*') ? 'active' : '' }}">
             <i class="bi bi-gear nav-icon"></i> Pengaturan Modul
         </a>
         @endif
+
     </div>
 </div>
 
 @push('scripts')
 <script>
-    // Toggle level-2 (nav-group)
     document.querySelectorAll('.nav-group-toggle').forEach(function(toggle) {
         toggle.addEventListener('click', function() {
             toggle.parentElement.classList.toggle('open');
         });
     });
-    // Toggle level-3 (nav-subgroup)
     document.querySelectorAll('.nav-subgroup-toggle').forEach(function(toggle) {
         toggle.addEventListener('click', function() {
             toggle.parentElement.classList.toggle('open');

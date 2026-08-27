@@ -163,19 +163,22 @@ class AdminOffsiteController extends Controller
         }
 
         // Ambil register harian dengan proteksi aman
-        $registerQuery = method_exists($wp, 'registerHarian') ? $wp->registerHarian() : null;
+        // Ambil data langsung dari relasi stagingOffsite
+        $stagingData = $wp->stagingOffsite()->orderBy('tanggal_data')->get();
 
-        $rows = $registerQuery 
-            ? $registerQuery->orderBy('tanggal_data')->orderBy('area_review')->get()->groupBy(fn($r) => optional($r->tanggal_data)->format('Y-m-d') ?? 'N/A')
-            : collect();
+        // Grouping berdasarkan tanggal_data untuk tampilan accordion Blade
+        $rows = $stagingData->groupBy(function($item) {
+            return \Carbon\Carbon::parse($item->tanggal_data)->format('Y-m-d');
+        });
 
+        // Hitung ringkasan statistik
         $ringkasan = [
-            'populasi'    => $registerQuery ? $registerQuery->sum('populasi_eligible') : 0,
-            'sampel_low'  => $registerQuery ? $registerQuery->sum('sampel_low') : 0,
-            'kka_final'   => $registerQuery ? $registerQuery->sum('kka_final') : 0,
-            'exception'   => $registerQuery ? $registerQuery->sum('exception') : 0,
-            'klarifikasi' => $registerQuery ? $registerQuery->sum('perlu_klarifikasi') : 0,
-            'eskalasi'    => $registerQuery ? $registerQuery->sum('perlu_eskalasi') : 0,
+            'populasi'    => $stagingData->count(),
+            'sampel_low'  => $stagingData->where('sampel_low', 1)->count(),
+            'kka_final'   => $stagingData->where('masuk_kka_final', 1)->count(),
+            'exception'   => $stagingData->where('exception_awal', 1)->count(),
+            'klarifikasi' => 0,
+            'eskalasi'    => 0,
         ];
 
         return view('admin-offsite.unit-detail', compact('unit', 'wp', 'rows', 'ringkasan', 'tahun', 'bulan'));
@@ -184,20 +187,28 @@ class AdminOffsiteController extends Controller
     /**
      * Daftar KKA per area untuk 1 WP
      */
+    /**
+     * Daftar KKA per area untuk 1 WP
+     */
     public function kkaIndex(WpOffsite $wp, string $area)
     {
-        if (!isset($this->kkaModels[$area])) {
+        if (!isset($this->kkaLabels[$area]) || !isset($this->kkaModels[$area])) {
             abort(404, 'Area KKA tidak dikenali.');
         }
 
-        $model = $this->kkaModels[$area];
-        $rows = $model::where('wp_offsite_id', $wp->id)->orderBy('tanggal_data')->get();
+        $areaLabel = $this->kkaLabels[$area];
+        $modelClass = $this->kkaModels[$area];
+
+        // GANTI DI SINI: Ambil langsung dari Model Tabel KKA Spesifik (bukan dari StagingOffsite)
+        $rows = $modelClass::where('wp_offsite_id', $wp->id)
+            ->orderBy('tanggal_data')
+            ->get();
 
         return view('admin-offsite.kka-index', [
-            'wp' => $wp,
-            'area' => $area,
-            'areaLabel' => $this->kkaLabels[$area],
-            'rows' => $rows,
+            'wp'        => $wp,
+            'area'      => $area,
+            'areaLabel' => $areaLabel,
+            'rows'      => $rows,
         ]);
     }
 
@@ -210,14 +221,59 @@ class AdminOffsiteController extends Controller
             abort(404, 'Area KKA tidak dikenali.');
         }
 
-        $model = $this->kkaModels[$area];
-        $kka = $model::where('wp_offsite_id', $wp->id)->findOrFail($kkaId);
+        $areaLabel = $this->kkaLabels[$area];
+        $modelClass = $this->kkaModels[$area];
+        $instance = new $modelClass;
+        $primaryKey = $instance->getKeyName();
+
+        // 1. Cari data di tabel KKA Spesifik memakai primary key dinamis & kka_id
+        $kka = $modelClass::where('wp_offsite_id', $wp->id)
+            ->where(function($q) use ($primaryKey, $kkaId) {
+                $q->where($primaryKey, $kkaId);
+                if ($primaryKey !== 'kka_id') {
+                    $q->orWhere('kka_id', $kkaId);
+                }
+            })
+            ->first();
+
+        // 2. Fallback: Jika belum didistribusikan ke tabel KKA area, ambil dari StagingOffsite
+        if (!$kka) {
+            $staging = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
+                ->where('id', $kkaId)
+                ->firstOrFail();
+
+            // Auto-create/sync ke tabel KKA area spesifik dengan kelengkapan field NOT NULL
+            $kka = $modelClass::firstOrCreate(
+                [
+                    'wp_offsite_id' => $wp->id,
+                    'object_id'     => $staging->object_id ?? 'STG-' . $staging->id,
+                ],
+                [
+                    'staging_id'           => $staging->id,
+                    'area_review'          => $staging->area_review ?? $areaLabel,
+                    'kode_unit'            => $staging->kode_unit ?? $wp->kode_unit,
+                    'nama_unit'            => $staging->nama_unit ?? $wp->nama_unit,
+                    'ra_id'                => $staging->ra_id ?? $wp->ra_pelaksana_id,
+                    'nama_ra'              => $staging->nama_ra,
+                    'tanggal_data'         => $staging->tanggal_data,
+                    'user_maker'           => $staging->user_maker ?? $staging->user_id ?? 'Maker',
+                    'nominal'              => $staging->nominal ?? 0,
+                    'risk_awal'            => $staging->risk_level ?? 'Low',
+                    'exception_awal'       => $staging->exception_awal ?? false,
+                    'jenis_exception_awal' => $staging->jenis_exception_awal ?? null,
+                    'sampel_low'           => $staging->sampel_low ?? false,
+                    'deskripsi_narasi'     => $staging->deskripsi_narasi ?? $staging->deskripsi ?? null,
+                    'status_review'        => $staging->status_review ?? 'Belum Review',
+                    'catatan_reviewer'     => $staging->catatan_reviewer ?? null,
+                ]
+            );
+        }
 
         return view('admin-offsite.kka-show', [
-            'wp' => $wp,
-            'area' => $area,
-            'areaLabel' => $this->kkaLabels[$area],
-            'kka' => $kka,
+            'wp'        => $wp,
+            'area'      => $area,
+            'areaLabel' => $areaLabel,
+            'kka'       => $kka,
         ]);
     }
 
@@ -243,5 +299,51 @@ class AdminOffsiteController extends Controller
         ]);
 
         return back()->with('success', 'Catatan Reviewer berhasil disimpan.');
+    }
+
+    /**
+     * Update Hasil Review KKA dari Form Reviewer
+     */
+    public function kkaUpdate(Request $request, WpOffsite $wp, string $area, $kkaId)
+    {
+        // 1. Validasi input catatan reviewer
+        $validated = $request->validate([
+            'catatan_reviewer' => 'nullable|string|max:2000',
+        ]);
+
+        $reviewerId = auth()->id();
+        $updatedData = [
+            'catatan_reviewer' => $validated['catatan_reviewer'],
+            'reviewer_id'      => $reviewerId,
+            'updated_at'       => now(), // Memaksa waktu ter-update saat ini
+        ];
+
+        // 2. Cari dan update di tabel StagingOffsite (jika ada)
+        $staging = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
+            ->where('id', $kkaId)
+            ->first();
+
+        if ($staging) {
+            $staging->update($updatedData);
+        }
+
+        // 3. Cari dan update di tabel KKA Spesifik (misal: kka_teller_kas)
+        if (isset($this->kkaModels[$area])) {
+            $modelClass = $this->kkaModels[$area];
+            $instance = new $modelClass;
+            $primaryKey = $instance->getKeyName();
+
+            $modelClass::where('wp_offsite_id', $wp->id)
+                ->where(function($q) use ($primaryKey, $kkaId, $staging) {
+                    $q->where($primaryKey, $kkaId)
+                      ->orWhere('kka_id', $kkaId);
+                    if ($staging) {
+                        $q->orWhere('staging_id', $staging->id);
+                    }
+                })
+                ->update($updatedData);
+        }
+
+        return redirect()->back()->with('updated_success', 'Catatan Reviewer berhasil disimpan!');
     }
 }

@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Traits\HasUnitScope;
 
 class WpOffsite extends Model
 {
+    use HasUnitScope;
     use SoftDeletes;
 
     protected $table = 'wp_offsite';
