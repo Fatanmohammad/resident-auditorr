@@ -137,6 +137,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [OffsiteReviewController::class, 'store'])->name('store');
         Route::get('/{wp}/dashboard', [OffsiteReviewController::class, 'dashboard'])->name('dashboard');
         Route::patch('/{wp}/status', [OffsiteReviewController::class, 'updateStatus'])->name('status');
+        Route::post('/{wp}/run-detection', [OffsiteReviewController::class, 'runDetection'])->name('run-detection');
     });
 
     // Upload & Register Data Offsite (Khusus RA & Admin)

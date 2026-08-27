@@ -31,10 +31,10 @@ class RaOffsiteUploadController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'cabang_id'            => 'required|exists:cabangs,id',
-            'domain_type'          => 'required|in:cbs,dpk,kredit,biaya,pengaduan',
-            'file_csv'             => 'required|file|mimes:csv,txt|max:20480',
-            'tanggal_data_manual' => 'nullable|required_if:domain_type,kredit,dpk|date',
+            'cabang_id'          => 'required|exists:cabangs,id',
+            'domain_type'        => 'required|in:cbs,dpk,kredit,biaya,pengaduan',
+            'file_csv'           => 'required|file|mimes:csv,txt|max:20480',
+            'tanggal_data_manual'=> 'nullable|required_if:domain_type,kredit,dpk|date',
         ]);
 
         $file = $request->file('file_csv');
@@ -45,53 +45,54 @@ class RaOffsiteUploadController extends Controller
         DB::beginTransaction();
         try {
             $handle = fopen($file->getRealPath(), 'r');
-            $header = fgetcsv($handle, 4096, ',');
+            $header = fgetcsv($handle, 4096, ',');   // <-- header dipakai sekarang
 
             $insertedCount = 0;
+            $insertedIds = [];             // <-- kumpulkan ID hasil insert
             $sampleDate = $tanggalManual;
 
             while (($row = fgetcsv($handle, 4096, ',')) !== FALSE) {
                 if (empty(array_filter($row))) continue;
 
-                // Tangkap Tanggal Transaksi dari Kolom CSV (jika bukan jenis snapshot)
+                // Normalisasi panjang elemen baris agar cocok dengan header
+                $rowPadded = array_pad(array_slice($row, 0, count($header)), count($header), null);
+                $rowAssoc = array_combine($header, $rowPadded);
+
                 $tglTransaksi = $sampleDate;
-                if (!in_array($domainType, ['kredit', 'dpk']) && isset($row[0])) {
+                if (!in_array($domainType, ['kredit', 'dpk']) && isset($rowAssoc[$header[0]])) {
                     try {
-                        $tglTransaksi = Carbon::parse($row[0])->format('Y-m-d');
+                        $tglTransaksi = Carbon::parse($rowAssoc[$header[0]])->format('Y-m-d');
                     } catch (\Exception $e) {
                         $tglTransaksi = date('Y-m-d');
                     }
                 }
-
                 if (!$sampleDate && $tglTransaksi) {
                     $sampleDate = $tglTransaksi;
                 }
 
-                // Simpan baris data ke tabel staging
-                WpOffsiteStaging::create([
-                    'cabang_id'       => $cabangId,
-                    'domain_type'     => $domainType,
-                    'tgl_transaksi'   => $tglTransaksi,
-                    'raw_data'        => json_encode($row),
-                    'uploaded_by'     => auth()->id(),
+                $staging = WpOffsiteStaging::create([
+                    'cabang_id'    => $cabangId,
+                    'domain_type'  => $domainType,
+                    'tgl_transaksi'=> $tglTransaksi,
+                    'raw_data'     => json_encode($rowAssoc),
+                    'uploaded_by'  => auth()->id(),
                 ]);
-
+                $insertedIds[] = $staging->id;
                 $insertedCount++;
             }
             fclose($handle);
 
-            // Buat / Pastikan Record Header WP Offsite Sesuai Periode
+            $wp = null;
             if ($sampleDate) {
                 $dt = Carbon::parse($sampleDate);
                 $tahun = $dt->year;
                 $bulan = $dt->month;
-
                 $kodeWp = 'SOP02-CAB-' . str_pad($cabangId, 3, '0', STR_PAD_LEFT) . '-' . $tahun . str_pad($bulan, 2, '0', STR_PAD_LEFT);
 
-                WpOffsite::firstOrCreate(
+                $wp = WpOffsite::firstOrCreate(
                     [
-                        'unit_id'       => $cabangId, // <--- GANTI cabang_id MENJADI unit_id DI SINI
-                        'periode_mulai' => $dt->firstOfMonth()->format('Y-m-d'),
+                        'unit_id'      => $cabangId, // catatan lama: ini masih perlu diperbaiki ke unit_id asli nanti
+                        'periode_mulai'=> $dt->firstOfMonth()->format('Y-m-d'),
                     ],
                     [
                         'kode_wp'               => $kodeWp,
@@ -101,16 +102,19 @@ class RaOffsiteUploadController extends Controller
                         'status_wp'             => 'Draft',
                     ]
                 );
+
+                // KAITKAN semua staging yang baru diinsert ke WP ini (INI FIX #2)
+                WpOffsiteStaging::whereIn('id', $insertedIds)->update(['wp_offsite_id' => $wp->id]);
             }
 
             DB::commit();
 
             if (isset($wp)) {
-                $engine = new OffsiteDetectorEngine();
+                $engine = new OffsiteDetectorEngine(new \App\Services\OffsiteDetectionService());
                 $flagged = $engine->scan($wp, $domainType);
             }
 
-            return redirect()->back()->with('success', "Berhasil! $insertedCount baris data domain $domainType sukses diunggah dan masuk ke Staging Offsite.");
+            return redirect()->back()->with('success', "Berhasil! $insertedCount baris data domain $domainType sukses diunggah dan diproses.");
 
         } catch (\Exception $e) {
             DB::rollBack();

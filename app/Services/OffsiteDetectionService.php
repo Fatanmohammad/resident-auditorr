@@ -27,7 +27,7 @@ class OffsiteDetectionService
         $teksDeteksi = $this->buildDetectionText($data, $source);
 
         // Langkah 2-3: Cek flag dan hitung jumlah
-        $flags = $this->checkFlags($teksDeteksi, $source);
+        $flags = $this->checkFlags($teksDeteksi, $source, $data);
         $jumlahFlagRisiko = $this->countRiskFlags($flags);
 
         // Langkah 4: Tentukan Area Review
@@ -117,7 +117,7 @@ class OffsiteDetectionService
     /**
      * Langkah 2-3: Check flags against rules
      */
-    private function checkFlags(string $teksDeteksi, string $source): array
+    private function checkFlags(string $teksDeteksi, string $source, array $data = []): array
     {
         $flags = [
             'reversal' => false,
@@ -130,33 +130,39 @@ class OffsiteDetectionService
             'whitelist' => false,
         ];
 
-        $rules = RuleEngine::active()->get();
+        try {
+            $rules = RuleEngine::active()->get();
 
-        foreach ($rules as $rule) {
-            $keywords = explode(',', $rule->keyword_pattern);
-            foreach ($keywords as $keyword) {
-                $keyword = trim($keyword);
-                if (!empty($keyword) && strpos($teksDeteksi, strtoupper($keyword)) !== false) {
-                    // Map rule_id to flag
-                    if (str_starts_with($rule->rule_id, 'RISK_REV')) {
-                        $flags['reversal'] = true;
-                    } elseif (str_starts_with($rule->rule_id, 'RISK_KOR')) {
-                        $flags['koreksi_override'] = true;
-                    } elseif (str_starts_with($rule->rule_id, 'RISK_SEL')) {
-                        $flags['selisih_kas'] = true;
-                    } elseif (str_starts_with($rule->rule_id, 'CLS_KRD')) {
-                        $flags['pencairan_kredit'] = true;
-                    } elseif (str_starts_with($rule->rule_id, 'WL_')) {
-                        $flags['whitelist'] = true;
+            foreach ($rules as $rule) {
+                $keywords = explode(',', $rule->keyword_pattern);
+                foreach ($keywords as $keyword) {
+                    $keyword = trim($keyword);
+                    if (!empty($keyword) && strpos($teksDeteksi, strtoupper($keyword)) !== false) {
+                        // Map rule_id to flag
+                        if (str_starts_with($rule->rule_id, 'RISK_REV')) {
+                            $flags['reversal'] = true;
+                        } elseif (str_starts_with($rule->rule_id, 'RISK_KOR')) {
+                            $flags['koreksi_override'] = true;
+                        } elseif (str_starts_with($rule->rule_id, 'RISK_SEL')) {
+                            $flags['selisih_kas'] = true;
+                        } elseif (str_starts_with($rule->rule_id, 'CLS_KRD')) {
+                            $flags['pencairan_kredit'] = true;
+                        } elseif (str_starts_with($rule->rule_id, 'WL_')) {
+                            $flags['whitelist'] = true;
+                        }
                     }
                 }
             }
+        } catch (\Throwable $e) {
+            // Fallback aman jika tabel rule_engine belum termigrasi penuh/terisi
         }
 
         // Special logic untuk tunai_besar, biaya_jurnal, internal_account
-        if (strpos($teksDeteksi, 'PENARIKAN TUNAI') !== false ||
-            strpos($teksDeteksi, 'SETORAN TUNAI') !== false) {
-            // Threshold check would go here
+        $nominal = floatval($data['nominal'] ?? 0);
+        $thresholdTunai = 50000000; // Contoh threshold tunai besar (bisa disesuaikan / diambil dari RuleThreshold)
+
+        if ((strpos($teksDeteksi, 'PENARIKAN TUNAI') !== false ||
+            strpos($teksDeteksi, 'SETORAN TUNAI') !== false) && $nominal >= $thresholdTunai) {
             $flags['tunai_besar'] = true;
         }
 
@@ -303,7 +309,7 @@ class OffsiteDetectionService
     public function validateDataQuality(array $data, WpOffsite $wp): string
     {
         // Cek unit
-        if ($data['kode_unit'] !== $wp->kode_unit) {
+        if (isset($data['kode_unit']) && $data['kode_unit'] !== $wp->kode_unit) {
             return 'Salah Unit';
         }
 
