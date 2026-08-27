@@ -121,23 +121,20 @@ class AdminOffsiteController extends Controller
     /**
      * Daftar KKA per area untuk 1 WP
      */
+    /**
+     * Daftar KKA per area untuk 1 WP
+     */
     public function kkaIndex(WpOffsite $wp, string $area)
     {
-        if (!isset($this->kkaLabels[$area])) {
+        if (!isset($this->kkaLabels[$area]) || !isset($this->kkaModels[$area])) {
             abort(404, 'Area KKA tidak dikenali.');
         }
 
         $areaLabel = $this->kkaLabels[$area];
+        $modelClass = $this->kkaModels[$area];
 
-        // Ambil HANYA data yang teridentifikasi Temuan / High / Exception / Sampel Low
-        $rows = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
-            ->where('area_review', $areaLabel)
-            ->where(function ($q) {
-                $q->where('exception_awal', true)
-                  ->orWhere('masuk_kka_final', true)
-                  ->orWhere('risk_level', 'High')
-                  ->orWhere('sampel_low', true);
-            })
+        // GANTI DI SINI: Ambil langsung dari Model Tabel KKA Spesifik (bukan dari StagingOffsite)
+        $rows = $modelClass::where('wp_offsite_id', $wp->id)
             ->orderBy('tanggal_data')
             ->get();
 
