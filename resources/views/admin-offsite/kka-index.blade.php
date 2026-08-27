@@ -83,8 +83,7 @@
                                 <span class="badge {{ $statusClass }}">{{ $row->status_review ?? 'Belum Review' }}</span>
                             </td>
                             <td style="text-align: right;">
-                                <a href="{{ route('admin-offsite.kka-show', [$wp->id, $area, $row->id]) }}" 
-                                    class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
+                                <a href="{{ route('admin-offsite.kka-show', [$wp->id, $area, $row->kka_id ?? $row->id]) }}" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
                                     Detail
                                 </a>
                             </td>
