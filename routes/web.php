@@ -15,6 +15,7 @@ use App\Http\Controllers\OffsiteReviewController;
 use App\Http\Controllers\AdminOffsiteController;
 use App\Http\Controllers\RaOffsiteUploadController;
 use App\Http\Controllers\RaOffsiteRegisterController;
+use App\Http\Controllers\RaKkaController;
 
 Route::get('/debug-test', function () {
     $unit = \App\Models\Unit::find(2);
@@ -149,6 +150,9 @@ Route::middleware('auth')->group(function () {
         // Register Harian & Review Transaksi Staging
         Route::get('/register', [RaOffsiteRegisterController::class, 'index'])->name('register.index');
         Route::put('/register/{id}', [RaOffsiteRegisterController::class, 'update'])->name('register.update');
+
+        // Review & Tampilan Sheet KKA
+        Route::get('/kka/{sheet?}', [RaKkaController::class, 'index'])->name('kka.index');
     });
 
     // ==========================================
