@@ -94,10 +94,11 @@ class OffsiteReviewService
             $kkaFinal    = $kka->where('kka_status', 'Final')->count();
             $exception   = $kka->where('status_kka', 'Exception')->count();
 
-            return [
+              return [
                 'dump'         => $dumpTable,
                 'label'        => $label,
                 'total'        => $total,
+                'normalized'   => $total,
                 'eligible'     => $eligible,
                 'salah_unit'   => $salahUnit,
                 'luar_periode' => $luarPeriode,

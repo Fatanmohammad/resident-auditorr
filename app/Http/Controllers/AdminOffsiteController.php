@@ -6,6 +6,7 @@ use App\Models\Unit;
 use App\Models\Cabang;
 use App\Models\WpOffsite;
 use App\Services\OffsiteAdminService;
+use App\Services\OffsiteGenerationService;
 use Illuminate\Http\Request;
 
 class AdminOffsiteController extends Controller
@@ -30,7 +31,72 @@ class AdminOffsiteController extends Controller
         'transfer-ku'     => 'Transfer/KU',
     ];
 
-    public function __construct(private OffsiteAdminService $service) {}
+    public function __construct(
+        private OffsiteAdminService $service,
+        private OffsiteGenerationService $generation,
+    ) {}
+
+    /**
+     * PERBAIKAN: route ini sebelumnya menunjuk ke method yang belum ada
+     * (akan error kalau diklik). Untuk sekarang, ini menjalankan ulang
+     * pipeline Dump -> Staging -> Register -> KKA untuk WP aktif unit ini.
+     *
+     * CATATAN: ini BELUM termasuk upload file Excel/CSV berisi data Dump.
+     * Data di tabel dump_* masih perlu diisi lewat cara lain (seeder/manual/
+     * fitur import terpisah) sebelum tombol ini berguna.
+     */
+    public function uploadRegister(Request $request, Unit $unit)
+    {
+        $tahun = (int) $request->input('tahun', date('Y'));
+        $bulan = (int) $request->input('bulan', date('m'));
+
+        $wp = WpOffsite::where('unit_id', $unit->id)
+            ->whereYear('periode_mulai', $tahun)
+            ->whereMonth('periode_mulai', $bulan)
+            ->first();
+
+        if (!$wp) {
+            return back()->with('error', 'Belum ada WP Offsite untuk unit dan periode ini. Buat WP-nya dulu di menu Offsite Review.');
+        }
+
+        $hasil = $this->generation->generate($wp);
+
+        $pesan = $hasil['total_diproses'] > 0
+            ? "Data berhasil digenerate ulang. {$hasil['total_diproses']} baris diproses, {$hasil['total_masuk_kka']} masuk KKA."
+            : 'Belum ada data Dump untuk unit & periode ini.';
+
+        return back()->with('success', $pesan);
+    }
+
+    /**
+     * PERBAIKAN: route 'admin-offsite.update-status' menunjuk ke method ini,
+     * tapi sebelumnya belum ditulis sama sekali (akan error kalau diklik).
+     * Ini mengubah status WP (Draft/Aktif/Final) untuk unit & periode terkait.
+     */
+    public function updateStatus(Request $request, Unit $unit)
+    {
+        $validated = $request->validate([
+            'status_wp' => 'required|in:Draft,Aktif,Final',
+            'tahun'     => 'nullable|integer',
+            'bulan'     => 'nullable|integer',
+        ]);
+
+        $tahun = $validated['tahun'] ?? date('Y');
+        $bulan = $validated['bulan'] ?? date('m');
+
+        $wp = WpOffsite::where('unit_id', $unit->id)
+            ->whereYear('periode_mulai', $tahun)
+            ->whereMonth('periode_mulai', $bulan)
+            ->first();
+
+        if (!$wp) {
+            return back()->with('error', 'WP Offsite untuk unit dan periode ini tidak ditemukan.');
+        }
+
+        $wp->update(['status_wp' => $validated['status_wp']]);
+
+        return back()->with('success', 'Status WP berhasil diperbarui.');
+    }
 
     /**
      * Halaman index admin offsite — daftar cabang dengan statistik unit

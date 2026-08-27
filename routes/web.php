@@ -46,7 +46,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [AuditPlanController::class, 'index'])->name('index');
         Route::get('/create', [AuditPlanController::class, 'create'])->name('create')->middleware('role:pimsie');
         Route::post('/', [AuditPlanController::class, 'store'])->name('store')->middleware('role:pimsie');
-Route::get('/{id}', [AuditPlanController::class, 'show'])->name('show');
+        Route::get('/{id}', [AuditPlanController::class, 'show'])->name('show');
         Route::post('/{id}/approve', [AuditPlanController::class, 'approve'])->name('approve')->middleware('role:kadiv_skai,kabag_ra,admin');
     });
 
@@ -54,8 +54,8 @@ Route::get('/{id}', [AuditPlanController::class, 'show'])->name('show');
     // SOP 01 — MODUL AUDIT PLAN BARU
     // ==========================================
 
-// Master Unit (RA TIDAK diizinkan — RA hanya menginput raw metrics via raw-metrics.index) 
-Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,pimsie,admin')->group(function () {
+    // Master Unit (RA TIDAK diizinkan — RA hanya menginput raw metrics via raw-metrics.index) 
+    Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,pimsie,admin')->group(function () {
         Route::get('/', [UnitController::class, 'index'])->name('index');
         Route::get('/create', [UnitController::class, 'create'])->name('create')->middleware('role:kadiv_skai,kabag_ra,admin');
         Route::post('/', [UnitController::class, 'store'])->name('store')->middleware('role:kadiv_skai,kabag_ra,admin');
@@ -70,20 +70,20 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
     // Assignment RA index (RA TIDAK diizinkan)
     Route::get('/assignment-ra', [CoverageController::class, 'assignmentIndex'])->name('assignment-ra.index')->middleware('role:kadiv_skai,kabag_ra,pimsie,admin');
 
-// Raw Metrics (RA memegang akses utama di sini — HANYA input raw metrics)
+    // Raw Metrics (RA memegang akses utama di sini — HANYA input raw metrics)
     Route::prefix('raw-metrics')->name('raw-metrics.')->middleware('role:kabag_ra,ra,admin')->group(function () {
         Route::get('/', [RawMetricController::class, 'index'])->name('index');
         Route::get('/{unit}/form', [RawMetricController::class, 'create'])->name('create');
         Route::post('/{unit}', [RawMetricController::class, 'store'])->name('store');
     });
 
-// Critical Override (hanya dipakai dari detail unit — menu terpisah sudah dihapus)
+    // Critical Override (hanya dipakai dari detail unit — menu terpisah sudah dihapus)
     Route::prefix('critical-override')->name('critical-override.')->middleware('role:kabag_ra,kadiv_skai,admin')->group(function () {
         Route::post('/{unit}', [CriticalOverrideController::class, 'store'])->name('store');
         Route::patch('/{override}/status', [CriticalOverrideController::class, 'updateStatus'])->name('status');
     });
 
-// Coverage
+    // Coverage
     Route::prefix('coverage')->name('coverage.')->middleware('role:kabag_ra,kadiv_skai,admin')->group(function () {
         Route::get('/', [CoverageController::class, 'index'])->name('index');
         Route::post('/generate-all', [CoverageController::class, 'generateAll'])->name('generate-all');
@@ -103,7 +103,7 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
         Route::get('/{unit}', [SchedulingController::class, 'unitSchedule'])->name('unit');
     });
 
-// Final Audit Plan
+    // Final Audit Plan
     Route::prefix('final-audit-plan')->name('final-audit-plan.')->group(function () {
         Route::get('/', [FinalAuditPlanController::class, 'index'])->name('index');
         Route::get('/change-log', [FinalAuditPlanController::class, 'changeLog'])->name('change-log');
@@ -135,6 +135,7 @@ Route::prefix('units')->name('units.')->middleware('role:ra,kadiv_skai,kabag_ra,
         Route::post('/', [OffsiteReviewController::class, 'store'])->name('store');
         Route::get('/{wp}/dashboard', [OffsiteReviewController::class, 'dashboard'])->name('dashboard');
         Route::patch('/{wp}/status', [OffsiteReviewController::class, 'updateStatus'])->name('status');
+        Route::post('/{wp}/refresh', [OffsiteReviewController::class, 'refresh'])->name('refresh');
     });
 
     // ==========================================
