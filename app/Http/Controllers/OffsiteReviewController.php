@@ -6,6 +6,7 @@ use App\Models\WpOffsite;
 use App\Models\Unit;
 use App\Models\Ra;
 use App\Services\OffsiteReviewService;
+use App\Services\OffsiteDetectorEngine;
 use Illuminate\Http\Request;
 
 class OffsiteReviewController extends Controller
@@ -88,5 +89,21 @@ class OffsiteReviewController extends Controller
         $request->validate(['status_wp' => 'required|in:Draft,Aktif,Final']);
         $wp->update(['status_wp' => $request->status_wp]);
         return back()->with('success', 'Status WP diperbarui.');
+    }
+
+    /**
+     * Jalankan mesin deteksi anomali (rules engine) untuk semua domain pada WP ini.
+     */
+    public function runDetection(WpOffsite $wp, OffsiteDetectorEngine $engine)
+    {
+        $domains = ['cbs', 'dpk', 'kredit', 'biaya', 'pengaduan'];
+        $totalFlagged = 0;
+
+        foreach ($domains as $domain) {
+            $totalFlagged += $engine->scan($wp, $domain);
+        }
+
+        return redirect()->route('offsite-review.dashboard', $wp)
+            ->with('success', "Deteksi anomali berhasil dijalankan. Total temuan/flag: {$totalFlagged} baris.");
     }
 }

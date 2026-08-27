@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\WpOffsiteStaging;
-use App\Models\WpOffsite;
 use App\Models\Cabang;
 
 class RaOffsiteRegisterController extends Controller
@@ -24,6 +23,7 @@ class RaOffsiteRegisterController extends Controller
 
         $cabangId = $request->get('cabang_id', $cabangs->first()->id ?? null);
         $domainType = $request->get('domain_type');
+        $statusReview = $request->get('status_review', 'Pending'); // Default ambil yang Pending agar tidak menumpuk
 
         $query = WpOffsiteStaging::query();
 
@@ -35,9 +35,17 @@ class RaOffsiteRegisterController extends Controller
             $query->where('domain_type', $domainType);
         }
 
-        $stagings = $query->orderBy('tgl_transaksi', 'desc')->paginate(15);
+        // Filter status review (jika dipilih user, atau gunakan default 'Pending')
+        if ($request->filled('status_review')) {
+            $query->where('status_review', $request->status_review);
+        } else {
+            $query->where('status_review', 'Pending');
+        }
 
-        return view('ra-offsite.register', compact('stagings', 'cabangs', 'cabangId', 'domainType'));
+        // Ambil data dengan paginasi dan pertahankan query string-nya
+        $stagings = $query->orderBy('tgl_transaksi', 'desc')->paginate(15)->withQueryString();
+
+        return view('ra-offsite.register', compact('stagings', 'cabangs', 'cabangId', 'domainType', 'statusReview'));
     }
 
     /**
