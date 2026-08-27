@@ -123,9 +123,14 @@
                     <i class="bi bi-journal-check nav-icon"></i> Register Harian & Review
                 </a>
 
-                {{-- KKA / Dashboard Review --}}
+                {{-- Kertas Kerja Audit (KKA) --}}
+                <a href="{{ route('ra-offsite.kka.index') }}" class="nav-item {{ request()->routeIs('ra-offsite.kka.*') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-spreadsheet nav-icon"></i> Sheet KKA Offsite
+                </a>
+
+                {{-- Dashboard Review --}}
                 <a href="{{ route('offsite-review.index') }}" class="nav-item {{ request()->routeIs('offsite-review.*') && !request()->routeIs('ra-offsite.*') ? 'active' : '' }}">
-                    <i class="bi bi-file-earmark-text nav-icon"></i> Dashboard & KKA Review
+                    <i class="bi bi-file-earmark-text nav-icon"></i> Dashboard & Review
                 </a>
 
             </div>

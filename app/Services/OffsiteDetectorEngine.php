@@ -12,6 +12,7 @@ use App\Models\KkaBiayaInternal;
 use App\Models\KkaPengaduan;
 use App\Models\KkaTransaksiUmum;
 use App\Models\KkaTransferKu;
+use Illuminate\Support\Str; // FIX: Import Helper Str
 
 class OffsiteDetectorEngine
 {
@@ -34,7 +35,6 @@ class OffsiteDetectorEngine
 
     public function scan(WpOffsite $wp, string $domainType): int
     {
-        // FIX: cari kolom yang BENAR-BENAR ada
         $stagings = WpOffsiteStaging::where('wp_offsite_id', $wp->id)
             ->where('domain_type', $domainType)
             ->whereNull('processed_at')
@@ -47,12 +47,19 @@ class OffsiteDetectorEngine
 
             $hasilDeteksi = $this->detectionService->detectBaris($data, strtoupper($domainType), $wp);
 
+            // FIX: Generate Case ID unik jika dari detection service tidak tersedia/null
+            $caseId = !empty($hasilDeteksi['case_id']) 
+                ? $hasilDeteksi['case_id'] 
+                : ('CS-' . strtoupper(substr($domainType, 0, 3)) . '-' . Str::random(6));
+
+            $hasilDeteksi['case_id'] = $caseId; // Simpan ke array hasil agar konsisten
+
             $staging->update([
                 'flags'              => $hasilDeteksi['flags'],
                 'jumlah_flag_risiko' => $hasilDeteksi['jumlah_flag_risiko'],
                 'area_review'        => $hasilDeteksi['area_review'],
                 'risk_level'         => $hasilDeteksi['risk_level'],
-                'case_id'            => $hasilDeteksi['case_id'],
+                'case_id'            => $caseId,
                 'kka_sheet_tujuan'   => $hasilDeteksi['kka_sheet_tujuan'],
                 'perlu_kka'          => $hasilDeteksi['perlu_kka'],
                 'perlu_klarifikasi'  => $hasilDeteksi['perlu_klarifikasi'],
@@ -73,7 +80,6 @@ class OffsiteDetectorEngine
     {
         $model = $this->kkaModelMap[$hasil['kka_sheet_tujuan']];
 
-        // Ambil deskripsi & nominal dari raw_data, fallback ke gabungan teks kalau field spesifik gak ada
         $deskripsi = $data['deskripsi_narasi'] ?? $data['keterangan_transaksi'] ?? $data['isi_pengaduan'] ?? implode(' ', $data);
         $nominal = $data['nominal'] ?? 0;
 
@@ -86,13 +92,13 @@ class OffsiteDetectorEngine
             'nama_unit'            => $wp->nama_unit,
             'ra_id'                => $wp->ra_pelaksana_id,
             'object_id'            => $data['no_referensi'] ?? $data['no_rekening'] ?? null,
-            'case_id'              => $hasil['case_id'],
+            'case_id'              => $hasil['case_id'], // Dipastikan tidak null
             'deskripsi_narasi'     => $deskripsi,
             'nominal'              => $nominal,
             'user_maker'           => $data['user_maker'] ?? null,
             'risk_awal'            => $hasil['risk_level'],
             'exception_awal'       => $hasil['jumlah_flag_risiko'] > 0,
-            'jenis_exception_awal' => implode(', ', array_keys(array_filter($hasil['flags']))),
+            'jenis_exception_awal' => implode(', ', array_keys(array_filter($hasil['flags'] ?? []))),
             'status_review'        => 'Belum Review',
         ]);
     }
