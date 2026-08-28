@@ -4,33 +4,41 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class AggregateKkaHistoryCommand extends Command
 {
     protected $signature = 'kka:aggregate-history {date?}';
-    protected $description = 'Melakukan rekapitulasi otomatis data KKA harian dan bulanan';
+    protected $description = 'Melakukan rekapitulasi otomatis data KKA harian dan bulanan dari Engine Utama';
 
     public function handle()
     {
-        // Ambil tanggal (default: hari kemarin/yesterday)
         $targetDate = $this->argument('date') 
             ? Carbon::parse($this->argument('date')) 
             : Carbon::yesterday();
-
+            
         $dateString = $targetDate->toDateString();
         $year = $targetDate->year;
         $month = $targetDate->month;
 
-        // Daftar tabel KKA yang direkap
-        $sheets = ['kka_transfer_ku', 'kka_transaksi_umum'];
+        // Daftar seluruh tabel KKA dari Engine Utama
+        $sheets = [
+            'kka_teller_kas',
+            'kka_kredit',
+            'kka_biaya_beban',
+            'kka_biaya_internal',
+            'kka_pengaduan',
+            'kka_transaksi_umum',
+            'kka_transfer_ku',
+        ];
 
         foreach ($sheets as $tableName) {
-            if (!DB::getSchemaBuilder()->hasTable($tableName)) {
+            if (!Schema::hasTable($tableName)) {
                 continue;
             }
 
-            // 1. Hitung Agregat Harian
+            // 1. Hitung Agregat Harian dari hasil pemrosesan Engine Utama
             $dailyStat = DB::table($tableName)
                 ->whereDate('tanggal_data', $dateString)
                 ->selectRaw('
@@ -81,7 +89,7 @@ class AggregateKkaHistoryCommand extends Command
             }
         }
 
-        $this->info("Rekapitulasi KKA tanggal {$dateString} berhasil diproses.");
+        $this->info("Rekapitulasi KKA Engine Utama tanggal {$dateString} berhasil diproses.");
         return Command::SUCCESS;
     }
 }
