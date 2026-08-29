@@ -15,7 +15,7 @@ class RaKkaController extends Controller
 {
     public function index(Request $request, $sheet = 'teller-kas')
     {
-        // 1. Normalisasi format parameter URL (mengubah strip '-' menjadi underscore '_')
+        // 1. Normalisasi format parameter URL
         $normalizedSheet = str_replace('-', '_', $sheet);
 
         // 2. Pemetaan daftar Sheet KKA yang valid
@@ -37,7 +37,7 @@ class RaKkaController extends Controller
         $activeSheetInfo = $validSheets[$normalizedSheet];
         $modelClass = $activeSheetInfo['model'];
 
-        // 3. Ambil data KKA aktif dari Engine Utama dengan pagination
+        // 3. Ambil data KKA aktif dengan pagination
         $items = $modelClass::latest()->paginate(15);
 
         return view('ra-offsite.kka.index', [
@@ -46,5 +46,90 @@ class RaKkaController extends Controller
             'sheetTitle'      => $activeSheetInfo['title'],
             'availableSheets' => $validSheets
         ]);
+    }
+
+    /**
+     * Menampilkan Form Detail & Input Pengujian KKA untuk RA
+     */
+    public function show($area, $kkaId)
+    {
+        $modelClass = $this->getModelByArea($area);
+        $kka = $modelClass::findOrFail($kkaId);
+        $wp = $kka->wpOffsite ?? null;
+
+        $areaLabels = [
+            'teller-kas'     => 'Teller & Kas',
+            'kredit'         => 'Kredit',
+            'biaya-beban'    => 'Biaya & Beban',
+            'biaya-internal' => 'Biaya Internal',
+            'pengaduan'      => 'Pengaduan',
+            'transaksi-umum' => 'Transaksi Umum',
+            'transfer-ku'    => 'Transfer & Pasiva',
+        ];
+
+        $areaLabel = $areaLabels[$area] ?? ucfirst($area);
+
+        return view('ra-offsite.kka-show', compact('kka', 'wp', 'area', 'areaLabel'));
+    }
+
+    /**
+     * Menyimpan/Mengupdate Hasil Kerja RA
+     */
+    public function update(Request $request, $area, $kkaId)
+    {
+        $request->validate([
+            'bukti_referensi' => 'nullable|string|max:255',
+            'hasil_uji'       => 'nullable|string',
+            'status_review'   => 'required|string',
+            'simpulan_ra'     => 'nullable|string',
+            'dampak'          => 'nullable|string|max:255',
+            'kemungkinan'     => 'nullable|string|max:255',
+        ]);
+
+        try {
+            $modelClass = $this->getModelByArea($area);
+            $kka = $modelClass::findOrFail($kkaId);
+
+            $kka->update([
+                'bukti_referensi' => $request->bukti_referensi,
+                'hasil_uji'       => $request->hasil_uji,
+                'status_review'   => $request->status_review,
+                'simpulan_ra'     => $request->simpulan_ra,
+                'dampak'          => $request->dampak,
+                'kemungkinan'     => $request->kemungkinan,
+            ]);
+
+            return redirect()->back()->with('updated_success', 'Hasil pengujian KKA berhasil diperbarui oleh RA.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withInput()->with('error', 'Gagal memperbarui data KKA: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Helper Pemetaan Area ke Model Class
+     */
+    private function getModelByArea($area)
+    {
+        $map = [
+            'teller-kas'     => KkaTellerKas::class,
+            'kredit'         => KkaKredit::class,
+            'biaya-beban'    => KkaBiayaBeban::class,
+            'biaya-internal' => KkaBiayaInternal::class,
+            'pengaduan'      => KkaPengaduan::class,
+            'transaksi-umum' => KkaTransaksiUmum::class,
+            'transfer-ku'    => KkaTransferKu::class,
+            // Fallback jika dikirim underscore
+            'teller_kas'     => KkaTellerKas::class,
+            'biaya_beban'    => KkaBiayaBeban::class,
+            'biaya_internal' => KkaBiayaInternal::class,
+            'transaksi_umum' => KkaTransaksiUmum::class,
+            'transfer_ku'    => KkaTransferKu::class,
+        ];
+
+        if (!isset($map[$area])) {
+            abort(404, 'Area KKA tidak valid');
+        }
+
+        return $map[$area];
     }
 }

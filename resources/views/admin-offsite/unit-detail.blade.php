@@ -162,7 +162,8 @@
     @else
         <!-- Identitas WP Card -->
         <div class="widget-card" style="margin-bottom: 1.5rem;">
-            <div class="widget-header">
+            <div class="widget-header d-flex justify-content-between align-items-center">
+            <div class="widget-header d-flex justify-content-between align-items-center">
                 <div class="widget-title">
                     <i class="bi bi-file-earmark-text"></i> Identitas Work Paper (WP) Audit
                 </div>
@@ -183,16 +184,46 @@
                     </div>
                     <div style="margin-bottom: 1rem;">
                         <div class="stat-label">STATUS WP</div>
-                        <div>
+                        <div class="d-flex align-items-center gap-2" style="margin-top: 0.25rem;">
+                        <div class="d-flex align-items-center gap-2" style="margin-top: 0.25rem;">
                             <span class="badge {{ $wp->status_wp === 'Final' ? 'badge-success' : ($wp->status_wp === 'Aktif' ? 'badge-warning' : 'badge-gray') }}">
                                 {{ $wp->status_wp }}
                             </span>
+
+                            @if($wp->status_wp !== 'Aktif')
+                                <form action="{{ route('admin-offsite.update-status', $unit->id) }}" method="POST" style="display: inline;">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status_wp" value="Aktif">
+                                    <input type="hidden" name="tahun" value="{{ $tahun }}">
+                                    <input type="hidden" name="bulan" value="{{ $bulan }}">
+                                    
+                                    <button type="submit" class="btn btn-sm btn-success" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; line-height: 1.2;">
+                                        <i class="bi bi-check-circle me-1"></i> Aktifkan WP
+                                    </button>
+                                </form>
+                            @endif
+
+                            @if($wp->status_wp !== 'Aktif')
+                                <form action="{{ route('admin-offsite.update-status', $unit->id) }}" method="POST" style="display: inline;">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status_wp" value="Aktif">
+                                    <input type="hidden" name="tahun" value="{{ $tahun }}">
+                                    <input type="hidden" name="bulan" value="{{ $bulan }}">
+                                    
+                                    <button type="submit" class="btn btn-sm btn-success" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; line-height: 1.2;">
+                                        <i class="bi bi-check-circle me-1"></i> Aktifkan WP
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     </div>
                     <div>
                         <div class="stat-label">PERIODE PELAKSANAAN</div>
                         <div style="font-weight: 600; font-size: 1rem; color: var(--text-main);">
-                            {{ $wp->periode_mulai->format('d/m/Y') }} s.d. {{ $wp->periode_selesai->format('d/m/Y') }}
+                            {{ $wp->periode_mulai ? $wp->periode_mulai->format('d/m/Y') : '-' }} s.d. {{ $wp->periode_selesai ? $wp->periode_selesai->format('d/m/Y') : '-' }}
+                            {{ $wp->periode_mulai ? $wp->periode_mulai->format('d/m/Y') : '-' }} s.d. {{ $wp->periode_selesai ? $wp->periode_selesai->format('d/m/Y') : '-' }}
                         </div>
                     </div>
                     <div>
