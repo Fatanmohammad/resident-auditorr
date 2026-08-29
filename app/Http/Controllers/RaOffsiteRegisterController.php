@@ -63,6 +63,23 @@ class RaOffsiteRegisterController extends Controller
                           ->paginate(15)
                           ->withQueryString();
 
+        // --- PIPELINE BACKEND: Murni merapikan raw_data tanpa ganggu View ---
+        $stagings->getCollection()->transform(function ($item) {
+            if (is_string($item->raw_data)) {
+                $json = json_decode($item->raw_data, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($json)) {
+                    $uraian = $json['URAIAN'] ?? $json['uraian'] ?? $json['DESKRIPSI'] ?? '';
+                    $noRek  = $json['NO_REK'] ?? $json['no_rek'] ?? '';
+                    
+                    // Timpa variabel raw_data di backend dengan string hasil parsing
+                    if ($uraian || $noRek) {
+                        $item->raw_data = trim($uraian . ($noRek ? " (Rek: {$noRek})" : ''));
+                    }
+                }
+            }
+            return $item;
+        });
+
         return view('ra-offsite.register', compact('stagings', 'cabangs', 'cabangId', 'domainType', 'statusFlag'));
     }
 

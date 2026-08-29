@@ -78,13 +78,17 @@ class OffsiteAdminService
                 ->count();
 
             return [
-                'unit' => $unit,
-                'status_review' => $statusReview,
+                'id'                => $unit->id,
+                'kode_unit'         => $unit->unit_code,
+                'nama_unit'         => $unit->unit_name,
+                'unit_type'         => $unit->unit_type,
+                'unit'              => $unit,
+                'status_review'     => $statusReview,
                 'total_klarifikasi' => $totalKlarifikasi,
-                'total_eskalasi' => $totalEskalasi,
+                'total_eskalasi'    => $totalEskalasi,
                 'total_area_risiko' => $totalAreaRisiko,
-                'risiko_tertinggi' => $risikoTertinggi,
-                'terakhir_update' => $rows->max('updated_at'),
+                'risiko_tertinggi'  => $risikoTertinggi,
+                'terakhir_update'   => $rows->max('updated_at'),
             ];
         });
 
@@ -111,7 +115,7 @@ class OffsiteAdminService
                 'jenis_unit'      => $unit->unit_type ?? 'KC',
                 'kantor_induk'    => $unit->parent_office ?? 'KANTOR PUSAT',
                 'periode_selesai' => date('Y-m-t', strtotime("$tahun-$bulan-01")),
-                'ra_pelaksana_id' => $unit->ra_user_id ?? auth()->id(), // <--- Tambahkan baris ini
+                'ra_pelaksana_id' => $unit->ra_user_id ?? auth()->id(),
                 'status_wp'       => 'Draft',
             ]
         );
@@ -127,12 +131,18 @@ class OffsiteAdminService
         $stagings = StagingOffsite::where('wp_offsite_id', $wp->id)->get();
 
         foreach ($stagings as $stg) {
+            // Memberikan fallback aman jika area_review di staging bernilai null
+            $areaReview = $stg->area_review 
+                ?? $stg->nama_kategori 
+                ?? $stg->modul 
+                ?? 'General Review';
+
             RegisterHarian::updateOrCreate(
                 [
                     'wp_offsite_id' => $wp->id,
                     'kode_unit'     => $unit->unit_code,
                     'tanggal_data'  => $stg->tanggal_data,
-                    'area_review'   => $stg->area_review,
+                    'area_review'   => $areaReview,
                 ],
                 [
                     'nama_unit'         => $unit->unit_name,

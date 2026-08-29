@@ -37,13 +37,7 @@ class AdminOffsiteController extends Controller
     ) {}
 
     /**
-     * PERBAIKAN: route ini sebelumnya menunjuk ke method yang belum ada
-     * (akan error kalau diklik). Untuk sekarang, ini menjalankan ulang
-     * pipeline Dump -> Staging -> Register -> KKA untuk WP aktif unit ini.
-     *
-     * CATATAN: ini BELUM termasuk upload file Excel/CSV berisi data Dump.
-     * Data di tabel dump_* masih perlu diisi lewat cara lain (seeder/manual/
-     * fitur import terpisah) sebelum tombol ini berguna.
+     * Jalankan ulang pipeline Dump -> Staging -> Register -> KKA untuk WP aktif unit ini.
      */
     public function uploadRegister(Request $request, Unit $unit)
     {
@@ -69,9 +63,7 @@ class AdminOffsiteController extends Controller
     }
 
     /**
-     * PERBAIKAN: route 'admin-offsite.update-status' menunjuk ke method ini,
-     * tapi sebelumnya belum ditulis sama sekali (akan error kalau diklik).
-     * Ini mengubah status WP (Draft/Aktif/Final) untuk unit & periode terkait.
+     * Mengubah status WP (Draft/Aktif/Final) untuk unit & periode terkait.
      */
     public function updateStatus(Request $request, Unit $unit)
     {
@@ -150,21 +142,34 @@ class AdminOffsiteController extends Controller
         $tahun = (int) request('tahun', date('Y'));
         $bulan = (int) request('bulan', date('m'));
 
-        $wp = WpOffsite::with(['raPelaksana', 'reviewerBagianRa'])
+        // Ambil WP Offsite beserta Eager Loading relasi staging & user
+        $wp = WpOffsite::with(['stagingOffsite', 'raPelaksana', 'reviewerBagianRa'])
             ->where('unit_id', $unit->id)
             ->whereYear('periode_mulai', $tahun)
             ->whereMonth('periode_mulai', $bulan)
             ->first();
 
+        // Jika WP belum ada, return view dengan state kosong
         if (!$wp) {
             return view('admin-offsite.unit-detail', [
-                'unit' => $unit, 'wp' => null, 'tahun' => $tahun, 'bulan' => $bulan,
+                'unit'      => $unit, 
+                'wp'        => null, 
+                'tahun'     => $tahun, 
+                'bulan'     => $bulan,
+                'ringkasan' => [
+                    'populasi'    => 0,
+                    'sampel_low'  => 0,
+                    'kka_final'   => 0,
+                    'exception'   => 0,
+                    'klarifikasi' => 0,
+                    'eskalasi'    => 0,
+                ],
+                'rows'      => collect()
             ]);
         }
 
-        // Ambil register harian dengan proteksi aman
-        // Ambil data langsung dari relasi stagingOffsite
-        $stagingData = $wp->stagingOffsite()->orderBy('tanggal_data')->get();
+        // Ambil koleksi staging dari eager loading WP
+        $stagingData = $wp->stagingOffsite->sortBy('tanggal_data');
 
         // Grouping berdasarkan tanggal_data untuk tampilan accordion Blade
         $rows = $stagingData->groupBy(function($item) {
@@ -177,16 +182,13 @@ class AdminOffsiteController extends Controller
             'sampel_low'  => $stagingData->where('sampel_low', 1)->count(),
             'kka_final'   => $stagingData->where('masuk_kka_final', 1)->count(),
             'exception'   => $stagingData->where('exception_awal', 1)->count(),
-            'klarifikasi' => 0,
-            'eskalasi'    => 0,
+            'klarifikasi' => $stagingData->where('perlu_klarifikasi', 1)->count(),
+            'eskalasi'    => $stagingData->where('perlu_eskalasi', 1)->count(),
         ];
 
         return view('admin-offsite.unit-detail', compact('unit', 'wp', 'rows', 'ringkasan', 'tahun', 'bulan'));
     }
 
-    /**
-     * Daftar KKA per area untuk 1 WP
-     */
     /**
      * Daftar KKA per area untuk 1 WP
      */
@@ -199,7 +201,6 @@ class AdminOffsiteController extends Controller
         $areaLabel = $this->kkaLabels[$area];
         $modelClass = $this->kkaModels[$area];
 
-        // GANTI DI SINI: Ambil langsung dari Model Tabel KKA Spesifik (bukan dari StagingOffsite)
         $rows = $modelClass::where('wp_offsite_id', $wp->id)
             ->orderBy('tanggal_data')
             ->get();
@@ -246,10 +247,10 @@ class AdminOffsiteController extends Controller
             $kka = $modelClass::firstOrCreate(
                 [
                     'wp_offsite_id' => $wp->id,
-                    'object_id'     => $staging->object_id ?? 'STG-' . $staging->id,
+                    'staging_id'    => $staging->id,
                 ],
                 [
-                    'staging_id'           => $staging->id,
+                    'object_id'            => $staging->object_id ?? 'STG-' . $staging->id,
                     'area_review'          => $staging->area_review ?? $areaLabel,
                     'kode_unit'            => $staging->kode_unit ?? $wp->kode_unit,
                     'nama_unit'            => $staging->nama_unit ?? $wp->nama_unit,
@@ -315,7 +316,7 @@ class AdminOffsiteController extends Controller
         $updatedData = [
             'catatan_reviewer' => $validated['catatan_reviewer'],
             'reviewer_id'      => $reviewerId,
-            'updated_at'       => now(), // Memaksa waktu ter-update saat ini
+            'updated_at'       => now(),
         ];
 
         // 2. Cari dan update di tabel StagingOffsite (jika ada)

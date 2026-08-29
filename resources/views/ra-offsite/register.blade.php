@@ -90,7 +90,7 @@
                         <th style="padding: 0.75rem 1rem; color: #475569; font-weight: 600;">#</th>
                         <th style="padding: 0.75rem 1rem; color: #475569; font-weight: 600;">Tanggal</th>
                         <th style="padding: 0.75rem 1rem; color: #475569; font-weight: 600;">Domain</th>
-                        <th style="padding: 0.75rem 1rem; color: #475569; font-weight: 600;">Detail Transaksi (Raw Data)</th>
+                        <th style="padding: 0.75rem 1rem; color: #475569; font-weight: 600;">Detail Transaksi</th>
                         <th style="padding: 0.75rem 1rem; color: #475569; font-weight: 600;">Risk Level</th>
                         <th style="padding: 0.75rem 1rem; color: #475569; font-weight: 600;">Status Deteksi</th>
                         <th style="padding: 0.75rem 1rem; color: #475569; font-weight: 600; text-align: center;">Aksi / Navigasi</th>
@@ -104,9 +104,29 @@
                             <td style="padding: 0.75rem 1rem;">
                                 <span style="display: inline-block; padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; border-radius: 4px; background-color: #e0f2fe; color: #0369a1;">{{ strtoupper($item->domain_type) }}</span>
                             </td>
-                            <td style="padding: 0.75rem 1rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; color: #334155;">
-                                {{ Str::limit(is_array($item->raw_data) ? implode(' | ', $item->raw_data) : $item->raw_data, 90) }}
+                            
+                            {{-- KOLOM DETAIL TRANSAKSI YANG SUDAH DISARING CLEAN --}}
+                            <td style="padding: 0.75rem 1rem; max-width: 320px;">
+                                @php
+                                    $data = is_string($item->raw_data) ? json_decode($item->raw_data, true) : $item->raw_data;
+                                    $uraian = $data['URAIAN'] ?? $data['uraian'] ?? $data['DESKRIPSI'] ?? $data['deskripsi'] ?? null;
+                                    $noRek  = $data['NO_REK'] ?? $data['no_rek'] ?? $data['NO_REKENING'] ?? $data['no_rekening'] ?? null;
+                                @endphp
+
+                                @if($uraian || $noRek)
+                                    <div style="font-weight: 600; color: #1e293b; line-height: 1.2;">
+                                        {{ $uraian ?? '-' }}
+                                    </div>
+                                    @if($noRek)
+                                        <div style="font-size: 0.75rem; color: #64748b; font-family: monospace; margin-top: 0.15rem;">
+                                            No. Rek: {{ $noRek }}
+                                        </div>
+                                    @endif
+                                @else
+                                    <span style="color: #94a3b8; font-size: 0.8rem;">-</span>
+                                @endif
                             </td>
+
                             <td style="padding: 0.75rem 1rem;">
                                 @if($item->risk_level == 'High')
                                     <span style="display: inline-block; padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; border-radius: 4px; background-color: #fee2e2; color: #991b1b;">High Risk</span>
