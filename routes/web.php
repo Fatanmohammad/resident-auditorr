@@ -16,6 +16,7 @@ use App\Http\Controllers\AdminOffsiteController;
 use App\Http\Controllers\RaOffsiteUploadController;
 use App\Http\Controllers\RaOffsiteRegisterController;
 use App\Http\Controllers\RaKkaController;
+use App\Http\Controllers\HistoryController; // Import HistoryController
 
 Route::get('/debug-test', function () {
     $unit = \App\Models\Unit::find(2);
@@ -40,6 +41,13 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // ==========================================
+    // HISTORY & LOG AKTIVITAS (ADMIN & RA)
+    // ==========================================
+    Route::get('/history', [HistoryController::class, 'index'])
+        ->name('history.index')
+        ->middleware('role:admin,ra,kabag_ra,kadiv_skai');
 
     // ==========================================
     // AUDIT PLAN (approval workflow)

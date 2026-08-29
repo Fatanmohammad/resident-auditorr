@@ -132,15 +132,22 @@
             </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon green">
-                <i class="bi bi-check2-square"></i>
+        <!-- Stat Card Selesai Review dengan Tombol Riwayat di Sebelahnya / Dalam Card -->
+        <div class="stat-card" style="position: relative; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div class="stat-icon green">
+                    <i class="bi bi-check2-square"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">SELESAI REVIEW</div>
+                    <div class="stat-value">{{ $doneCount }}</div>
+                    <div class="stat-sub">Sudah Ditindaklanjuti</div>
+                </div>
             </div>
-            <div class="stat-info">
-                <div class="stat-label">SELESAI REVIEW</div>
-                <div class="stat-value">{{ $doneCount }}</div>
-                <div class="stat-sub">Sudah Ditindaklanjuti</div>
-            </div>
+            <!-- Tombol Riwayat Sejajar -->
+            <a href="{{ route('history.index') }}" class="btn btn-outline-primary" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; white-space: nowrap;">
+                <i class="bi bi-clock-history"></i> Riwayat
+            </a>
         </div>
     </div>
 
