@@ -156,9 +156,15 @@
                                         @endif
                                     </td>
                                     <td style="text-align: right;">
-                                        <button class="btn btn-outline" style="padding: 0.28rem 0.65rem; font-size: 0.75rem; border-radius: 6px;">
+                                        @php
+                                            $activeRouteArea = $availableSheets[$currentSheet]['route_param'] ?? str_replace('_', '-', $currentSheet);
+                                            $itemId = $item->id ?? $item->id_kka ?? $item->getKey();
+                                        @endphp
+                                        <a href="{{ route('ra-offsite.kka.show', ['area' => $activeRouteArea, 'kkaId' => $itemId]) }}" 
+                                        class="btn btn-outline" 
+                                        style="padding: 0.28rem 0.65rem; font-size: 0.75rem; border-radius: 6px; text-decoration: none; display: inline-block;">
                                             Review
-                                        </button>
+                                        </a>
                                     </td>
                                 </tr>
                             @empty

@@ -125,7 +125,7 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     // SOP 02 — ADMIN OFFSITE (ADMIN ONLY)
     // ==========================================
-    Route::prefix('admin/offsite')->name('admin-offsite.')->middleware('role:admin')->group(function () {
+    Route::prefix('admin/offsite')->name('admin-offsite.')->middleware('role:admin,ra')->group(function () {
         Route::get('/', [AdminOffsiteController::class, 'index'])->name('index');
         Route::get('/cabang/{cabang}', [AdminOffsiteController::class, 'cabangDetail'])->name('cabang-detail');
         Route::get('/unit/{unit}', [AdminOffsiteController::class, 'unitDetail'])->name('unit-detail');
@@ -159,6 +159,10 @@ Route::middleware('auth')->group(function () {
         // Register Harian & Review Transaksi Staging
         Route::get('/register', [RaOffsiteRegisterController::class, 'index'])->name('register.index');
         Route::put('/register/{id}', [RaOffsiteRegisterController::class, 'update'])->name('register.update');
+
+        // Form Detail & Review KKA Khusus RA
+        Route::get('/kka/{area}/{kkaId}', [RaKkaController::class, 'show'])->name('kka.show');
+        Route::put('/kka/{area}/{kkaId}', [RaKkaController::class, 'update'])->name('kka.update');
 
         // Review & Tampilan Sheet KKA
         Route::get('/kka/{sheet?}', [RaKkaController::class, 'index'])->name('kka.index');
