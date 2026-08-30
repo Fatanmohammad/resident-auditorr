@@ -2,7 +2,6 @@
 
 @push('styles')
 <style>
-    /* Styling Khusus untuk Card Grid KKA */
     .kka-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -163,7 +162,6 @@
         <!-- Identitas WP Card -->
         <div class="widget-card" style="margin-bottom: 1.5rem;">
             <div class="widget-header d-flex justify-content-between align-items-center">
-            <div class="widget-header d-flex justify-content-between align-items-center">
                 <div class="widget-title">
                     <i class="bi bi-file-earmark-text"></i> Identitas Work Paper (WP) Audit
                 </div>
@@ -185,24 +183,9 @@
                     <div style="margin-bottom: 1rem;">
                         <div class="stat-label">STATUS WP</div>
                         <div class="d-flex align-items-center gap-2" style="margin-top: 0.25rem;">
-                        <div class="d-flex align-items-center gap-2" style="margin-top: 0.25rem;">
                             <span class="badge {{ $wp->status_wp === 'Final' ? 'badge-success' : ($wp->status_wp === 'Aktif' ? 'badge-warning' : 'badge-gray') }}">
                                 {{ $wp->status_wp }}
                             </span>
-
-                            @if($wp->status_wp !== 'Aktif')
-                                <form action="{{ route('admin-offsite.update-status', $unit->id) }}" method="POST" style="display: inline;">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="status_wp" value="Aktif">
-                                    <input type="hidden" name="tahun" value="{{ $tahun }}">
-                                    <input type="hidden" name="bulan" value="{{ $bulan }}">
-                                    
-                                    <button type="submit" class="btn btn-sm btn-success" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; line-height: 1.2;">
-                                        <i class="bi bi-check-circle me-1"></i> Aktifkan WP
-                                    </button>
-                                </form>
-                            @endif
 
                             @if($wp->status_wp !== 'Aktif')
                                 <form action="{{ route('admin-offsite.update-status', $unit->id) }}" method="POST" style="display: inline;">
@@ -222,7 +205,6 @@
                     <div>
                         <div class="stat-label">PERIODE PELAKSANAAN</div>
                         <div style="font-weight: 600; font-size: 1rem; color: var(--text-main);">
-                            {{ $wp->periode_mulai ? $wp->periode_mulai->format('d/m/Y') : '-' }} s.d. {{ $wp->periode_selesai ? $wp->periode_selesai->format('d/m/Y') : '-' }}
                             {{ $wp->periode_mulai ? $wp->periode_mulai->format('d/m/Y') : '-' }} s.d. {{ $wp->periode_selesai ? $wp->periode_selesai->format('d/m/Y') : '-' }}
                         </div>
                     </div>
@@ -375,7 +357,7 @@
                                                     <th style="text-align: right;">KKA FINAL</th>
                                                     <th style="text-align: right;">EXCEPTION</th>
                                                     <th style="text-align: center;">RISIKO TERTINGGI</th>
-                                                    <th>DETAIL TRANSAKSI (URAIAAN & REK)</th>
+                                                    <th>DETAIL TRANSAKSI (URAIAN & REK)</th>
                                                     <th style="text-align: center;">STATUS REVIEW</th>
                                                     <th>CATATAN REVIEWER</th>
                                                 </tr>
@@ -402,15 +384,11 @@
                                                         @endif
                                                     </td>
 
-                                                    {{-- PARSING RAW JSON SECARA FLEKSIBEL SESUAI STAGING OFFSITE --}}
                                                     <td>
                                                         @php
-                                                            // Ambil isi raw data dari berbagai alternatif nama atribut Staging
                                                             $rawString = $row->detail_transaksi ?? $row->raw_data ?? $row->deskripsi_narasi ?? $row->deskripsi;
-                                                            
                                                             $dataArray = is_string($rawString) ? json_decode($rawString, true) : (is_array($rawString) ? $rawString : null);
                                                             
-                                                            // Ekstraksi Uraian
                                                             $uraian = $dataArray['URAIAN'] 
                                                                 ?? $dataArray['uraian'] 
                                                                 ?? $dataArray['NAMA_TRANSAKSI'] 
@@ -420,7 +398,6 @@
                                                                 ?? $row->deskripsi_narasi 
                                                                 ?? 'Detail Transaksi';
 
-                                                            // Ekstraksi No Rekening
                                                             $noRek = $dataArray['NO_REK'] 
                                                                 ?? $dataArray['no_rek'] 
                                                                 ?? $dataArray['NO_REKENING'] 
@@ -437,12 +414,10 @@
                                                                 No. Rek: {{ $noRek }}
                                                             </div>
                                                             
-                                                            <!-- Modal Trigger -->
                                                             <a href="#" data-bs-toggle="modal" data-bs-target="#modalRaw-{{ $row->id }}" style="font-size: 0.7rem; color: #0284c7; text-decoration: underline; margin-top: 2px; display: inline-block;">
                                                                 <i class="bi bi-code-slash"></i> Lihat Raw Data
                                                             </a>
 
-                                                            <!-- Modal Popup JSON Raw Data -->
                                                             <div class="modal fade" id="modalRaw-{{ $row->id }}" tabindex="-1" aria-hidden="true">
                                                                 <div class="modal-dialog modal-dialog-centered">
                                                                     <div class="modal-content" style="text-align: left;">

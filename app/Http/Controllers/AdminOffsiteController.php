@@ -227,23 +227,23 @@ class AdminOffsiteController extends Controller
         $instance = new $modelClass;
         $primaryKey = $instance->getKeyName();
 
-        // 1. Cari data di tabel KKA Spesifik memakai primary key dinamis & kka_id
+        // 1. Cari data di tabel KKA Spesifik
         $kka = $modelClass::where('wp_offsite_id', $wp->id)
             ->where(function($q) use ($primaryKey, $kkaId) {
                 $q->where($primaryKey, $kkaId);
                 if ($primaryKey !== 'kka_id') {
                     $q->orWhere('kka_id', $kkaId);
                 }
+                $q->orWhere('staging_id', $kkaId);
             })
             ->first();
 
-        // 2. Fallback: Jika belum didistribusikan ke tabel KKA area, ambil dari StagingOffsite
+        // 2. Fallback: Jika belum ada di tabel KKA area, ambil dari StagingOffsite
         if (!$kka) {
             $staging = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
                 ->where('id', $kkaId)
                 ->firstOrFail();
 
-            // Auto-create/sync ke tabel KKA area spesifik dengan kelengkapan field NOT NULL
             $kka = $modelClass::firstOrCreate(
                 [
                     'wp_offsite_id' => $wp->id,
@@ -279,7 +279,7 @@ class AdminOffsiteController extends Controller
     }
 
     /**
-     * Update Catatan Reviewer (Admin/Reviewer HANYA boleh isi ini)
+     * Update Catatan Reviewer (Admin/Reviewer)
      */
     public function kkaUpdateReviewerNote(Request $request, WpOffsite $wp, string $area, int $kkaId)
     {
@@ -296,7 +296,7 @@ class AdminOffsiteController extends Controller
 
         $kka->update([
             'catatan_reviewer' => $validated['catatan_reviewer'],
-            'reviewer_id' => auth()->id(),
+            'reviewer_id'       => auth()->id(),
         ]);
 
         return back()->with('success', 'Catatan Reviewer berhasil disimpan.');
@@ -307,7 +307,6 @@ class AdminOffsiteController extends Controller
      */
     public function kkaUpdate(Request $request, WpOffsite $wp, string $area, $kkaId)
     {
-        // 1. Validasi input catatan reviewer
         $validated = $request->validate([
             'catatan_reviewer' => 'nullable|string|max:2000',
         ]);
@@ -319,7 +318,7 @@ class AdminOffsiteController extends Controller
             'updated_at'       => now(),
         ];
 
-        // 2. Cari dan update di tabel StagingOffsite (jika ada)
+        // 1. Update StagingOffsite jika ada
         $staging = \App\Models\StagingOffsite::where('wp_offsite_id', $wp->id)
             ->where('id', $kkaId)
             ->first();
@@ -328,7 +327,7 @@ class AdminOffsiteController extends Controller
             $staging->update($updatedData);
         }
 
-        // 3. Cari dan update di tabel KKA Spesifik (misal: kka_teller_kas)
+        // 2. Update di tabel KKA Spesifik
         if (isset($this->kkaModels[$area])) {
             $modelClass = $this->kkaModels[$area];
             $instance = new $modelClass;
