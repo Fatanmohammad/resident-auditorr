@@ -16,10 +16,10 @@ return new class extends Migration
         foreach ($tables as $table) {
             if (Schema::hasTable($table)) {
                 Schema::table($table, function (Blueprint $table) {
-                    $table->string('status_review', 255)->change();
-                    $table->string('dampak', 255)->change();
-                    $table->string('kemungkinan', 255)->change();
-                    $table->text('hasil_uji')->change();
+                    $table->string('status_review', 255)->nullable()->change();
+                    $table->string('dampak', 255)->nullable()->change();
+                    $table->string('kemungkinan', 255)->nullable()->change();
+                    $table->text('hasil_uji')->nullable()->change();
                 });
             }
         }
