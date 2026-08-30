@@ -136,10 +136,31 @@ class OffsiteDetectionService
     }
 
     /**
-     * Logika Deteksi KREDIT (Nomi KDT / Kredit)
+     * Logika Deteksi KREDIT (Nomi KDT / Kredit) - HANYA populasi cair kemarin (H-1)
      */
     private function detectKredit(array $data, string $source, WpOffsite $wp): array
     {
+        $tglRealisasi = $data['TGLMULAI'] ?? $data['TGL_MULAI'] ?? $data['tgl_mulai'] ?? null;
+        $tanggalData  = $data['tanggal_data_manual'] ?? now()->format('Y-m-d');
+
+        // Filter populasi: hanya kredit cair KEMARIN (H-1) yang dievaluasi
+        $isKreditBaru = $tglRealisasi && Carbon::parse($tglRealisasi)->isSameDay(Carbon::parse($tanggalData)->subDay());
+
+        if (!$isKreditBaru) {
+            return [
+                'flags'              => [],
+                'jumlah_flag_risiko' => 0,
+                'area_review'        => 'Kredit',
+                'risk_level'         => 'Low',
+                'case_id'            => null,
+                'kka_sheet_tujuan'   => 'Register',
+                'perlu_kka'          => false,
+                'perlu_klarifikasi'  => false,
+                'perlu_eskalasi'     => false,
+                'catatan'            => 'BUKAN_POPULASI_HARIAN',
+            ];
+        }
+
         $noAkad      = $data['NO_AKD'] ?? $data['no_akad'] ?? null;
         $plafon      = (float) ($data['PLAFOND'] ?? $data['plafon'] ?? 0);
         $bakiDebet   = (float) ($data['SALDO_AKHIR'] ?? $data['baki_debet'] ?? 0);
@@ -152,11 +173,11 @@ class OffsiteDetectionService
         $wajibAgunanFisik = !str_contains($jenisKredit, 'TANPA AGUNAN') && !str_contains($jenisKredit, 'KUR MIKRO');
 
         $flags = [
-            'akad_tidak_ada'              => empty($noAkad),
-            'produk_belum_terklasifikasi' => empty($jenisKredit),
-            'agunan_fisik_wajib_tidak_ada'=> $wajibAgunanFisik && $totalAgunan <= 0,
-            'plafon_baki_debet_besar'     => $plafon >= 500000000 || $bakiDebet >= 500000000,
-            'kolek_tunggakan_tidak_normal'=> $kolek >= 2 || $tunggPokok > 0 || $tunggBunga > 0,
+            'akad_tidak_ada'               => empty($noAkad),
+            'produk_belum_terklasifikasi'  => empty($jenisKredit),
+            'agunan_fisik_wajib_tidak_ada' => $wajibAgunanFisik && $totalAgunan <= 0,
+            'plafon_baki_debet_besar'      => $plafon >= 500000000 || $bakiDebet >= 500000000,
+            'kolek_tunggakan_tidak_normal' => $kolek >= 2 || $tunggPokok > 0 || $tunggBunga > 0,
         ];
 
         $jumlahFlag = count(array_filter($flags));
@@ -187,9 +208,41 @@ class OffsiteDetectionService
      */
     private function detectBiaya(array $data, string $source): array
     {
+        $noRek  = $data['NO_REK'] ?? $data['no_rekening'] ?? '';
+        $kodeGl = strlen($noRek) >= 8 ? substr($noRek, 3, 5) : '';
+
+        // Lookup kategori dari tabel referensi GL jika ada
+        $glRef = class_exists('\App\Models\GlReference') && !empty($kodeGl)
+            ? \App\Models\GlReference::where('kode_gl', $kodeGl)->first()
+            : null;
+
+        $kategoriBeban = $glRef->kategori_beban ?? 'Beban Operasional Lainnya';
+
+        $kategoriDireview = [
+            'Beban Listrik dan Air', 'Pemeliharaan/ATK/Barang Cetakan', 'Perjalanan/Transport/BBM',
+            'Beban Operasional Lainnya', 'Titipan/Kas Prioritas', 'Titipan Pencairan Kredit',
+            'Titipan Pihak III/Intern', 'Titipan/Rekening Antara Lainnya'
+        ];
+
+        if (!in_array($kategoriBeban, $kategoriDireview)) {
+            return [
+                'flags'              => [],
+                'jumlah_flag_risiko' => 0,
+                'area_review'        => 'Biaya/Internal',
+                'risk_level'         => 'Exclude',
+                'case_id'            => null,
+                'kka_sheet_tujuan'   => 'Register',
+                'perlu_kka'          => false,
+                'perlu_klarifikasi'  => false,
+                'perlu_eskalasi'     => false,
+            ];
+        }
+
         $nominal   = (float) ($data['JUMLAH_TX'] ?? $data['nominal'] ?? 0);
         $deskripsi = strtoupper($data['KET_TX'] ?? $data['keterangan_transaksi'] ?? $data['URAIAN'] ?? $data['deskripsi'] ?? '');
         $isAuto    = ($data['ISAUTOTX'] ?? '0') == '1';
+
+        $caseKey = ($data['KD_CAB'] ?? '') . '|' . ($data['TGL_TX'] ?? '') . '|' . ($data['NO_ARSIP'] ?? '');
 
         $flags = [
             'nominal_besar'       => $nominal >= 20000000,
@@ -213,7 +266,7 @@ class OffsiteDetectionService
             'jumlah_flag_risiko' => $jumlahFlag,
             'area_review'        => 'Biaya/Internal',
             'risk_level'         => $riskLevel,
-            'case_id'            => null,
+            'case_id'            => $caseKey,
             'kka_sheet_tujuan'   => $riskLevel === 'Low' ? 'Register' : 'kka_biaya_beban',
             'perlu_kka'          => $riskLevel !== 'Low',
             'perlu_klarifikasi'  => false,
@@ -226,26 +279,31 @@ class OffsiteDetectionService
      */
     private function detectPengaduan(array $data, string $source): array
     {
-        $tglTerima    = $data['TGL_TERIMA'] ?? $data['tgl_terima'] ?? now()->format('Y-m-d');
-        $status       = strtoupper($data['status_pengaduan'] ?? $data['STATUS'] ?? '');
-        $kategori     = strtoupper($data['jenis_pengaduan'] ?? '');
-        $isiPengaduan = $data['isi_pengaduan'] ?? '';
-        $nominalRugi  = (float) ($data['NOMINAL_KERUGIAN'] ?? $data['nominal_kerugian'] ?? 0);
+        $tglTerima     = $data['TGL_TERIMA'] ?? $data['tgl_terima'] ?? now()->format('Y-m-d');
+        $status        = strtoupper($data['status_pengaduan'] ?? $data['STATUS'] ?? '');
+        $kategori      = strtoupper($data['jenis_pengaduan'] ?? '');
+        $isiPengaduan  = $data['isi_pengaduan'] ?? '';
+        $nominalRugi   = (float) ($data['NOMINAL_KERUGIAN'] ?? $data['nominal_kerugian'] ?? 0);
+        $buktiSelesai  = $data['BUKTI_PENYELESAIAN'] ?? null;
+        $catatanCabang = $data['CATATAN_TL_CABANG'] ?? null;
 
         $isSelesai = in_array($status, ['SELESAI', 'CLOSED']);
-        $overdue   = $isSelesai ? false : now()->greaterThan(Carbon::parse($tglTerima)->addDays(14));
+        $tglSla    = Carbon::parse($tglTerima)->addWeekdays(14);
+        $overdue   = $isSelesai ? false : now()->greaterThan($tglSla);
 
         $flags = [
-            'overdue_sla'          => $overdue,
-            'dana_saldo_berkurang' => (bool) preg_match('/DANA BERKURANG|SALDO BERKURANG|UANG HILANG/i', $isiPengaduan),
-            'atm_digital_banking'  => (bool) preg_match('/ATM|KARTU|MOBILE|MBANK|DIGITAL|EDC/i', $isiPengaduan . ' ' . $kategori),
-            'nominal_material'     => $nominalRugi >= 5000000,
-            'status_open'          => !$isSelesai,
+            'overdue_sla'                  => $overdue,
+            'dana_saldo_berkurang'         => (bool) preg_match('/DANA BERKURANG|SALDO BERKURANG|UANG HILANG/i', $isiPengaduan),
+            'atm_digital_banking'          => (bool) preg_match('/ATM|KARTU|MOBILE|MBANK|DIGITAL|EDC/i', $isiPengaduan . ' ' . $kategori),
+            'nominal_material'             => $nominalRugi >= 5000000,
+            'status_open'                  => !$isSelesai,
+            'belum_ada_bukti_penyelesaian' => $isSelesai && empty($buktiSelesai),
+            'cabang_belum_tindak_lanjut'   => empty($catatanCabang),
         ];
 
         $jumlahFlag = count(array_filter($flags));
 
-        if ($flags['overdue_sla'] || $flags['dana_saldo_berkurang']) {
+        if ($flags['overdue_sla'] || $flags['dana_saldo_berkurang'] || $flags['cabang_belum_tindak_lanjut']) {
             $riskLevel = 'High';
         } elseif ($jumlahFlag >= 1) {
             $riskLevel = 'Moderate';
