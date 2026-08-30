@@ -13,32 +13,45 @@ class WpOffsiteStaging extends Model
     protected $table = 'wp_offsite_stagings';
 
     protected $fillable = [
+        'wp_offsite_id',
         'cabang_id',
         'domain_type',
         'tgl_transaksi',
         'raw_data',
+        'flags',
+        'jumlah_flag_risiko',
+        'area_review',
+        'risk_level',
+        'case_id',
+        'kka_sheet_tujuan',
+        'perlu_kka',
+        'perlu_klarifikasi',
+        'perlu_eskalasi',
+        'processed_at',
         'uploaded_by',
     ];
 
     protected $casts = [
-        'raw_data' => 'array',
+        'raw_data'      => 'array',
+        'flags'         => 'array',
+        'perlu_kka'     => 'boolean',
+        'perlu_klarifikasi' => 'boolean',
+        'perlu_eskalasi' => 'boolean',
         'tgl_transaksi' => 'date',
+        'processed_at'  => 'datetime',
     ];
 
     /**
-     * Accessor Otomatis (Backend Only):
-     * Menyaring array / string JSON raw_data secara otomatis menjadi 
-     * teks ringkas "URAIAN (No. Rek: NO_REK)" tanpa mengubah View Blade.
+     * Accessor Otomatis (Gunakan $staging->formatted_raw_data jika ingin menampilkan teks ringkas di Blade View)
      */
-    protected function rawData(): Attribute
+    protected function formattedRawData(): Attribute
     {
         return Attribute::make(
-            get: function ($value) {
-                // Parse jika nilainya masih string JSON
-                $data = is_string($value) ? json_decode($value, true) : $value;
+            get: function ($value, array $attributes) {
+                $raw = $attributes['raw_data'] ?? null;
+                $data = is_string($raw) ? json_decode($raw, true) : $raw;
 
                 if (is_array($data)) {
-                    // Ambil field URAIAN / DESKRIPSI dan NO_REK
                     $uraian = $data['URAIAN'] ?? $data['uraian'] ?? $data['DESKRIPSI'] ?? $data['deskripsi'] ?? '';
                     $noRek  = $data['NO_REK'] ?? $data['no_rek'] ?? $data['NO_REKENING'] ?? $data['no_rekening'] ?? '';
 
@@ -51,7 +64,7 @@ class WpOffsiteStaging extends Model
                     }
                 }
 
-                return $value ?? '-';
+                return '-';
             }
         );
     }
