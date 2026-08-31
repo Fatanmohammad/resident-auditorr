@@ -18,6 +18,7 @@
         display: inline-flex;
         align-items: center;
         gap: 4px;
+        white-space: nowrap;
     }
     .badge-status-pending { 
         background-color: #fffbe3; 
@@ -30,6 +31,7 @@
         display: inline-flex;
         align-items: center;
         gap: 4px;
+        white-space: nowrap;
     }
 </style>
 @endpush
@@ -61,12 +63,12 @@
                         <thead style="background-color: #f8fafc; font-size: 0.78rem; color: #475569; text-transform: uppercase; font-weight: 700;">
                             <tr>
                                 <th style="width: 4%; text-align: center; padding: 0.75rem 1rem;">NO</th>
-                                <th style="width: 14%; padding: 0.75rem 1rem;">WAKTU LOG</th>
-                                <th style="width: 12%; padding: 0.75rem 1rem;">USER / EDITOR</th>
-                                <th style="width: 10%; padding: 0.75rem 1rem;">KODE UNIT</th>
-                                <th style="width: 12%; padding: 0.75rem 1rem;">AKSI</th>
+                                <th style="width: 14%; padding: 0.75rem 1rem; white-space: nowrap;">WAKTU LOG</th>
+                                <th style="width: 12%; padding: 0.75rem 1rem; white-space: nowrap;">USER / EDITOR</th>
+                                <th style="width: 10%; text-align: center; padding: 0.75rem 1rem; white-space: nowrap;">KODE UNIT</th>
+                                <th style="width: 10%; text-align: center; padding: 0.75rem 1rem; white-space: nowrap;">AKSI</th>
                                 <th style="padding: 0.75rem 1rem;">KETERANGAN / CATATAN</th>
-                                <th style="width: 12%; text-align: center; padding: 0.75rem 1rem;">STATUS</th>
+                                <th style="width: 12%; text-align: center; padding: 0.75rem 1rem; white-space: nowrap;">STATUS</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -78,21 +80,21 @@
                                     <td style="white-space: nowrap; font-size: 0.82rem;">
                                         {{ isset($log->created_at) ? \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i') : '-' }}
                                     </td>
-                                    <td style="font-weight: 600; font-size: 0.83rem;">
+                                    <td style="font-weight: 600; font-size: 0.83rem; white-space: nowrap;">
                                         {{ $log->user_name ?? $log->user_id ?? 'System' }}
                                     </td>
-                                    <td style="font-size: 0.82rem;">
+                                    <td style="text-align: center; font-size: 0.82rem; white-space: nowrap;">
                                         {{ $log->kode_unit ?? '-' }}
                                     </td>
-                                    <td style="font-size: 0.82rem; font-weight: 600;">
-                                        {{ $log->action ?? 'Update Review' }}
+                                    <td style="text-align: center; font-size: 0.82rem; font-weight: 600; white-space: nowrap;">
+                                        <span class="badge bg-light text-dark border" style="font-size: 0.75rem; padding: 0.3em 0.6em;">{{ $log->action ?? 'UPDATE' }}</span>
                                     </td>
-                                    <td style="font-size: 0.83rem; color: #334155;">
-                                        {{ $log->keterangan ?? $log->description ?? '-' }}
+                                    <td style="font-size: 0.83rem; color: #334155; word-break: break-word;">
+                                        {{ $log->deskripsi_perubahan ?? $log->keterangan ?? $log->description ?? '-' }}
                                     </td>
-                                    <td style="text-align: center;">
-                                        @if(in_array(strtolower($log->status_review ?? ''), ['selesai', 'reviewed', 'closed']))
-                                            <span class="badge-status-done"><i class="bi bi-check-circle-fill"></i> Selesai</span>
+                                    <td style="text-align: center; white-space: nowrap;">
+                                        @if(in_array(strtolower($log->status_review ?? ''), ['selesai', 'reviewed', 'closed', 'sudah']))
+                                            <span class="badge-status-done"><i class="bi bi-check-circle-fill"></i> Sudah Review</span>
                                         @else
                                             <span class="badge-status-pending"><i class="bi bi-clock-fill"></i> Belum Review</span>
                                         @endif

@@ -96,62 +96,136 @@
             </div>
         </div>
 
-        {{-- KOLOM KANAN: Form Pengisian RA --}}
+        {{-- KOLOM KANAN --}}
         <div>
-            <form action="{{ route('ra-offsite.kka.update', ['area' => $area, 'kkaId' => $kka->getKey()]) }}" method="POST">
-                @csrf
-                @method('PUT')
+            @if(auth()->user()->role === 'ra')
+                {{-- TAMPILAN RESIK UNTUK RA (Hanya Menampilkan Hasil Jika Admin Sudah Mengisi) --}}
+                @php
+                    $hasContent = !empty($kka->hasil_uji) || !empty($kka->simpulan_ra) || !empty($kka->bukti_referensi);
+                @endphp
 
-                <div class="card" style="border: 1px solid #f59e0b; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <div class="card-header" style="background-color: #fef3c7; border-bottom: 1px solid #fcd34d; padding: 0.8rem 1.25rem;">
-                        <div class="card-title" style="font-size: 0.9rem; font-weight: 600; color: #b45309; margin: 0;">
-                            <i class="bi bi-pencil-square me-1"></i> Input Pengujian Risk Analyst (RA)
+                @if($hasContent)
+                    <div class="card" style="border: 1px solid #10b981; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="card-header" style="background-color: #ecfdf5; border-bottom: 1px solid #a7f3d0; padding: 0.8rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="card-title" style="font-size: 0.9rem; font-weight: 600; color: #047857; margin: 0;">
+                                <i class="bi bi-check-circle-fill me-1"></i> Hasil Review & Pengujian Auditor
+                            </div>
+                            <span style="font-size: 0.75rem; font-weight: 700; background: #d1fae5; color: #065f46; padding: 0.2rem 0.6rem; border-radius: 20px;">
+                                {{ $kka->status_review ?? 'Selesai' }}
+                            </span>
+                        </div>
+                        <div class="card-body" style="padding: 1.25rem;">
+                            
+                            @if($kka->hasil_uji)
+                                <div style="margin-bottom: 1rem;">
+                                    <div style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 0.35rem;">Hasil Analysis / Pengujian</div>
+                                    <div style="background-color: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem; color: #1e293b; line-height: 1.5;">
+                                        {!! nl2br(e($kka->hasil_uji)) !!}
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($kka->simpulan_ra)
+                                <div style="margin-bottom: 1rem;">
+                                    <div style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 0.35rem;">Simpulan Akhir</div>
+                                    <div style="background-color: #f0fdf4; padding: 0.85rem; border-radius: 6px; border: 1px solid #bbf7d0; font-size: 0.85rem; font-weight: 600; color: #166534;">
+                                        {!! nl2br(e($kka->simpulan_ra)) !!}
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($kka->bukti_referensi || $kka->dampak || $kka->kemungkinan)
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; background: #f8fafc; padding: 0.75rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.8rem;">
+                                    @if($kka->bukti_referensi)
+                                        <div>
+                                            <span style="color: #64748b; display: block; font-size: 0.7rem;">BUKTI/REFERENSI</span>
+                                            <strong style="color: #0f172a;">{{ $kka->bukti_referensi }}</strong>
+                                        </div>
+                                    @endif
+                                    @if($kka->dampak)
+                                        <div>
+                                            <span style="color: #64748b; display: block; font-size: 0.7rem;">DAMPAK</span>
+                                            <strong style="color: #0f172a;">{{ $kka->dampak }}</strong>
+                                        </div>
+                                    @endif
+                                    @if($kka->kemungkinan)
+                                        <div>
+                                            <span style="color: #64748b; display: block; font-size: 0.7rem;">KEMUNGKINAN</span>
+                                            <strong style="color: #0f172a;">{{ $kka->kemungkinan }}</strong>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+
                         </div>
                     </div>
-                    <div class="card-body" style="padding: 1.25rem;">
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                            <div>
-                                <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Status Review RA</label>
-                                <select name="status_review" class="form-select" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1;">
-                                    <option value="Belum Review" {{ old('status_review', $kka->status_review) == 'Belum Review' ? 'selected' : '' }}>Belum Review</option>
-                                    <option value="Sudah Review" {{ old('status_review', $kka->status_review) == 'Sudah Review' ? 'selected' : '' }}>Sudah Review</option>
-                                    <option value="Perlu Clarification" {{ old('status_review', $kka->status_review) == 'Perlu Clarification' ? 'selected' : '' }}>Perlu Clarification</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Bukti / Referensi</label>
-                                <input type="text" name="bukti_referensi" class="form-control" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1;" value="{{ old('bukti_referensi', $kka->bukti_referensi) }}" placeholder="Contoh: No. Memo / Lampiran Dokumen">
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Hasil Uji RA</label>
-                            <textarea name="hasil_uji" class="form-control" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1; resize: vertical; min-height: 90px;" placeholder="Tuliskan temuan atau hasil analisis pengujian di sini...">{{ old('hasil_uji', $kka->hasil_uji) }}</textarea>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                            <div>
-                                <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Dampak (Impact)</label>
-                                <input type="text" name="dampak" class="form-control" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1;" value="{{ old('dampak', $kka->dampak) }}" placeholder="Contoh: High / Moderate / Skala 1-5">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Kemungkinan (Likelihood)</label>
-                                <input type="text" name="kemungkinan" class="form-control" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1;" value="{{ old('kemungkinan', $kka->kemungkinan) }}" placeholder="Contoh: High / Low / Skala 1-5">
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 1.5rem;">
-                            <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Simpulan RA</label>
-                            <textarea name="simpulan_ra" class="form-control" style="width: 100%; font-size: 0.85rem; font-weight: 600; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1; resize: vertical; min-height: 70px;" placeholder="Kesimpulan akhir pengujian oleh RA...">{{ old('simpulan_ra', $kka->simpulan_ra) }}</textarea>
-                        </div>
-
-                        <button type="submit" class="btn btn-warning" style="width: 100%; font-weight: 600; padding: 0.6rem; color: #fff; background-color: #f59e0b; border: none; border-radius: 6px; cursor: pointer;">
-                            <i class="bi bi-save me-1"></i> Simpan Hasil Pengujian RA
-                        </button>
+                @else
+                    {{-- State Kosong untuk RA: Jika Admin Belum Review --}}
+                    <div class="card" style="border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; text-align: center; padding: 2.5rem 1.5rem;">
+                        <i class="bi bi-clock-history" style="font-size: 2.5rem; color: #94a3b8; display: block; margin-bottom: 0.5rem;"></i>
+                        <h6 style="font-weight: 600; color: #475569; margin-bottom: 0.25rem;">Menunggu Review Admin</h6>
+                        <p style="font-size: 0.8rem; color: #64748b; margin: 0;">Pengujian dan simpulan untuk KKA ini belum diinput oleh Admin / Auditor.</p>
                     </div>
-                </div>
-            </form>
+                @endif
+
+            @else
+
+                {{-- FORM EDIT UNTUK ADMIN --}}
+                <form action="{{ route('ra-offsite.kka.update', ['area' => $area, 'kkaId' => $kka->getKey()]) }}" method="POST">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="card" style="border: 1px solid #f59e0b; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="card-header" style="background-color: #fef3c7; border-bottom: 1px solid #fcd34d; padding: 0.8rem 1.25rem;">
+                            <div class="card-title" style="font-size: 0.9rem; font-weight: 600; color: #b45309; margin: 0;">
+                                <i class="bi bi-pencil-square me-1"></i> Input Pengujian Risk Analyst (Admin)
+                            </div>
+                        </div>
+                        <div class="card-body" style="padding: 1.25rem;">
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Status Review</label>
+                                    <select name="status_review" class="form-select" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+                                        <option value="Belum Review" {{ old('status_review', $kka->status_review) == 'Belum Review' ? 'selected' : '' }}>Belum Review</option>
+                                        <option value="Sudah Review" {{ old('status_review', $kka->status_review) == 'Sudah Review' ? 'selected' : '' }}>Sudah Review</option>
+                                        <option value="Perlu Clarification" {{ old('status_review', $kka->status_review) == 'Perlu Clarification' ? 'selected' : '' }}>Perlu Clarification</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Bukti / Referensi</label>
+                                    <input type="text" name="bukti_referensi" class="form-control" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1;" value="{{ old('bukti_referensi', $kka->bukti_referensi) }}" placeholder="Contoh: No. Memo / Lampiran Dokumen">
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Hasil Uji</label>
+                                <textarea name="hasil_uji" class="form-control" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1; resize: vertical; min-height: 90px;" placeholder="Tuliskan temuan atau hasil analisis pengujian di sini...">{{ old('hasil_uji', $kka->hasil_uji) }}</textarea>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Dampak (Impact)</label>
+                                    <input type="text" name="dampak" class="form-control" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1;" value="{{ old('dampak', $kka->dampak) }}" placeholder="Contoh: High / Moderate / Skala 1-5">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Kemungkinan (Likelihood)</label>
+                                    <input type="text" name="kemungkinan" class="form-control" style="width: 100%; font-size: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1;" value="{{ old('kemungkinan', $kka->kemungkinan) }}" placeholder="Contoh: High / Low / Skala 1-5">
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="font-size: 0.75rem; font-weight: 600; display: block; margin-bottom: 0.35rem; color: #334155;">Simpulan Pengujian</label>
+                                <textarea name="simpulan_ra" class="form-control" style="width: 100%; font-size: 0.85rem; font-weight: 600; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #cbd5e1; resize: vertical; min-height: 70px;" placeholder="Kesimpulan akhir pengujian...">{{ old('simpulan_ra', $kka->simpulan_ra) }}</textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-warning" style="width: 100%; font-weight: 600; padding: 0.6rem; color: #fff; background-color: #f59e0b; border: none; border-radius: 6px; cursor: pointer;">
+                                <i class="bi bi-save me-1"></i> Simpan Hasil Pengujian
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            @endif
         </div>
 
     </div>

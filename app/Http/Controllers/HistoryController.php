@@ -23,11 +23,15 @@ class HistoryController extends Controller
                 $query->where('status_review', $request->status_review);
             }
         } else {
-            // RA: Hanya melihat aktivitas di cabangnya sendiri (termasuk sesama RA 1 cabang)
+            // RA: Melihat log berdasarkan kode_unit user ATAU log yang ia unggah sendiri
             $userUnit = $user->kode_unit ?? '001';
-            $query->where('kode_unit', $userUnit);
+            $query->where(function ($q) use ($userUnit, $user) {
+                $q->where('kode_unit', $userUnit)
+                  ->orWhere('user_id', $user?->id);
+            });
         }
 
+        // Filter Tanggal Opsional
         if ($request->filled('tanggal')) {
             $query->whereDate('created_at', $request->tanggal);
         }
@@ -36,7 +40,10 @@ class HistoryController extends Controller
 
         // Menghitung data yang belum direview untuk indikator Admin
         $unreviewedCount = DB::table('kka_activity_logs')
-            ->when($user && $user->role !== 'admin', fn($q) => $q->where('kode_unit', $user->kode_unit ?? '001'))
+            ->when($user && $user->role !== 'admin', function ($q) use ($user) {
+                $q->where('kode_unit', $user->kode_unit ?? '001')
+                  ->orWhere('user_id', $user?->id);
+            })
             ->where('status_review', 'Belum')
             ->count();
 

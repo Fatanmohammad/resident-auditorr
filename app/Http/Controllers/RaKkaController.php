@@ -10,6 +10,7 @@ use App\Models\KkaBiayaInternal;
 use App\Models\KkaPengaduan;
 use App\Models\KkaTransaksiUmum;
 use App\Models\KkaTransferKu;
+use Illuminate\Support\Facades\DB;
 
 class RaKkaController extends Controller
 {
@@ -90,14 +91,20 @@ class RaKkaController extends Controller
             $modelClass = $this->getModelByArea($area);
             $kka = $modelClass::findOrFail($kkaId);
 
-            $kka->update([
+            $dataBaru = [
                 'bukti_referensi' => $request->bukti_referensi,
                 'hasil_uji'       => $request->hasil_uji,
                 'status_review'   => $request->status_review,
                 'simpulan_ra'     => $request->simpulan_ra,
                 'dampak'          => $request->dampak,
                 'kemungkinan'     => $request->kemungkinan,
-            ]);
+            ];
+
+            // 1. Catat perubahan ke kka_activity_logs sebelum di-update
+            $this->catatPerubahan($kka, $dataBaru, $area);
+
+            // 2. Simpan pembaruan data KKA
+            $kka->update($dataBaru);
 
             return redirect()->back()->with('updated_success', 'Hasil pengujian KKA berhasil diperbarui oleh RA.');
         } catch (\Exception $e) {
@@ -131,5 +138,41 @@ class RaKkaController extends Controller
         }
 
         return $map[$area];
+    }
+
+    /**
+     * Helper privat untuk mencatat log perubahan ke kka_activity_logs
+     */
+    private function catatPerubahan($kka, array $dataBaru, string $area): void
+    {
+        $user = auth()->user();
+        $perubahan = [];
+
+        foreach ($dataBaru as $field => $nilaiBaru) {
+            $nilaiLama = $kka->{$field};
+
+            if ((string) $nilaiLama !== (string) $nilaiBaru) {
+                $perubahan[] = "{$field}: '" . ($nilaiLama ?? '-') . "' -> '" . ($nilaiBaru ?? '-') . "'";
+            }
+        }
+
+        if (empty($perubahan)) {
+            return;
+        }
+
+        $statusReview = $dataBaru['status_review'] ?? $kka->status_review ?? 'Belum';
+
+        DB::table('kka_activity_logs')->insert([
+            'user_id'             => $user?->id ?? 1,
+            'user_name'           => $user?->name ?? 'System',
+            'kode_unit'           => $kka->kode_unit ?? '001',
+            'case_id'             => (string) $kka->getKey(),
+            'sheet_name'          => strtoupper(str_replace('-', '_', $area)),
+            'action'              => 'UPDATE',
+            'deskripsi_perubahan' => implode(' | ', $perubahan),
+            'status_review'       => in_array($statusReview, ['Belum', 'Selesai', 'Pending']) ? $statusReview : 'Pending',
+            'created_at'          => now(),
+            'updated_at'          => now(),
+        ]);
     }
 }

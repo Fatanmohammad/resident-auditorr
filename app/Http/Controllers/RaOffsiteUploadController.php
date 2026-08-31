@@ -41,6 +41,7 @@ class RaOffsiteUploadController extends Controller
         $domainType = strtoupper($request->domain_type);
         $cabangId = $request->cabang_id;
         $tanggalManual = $request->tanggal_data_manual;
+        $user = Auth::user();
 
         DB::beginTransaction();
         try {
@@ -49,7 +50,8 @@ class RaOffsiteUploadController extends Controller
             $dt = Carbon::parse($sampleDate);
             $tahun = $dt->year;
             $bulan = $dt->month;
-            $kodeWp = 'SOP02-CAB-' . str_pad($cabangId, 3, '0', STR_PAD_LEFT) . '-' . $tahun . str_pad($bulan, 2, '0', STR_PAD_LEFT);
+            $kodeUnit = str_pad($cabangId, 3, '0', STR_PAD_LEFT);
+            $kodeWp = 'SOP02-CAB-' . $kodeUnit . '-' . $tahun . str_pad($bulan, 2, '0', STR_PAD_LEFT);
 
             $wp = WpOffsite::firstOrCreate(
                 [
@@ -70,6 +72,7 @@ class RaOffsiteUploadController extends Controller
             $header = fgetcsv($handle, 4096, ',');
 
             $insertedCount = 0;
+            $sampleAssoc = null; // Menampung sampel baris data pertama
 
             while (($row = fgetcsv($handle, 4096, ',')) !== FALSE) {
                 if (empty(array_filter($row))) continue;
@@ -77,6 +80,11 @@ class RaOffsiteUploadController extends Controller
                 // Normalisasi panjang elemen baris agar cocok dengan header
                 $rowPadded = array_pad(array_slice($row, 0, count($header)), count($header), null);
                 $rowAssoc = array_combine($header, $rowPadded);
+
+                // Tangkap data baris pertama sebagai contoh sampel
+                if ($sampleAssoc === null) {
+                    $sampleAssoc = $rowAssoc;
+                }
 
                 $tglTransaksi = $tanggalManual;
                 if (!in_array(strtolower($domainType), ['kredit', 'dpk']) && isset($rowAssoc[$header[0]])) {
@@ -87,11 +95,11 @@ class RaOffsiteUploadController extends Controller
                     }
                 }
 
-                // 3. Simpan ke model StagingOffsite ($wp->id dipastikan terdefinisi)
+                // 3. Simpan ke model StagingOffsite
                 StagingOffsite::create([
                     'wp_offsite_id'    => $wp->id,
                     'tanggal_data'     => $tglTransaksi ?? now()->format('Y-m-d'),
-                    'kode_unit'        => str_pad($cabangId, 3, '0', STR_PAD_LEFT),
+                    'kode_unit'        => $kodeUnit,
                     'nama_unit'        => $rowAssoc['NAMA_UNIT'] ?? $rowAssoc['nama_unit'] ?? 'Kantor Cabang',
                     'ra_id'            => auth()->id(),
                     'source_table'     => $domainType,
@@ -104,9 +112,32 @@ class RaOffsiteUploadController extends Controller
             }
             fclose($handle);
 
+            // 4. Rangkai narasi harian yang mengalir rapi (Opsi 1)
+            $catatanNarasi = $this->generateNarasiLog(
+                $domainType, 
+                $file->getClientOriginalName(), 
+                $insertedCount, 
+                $kodeUnit, 
+                $sampleAssoc
+            );
+
+            // 5. Catat aktivitas UPLOAD ke kka_activity_logs
+            DB::table('kka_activity_logs')->insert([
+                'user_id'             => $user?->id ?? 1,
+                'user_name'           => $user?->name ?? 'System',
+                'kode_unit'           => $kodeUnit,
+                'case_id'             => (string) $wp->id,
+                'sheet_name'          => $domainType,
+                'action'              => 'UPLOAD',
+                'deskripsi_perubahan' => $catatanNarasi,
+                'status_review'       => 'Belum',
+                'created_at'          => now(),
+                'updated_at'          => now(),
+            ]);
+
             DB::commit();
 
-            // 4. Eksekusi Engine Scan Deteksi Risiko setelah commit
+            // 6. Eksekusi Engine Scan Deteksi Risiko setelah commit
             $engine = new OffsiteDetectorEngine(new \App\Services\OffsiteDetectionService());
             $flagged = $engine->scan($wp, $domainType);
 
@@ -116,5 +147,21 @@ class RaOffsiteUploadController extends Controller
             DB::rollBack();
             return redirect()->back()->withErrors(['file_csv' => 'Gagal memproses file CSV: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Generator narasi bahasa Indonesia yang mengalir untuk tampilan UI History (Opsi 1)
+     */
+    private function generateNarasiLog(string $domain, string $fileName, int $rowCount, string $kodeUnit, ?array $sample): string
+    {
+        $noRek = $sample['NO_REK'] ?? $sample['no_rek'] ?? $sample['NO_REKENING'] ?? null;
+        
+        $narasi = "Mengunggah data transaksi {$domain} sebanyak {$rowCount} baris dari file {$fileName} untuk Cabang {$kodeUnit}.";
+        
+        if ($noRek) {
+            $narasi .= " Sampel data yang tercatat yaitu rekening {$noRek}.";
+        }
+
+        return $narasi;
     }
 }
