@@ -60,6 +60,93 @@ class StagingOffsite extends Model
         'processed_at'      => 'datetime',
     ];
 
+    /** Kata kunci (fuzzy, case-insensitive) untuk cari kolom deskripsi/narasi di raw data */
+    private const KATA_KUNCI_DESKRIPSI = [
+        'uraian', 'keterangan', 'narasi', 'deskripsi', 'ket_tx', 'ket',
+        'nm_ledger', 'nama_transaksi', 'glnmbi', 'nm_gl',
+    ];
+
+    /** Kata kunci untuk cari kolom nomor rekening/referensi/kode di raw data */
+    private const KATA_KUNCI_REFERENSI = [
+        'no_rek', 'rekening', 'referensi', 'no_ref', 'account', 'no_arsip',
+        'no_ledger', 'glnbrbi',
+    ];
+
+    /**
+     * Cari value pertama di $data yang key-nya mengandung salah satu dari $kataKunci.
+     */
+    private static function cariNilaiFuzzy(array $data, array $kataKunci): ?string
+    {
+        foreach ($data as $key => $value) {
+            if ($value === null || $value === '' || !is_scalar($value)) {
+                continue;
+            }
+            $keyNormal = strtolower(str_replace([' ', '-'], '_', (string) $key));
+            foreach ($kataKunci as $kk) {
+                if (str_contains($keyNormal, $kk)) {
+                    return (string) $value;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Ringkasan siap-baca dari deskripsi_narasi. Dipakai di Blade sebagai
+     * {{ $row->ringkasan_narasi }} — JANGAN tampilkan deskripsi_narasi mentah.
+     * TIDAK PERNAH mengembalikan JSON mentah, walau tidak ada key yang cocok.
+     */
+    public function getRingkasanNarasiAttribute(): string
+    {
+        $data = $this->deskripsi_narasi;
+
+        if (!is_array($data) || empty($data)) {
+            return '-';
+        }
+
+        $uraian = self::cariNilaiFuzzy($data, self::KATA_KUNCI_DESKRIPSI);
+        $noRef  = self::cariNilaiFuzzy($data, self::KATA_KUNCI_REFERENSI);
+
+        if ($uraian && $noRef) {
+            return "{$uraian} ({$noRef})";
+        }
+        if ($uraian) {
+            return $uraian;
+        }
+        if ($noRef) {
+            return "Ref: {$noRef}";
+        }
+
+        // Fallback aman: pasangan key:value pertama yang ada isinya,
+        // TIDAK PERNAH dump JSON mentah utuh.
+        $pasangan = [];
+        foreach ($data as $key => $value) {
+            if ($value === null || $value === '' || !is_scalar($value)) {
+                continue;
+            }
+            $labelRapi = ucwords(str_replace('_', ' ', strtolower((string) $key)));
+            $pasangan[] = "{$labelRapi}: {$value}";
+            if (count($pasangan) >= 2) {
+                break;
+            }
+        }
+
+        return $pasangan ? implode(' | ', $pasangan) : '-';
+    }
+
+    /**
+     * Nomor rekening/referensi saja (dipakai terpisah kalau perlu ditampilkan
+     * di kolom sendiri, bukan digabung dengan uraian).
+     */
+    public function getNoReferensiRingkasAttribute(): ?string
+    {
+        $data = $this->deskripsi_narasi;
+        if (!is_array($data)) {
+            return null;
+        }
+        return self::cariNilaiFuzzy($data, self::KATA_KUNCI_REFERENSI);
+    }
+
     public function wpOffsite() 
     { 
         return $this->belongsTo(WpOffsite::class); 

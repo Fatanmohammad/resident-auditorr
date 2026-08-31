@@ -385,35 +385,11 @@
                                                     </td>
 
                                                     <td>
-                                                        @php
-                                                            $rawString = $row->detail_transaksi ?? $row->raw_data ?? $row->deskripsi_narasi ?? $row->deskripsi;
-                                                            $dataArray = is_string($rawString) ? json_decode($rawString, true) : (is_array($rawString) ? $rawString : null);
-                                                            
-                                                            $uraian = $dataArray['URAIAN'] 
-                                                                ?? $dataArray['uraian'] 
-                                                                ?? $dataArray['NAMA_TRANSAKSI'] 
-                                                                ?? $dataArray['nama_transaksi'] 
-                                                                ?? $dataArray['DESKRIPSI'] 
-                                                                ?? $dataArray['deskripsi'] 
-                                                                ?? $row->deskripsi_narasi 
-                                                                ?? 'Detail Transaksi';
+                                                        <div style="font-weight: 600; color: #0f172a; font-size: 0.85rem;">
+                                                            {{ $row->ringkasan_narasi }}
+                                                        </div>
 
-                                                            $noRek = $dataArray['NO_REK'] 
-                                                                ?? $dataArray['no_rek'] 
-                                                                ?? $dataArray['NO_REKENING'] 
-                                                                ?? $dataArray['no_rekening'] 
-                                                                ?? $dataArray['REKENING'] 
-                                                                ?? '-';
-                                                        @endphp
-
-                                                        @if(!empty($dataArray) && is_array($dataArray))
-                                                            <div style="font-weight: 600; color: #0f172a; font-size: 0.85rem;">
-                                                                {{ $uraian }}
-                                                            </div>
-                                                            <div style="font-size: 0.75rem; color: #64748b; font-family: monospace;">
-                                                                No. Rek: {{ $noRek }}
-                                                            </div>
-                                                            
+                                                        @if(is_array($row->deskripsi_narasi) && !empty($row->deskripsi_narasi))
                                                             <a href="#" data-bs-toggle="modal" data-bs-target="#modalRaw-{{ $row->id }}" style="font-size: 0.7rem; color: #0284c7; text-decoration: underline; margin-top: 2px; display: inline-block;">
                                                                 <i class="bi bi-code-slash"></i> Lihat Raw Data
                                                             </a>
@@ -426,13 +402,11 @@
                                                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                                         </div>
                                                                         <div class="modal-body">
-                                                                            <pre style="background: #f8fafc; padding: 1rem; border-radius: 8px; font-size: 0.75rem; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto; color: #0f172a;">{{ json_encode($dataArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                                                                            <pre style="background: #f8fafc; padding: 1rem; border-radius: 8px; font-size: 0.75rem; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto; color: #0f172a;">{{ json_encode($row->deskripsi_narasi, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                                                                         </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        @else
-                                                            <span style="color: #475569; font-size: 0.85rem;">{{ $rawString ?? '-' }}</span>
                                                         @endif
                                                     </td>
 
