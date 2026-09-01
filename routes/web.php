@@ -125,7 +125,7 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     // SOP 02 — ADMIN OFFSITE (ADMIN ONLY)
     // ==========================================
-    Route::prefix('admin/offsite')->name('admin-offsite.')->middleware('role:admin,ra')->group(function () {
+    Route::prefix('admin/offsite')->name('admin-offsite.')->middleware('role:admin')->group(function () {
         Route::get('/', [AdminOffsiteController::class, 'index'])->name('index');
         Route::get('/cabang/{cabang}', [AdminOffsiteController::class, 'cabangDetail'])->name('cabang-detail');
         Route::get('/unit/{unit}', [AdminOffsiteController::class, 'unitDetail'])->name('unit-detail');

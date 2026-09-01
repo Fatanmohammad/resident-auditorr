@@ -28,13 +28,22 @@ class RuleEngineSeeder extends Seeder
                 'description'     => 'Transaksi koreksi atau override sistem',
                 'aktif'           => true,
             ],
-            // ── RISK TRIGGER: Selisih Kas ───────────────────────────────────
+            // ── RISK TRIGGER: Selisih Kas (High) ───────────────────────────
             [
                 'rule_id'         => 'RISK_SEL_01',
                 'rule_type'       => 'Risk Trigger',
-                'keyword_pattern' => 'SELISIH KAS,PEMBULATAN KAS',
+                'keyword_pattern' => 'SELISIH KAS',
                 'area_terkait'    => 'Teller/Kas',
-                'description'     => 'Selisih atau pembulatan kas',
+                'description'     => 'Selisih kas — High',
+                'aktif'           => true,
+            ],
+            // ── RISK TRIGGER: Pembulatan Kas (Moderate) ────────────────────
+            [
+                'rule_id'         => 'RISK_SEL_02',
+                'rule_type'       => 'Risk Trigger',
+                'keyword_pattern' => 'PEMBULATAN KAS',
+                'area_terkait'    => 'Teller/Kas',
+                'description'     => 'Pembulatan kas — Moderate',
                 'aktif'           => true,
             ],
             // ── CLASSIFICATION: Pencairan Kredit ───────────────────────────
@@ -85,17 +94,33 @@ class RuleEngineSeeder extends Seeder
             [
                 'rule_id'         => 'WL_001',
                 'rule_type'       => 'Whitelist',
-                'keyword_pattern' => 'BIAYA GAJI,HONORARIUM,GAJI DAN TUNJ,PENGHASILAN TETAP',
+                'keyword_pattern' => 'PB GAJI,GAJI DAN TUNJ KADES',
                 'area_terkait'    => null,
-                'description'     => 'Transaksi gaji & honorarium — rutin, bukan exception',
+                'description'     => 'Gaji rutin & gaji kades — sesuai master parameter',
                 'aktif'           => true,
             ],
             [
                 'rule_id'         => 'WL_002',
                 'rule_type'       => 'Whitelist',
-                'keyword_pattern' => 'MPNG3_,BIA TRF',
+                'keyword_pattern' => 'BIAYA GAJI,HONORARIUM,GAJI DAN TUNJ,PENGHASILAN TETAP',
                 'area_terkait'    => null,
-                'description'     => 'Kode sistem rutin yang bukan exception (MPNG3_, BIA TRF)',
+                'description'     => 'Gaji & honorarium pegawai rutin',
+                'aktif'           => true,
+            ],
+            [
+                'rule_id'         => 'WL_003',
+                'rule_type'       => 'Whitelist',
+                'keyword_pattern' => 'MPNG3_',
+                'area_terkait'    => null,
+                'description'     => 'Penerimaan negara rutin',
+                'aktif'           => true,
+            ],
+            [
+                'rule_id'         => 'WL_004',
+                'rule_type'       => 'Whitelist',
+                'keyword_pattern' => 'BIA TRF',
+                'area_terkait'    => null,
+                'description'     => 'Biaya transfer rutin',
                 'aktif'           => true,
             ],
         ];
