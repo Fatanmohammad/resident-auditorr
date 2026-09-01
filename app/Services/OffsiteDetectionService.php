@@ -67,7 +67,7 @@ class OffsiteDetectionService
         $kkaSheet = $this->determineKkaSheet($riskLevel, $areaReview);
 
         // Langkah 8: Flag untuk sampling / KKA
-        $perluKka = $jumlahFlagRisiko > 0 || $riskLevel === 'High';
+        $perluKka = !in_array($riskLevel, ['Low', 'Exclude']);
         $perluKlarifikasi = $flags['whitelist'] ?? false;
         $perluEskalasi = $riskLevel === 'High';
 
@@ -415,6 +415,13 @@ class OffsiteDetectionService
                             $flags['selisih_kas'] = true;
                         } elseif (str_starts_with($rule->rule_id, 'CLS_KRD')) {
                             $flags['pencairan_kredit'] = true;
+                        } elseif (str_starts_with($rule->rule_id, 'CLS_TLR')) {
+                            // keyword teller/kas dari rule engine — tunai_besar dihitung
+                            // terpisah dengan cek nominal, jadi tidak di-set di sini
+                        } elseif (str_starts_with($rule->rule_id, 'CLS_TRF')) {
+                            // keyword transfer/KU — area routing ditangani determineArea()
+                        } elseif (str_starts_with($rule->rule_id, 'CLS_BIA')) {
+                            $flags['biaya_jurnal'] = true;
                         } elseif (str_starts_with($rule->rule_id, 'WL_')) {
                             $flags['whitelist'] = true;
                         }
