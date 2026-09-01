@@ -71,7 +71,8 @@ class OffsiteGenerationService
                 }
             }
 
-            // Pass kedua: deteksi lintas-baris untuk Pengaduan berulang
+            // Pass kedua: deteksi lintas-baris Biaya (split & berulang) dan Pengaduan (berulang)
+            $totalMasukKka += $this->tandaiBiayaLintas($wp);
             $totalMasukKka += $this->tandaiPengaduanBerulang($wp);
 
             $this->rebuildRegisterHarian($wp);
@@ -232,6 +233,142 @@ class OffsiteGenerationService
             ],
             default => [],
         };
+    }
+
+    /**
+     * Pass kedua Biaya: deteksi split_transaksi dan transaksi_berulang lintas-baris.
+     *
+     * split_transaksi  : kombinasi (kode_unit + tanggal + no_rekening + keterangan + nominal)
+     *                    PERSIS SAMA muncul >1 kali — indikasi dipecah hindari threshold.
+     * transaksi_berulang: kombinasi (kode_unit + no_rekening + keterangan + nominal)
+     *                    sama tanpa syarat referensi sama — muncul >1 kali lintas tanggal.
+     *
+     * Keduanya men-upgrade Low → Moderate dan membuat baris KKA baru.
+     * High tetap High (tidak diturunkan).
+     */
+    private function tandaiBiayaLintas(WpOffsite $wp): int
+    {
+        $tambahKka = 0;
+
+        $stagings = StagingOffsite::where('wp_offsite_id', $wp->id)
+            ->where('source_table', 'dump_biaya_beban')
+            ->where('status_data_quality', 'VALID')
+            ->get();
+
+        if ($stagings->isEmpty()) {
+            return 0;
+        }
+
+        // Bangun lookup dari dump_biaya_beban untuk data mentah (nominal, GL, keterangan)
+        $dumpIds = $stagings->pluck('source_record_id')->filter();
+        $dumpMap = DumpBiayaBeban::whereIn('id', $dumpIds)
+            ->get()
+            ->keyBy('id');
+
+        // ── Hitung frekuensi untuk kedua flag ──────────────────────────────
+        $countSplit    = []; // key: unit|tgl|gl|ket|nominal
+        $countBerulang = []; // key: unit|gl|ket|nominal
+
+        foreach ($stagings as $staging) {
+            $dump = $dumpMap[$staging->source_record_id] ?? null;
+            if (!$dump) continue;
+
+            $gl  = $dump->no_rekening ?? '';
+            $ket = strtoupper(trim($dump->keterangan_transaksi ?? ''));
+            $nom = (string) ($dump->nominal ?? '0');
+            $tgl = $dump->tanggal_data ? $dump->tanggal_data->format('Y-m-d') : '';
+
+            $keySplit    = implode('|', [$staging->kode_unit, $tgl, $gl, $ket, $nom]);
+            $keyBerulang = implode('|', [$staging->kode_unit, $gl, $ket, $nom]);
+
+            $countSplit[$keySplit][]    = $staging->id;
+            $countBerulang[$keyBerulang][] = $staging->id;
+        }
+
+        // Set staging_id yang kena flag
+        $splitIds    = [];
+        $berulangIds = [];
+
+        foreach ($countSplit as $key => $ids) {
+            if (count($ids) > 1) {
+                $splitIds = array_merge($splitIds, $ids);
+            }
+        }
+        foreach ($countBerulang as $key => $ids) {
+            if (count($ids) > 1) {
+                $berulangIds = array_merge($berulangIds, $ids);
+            }
+        }
+
+        $flaggedIds = array_unique(array_merge($splitIds, $berulangIds));
+        if (empty($flaggedIds)) {
+            return 0;
+        }
+
+        // ── Update staging & buat KKA untuk yang belum punya ──────────────
+        $splitSet    = array_flip($splitIds);
+        $berulangSet = array_flip($berulangIds);
+
+        foreach ($stagings->whereIn('id', $flaggedIds) as $staging) {
+            $flags = $staging->flags ?? [];
+
+            // Jangan proses ulang yang sudah ditandai
+            if (($flags['split_transaksi'] ?? false) || ($flags['transaksi_berulang'] ?? false)) {
+                continue;
+            }
+
+            $flags['split_transaksi']    = isset($splitSet[$staging->id]);
+            $flags['transaksi_berulang'] = isset($berulangSet[$staging->id]);
+
+            $riskLama = $staging->risk_level;
+            // split_transaksi → High sesuai panduan §5.3; transaksi_berulang → Moderate
+            if ($flags['split_transaksi']) {
+                $riskBaru = 'High';
+            } elseif ($riskLama === 'Low') {
+                $riskBaru = 'Moderate';
+            } else {
+                $riskBaru = $riskLama;
+            }
+
+            $perluKkaBaru = !in_array($riskBaru, ['Low', 'Exclude']);
+
+            $staging->update([
+                'flags'                  => $flags,
+                'risk_level'             => $riskBaru,
+                'kka_sheet_tujuan'       => $perluKkaBaru ? 'kka_biaya_beban' : $staging->kka_sheet_tujuan,
+                'masuk_kka_final'        => $perluKkaBaru,
+                'alasan_tidak_masuk_kka' => $perluKkaBaru ? null : $staging->alasan_tidak_masuk_kka,
+            ]);
+
+            // Buat KKA hanya jika sebelumnya Low (belum ada baris KKA-nya)
+            if ($riskLama === 'Low' && $perluKkaBaru) {
+                $flagNames = implode(', ', array_keys(array_filter([
+                    'split_transaksi'    => $flags['split_transaksi'],
+                    'transaksi_berulang' => $flags['transaksi_berulang'],
+                ])));
+
+                KkaBiayaBeban::create([
+                    'wp_offsite_id'        => $wp->id,
+                    'staging_id'           => $staging->id,
+                    'area_review'          => 'Biaya/Beban',
+                    'tanggal_data'         => $staging->tanggal_data,
+                    'kode_unit'            => $staging->kode_unit,
+                    'nama_unit'            => $staging->nama_unit,
+                    'ra_id'                => $wp->ra_pelaksana_id,
+                    'nama_ra'              => optional($wp->raPelaksana)->name,
+                    'source_sheet'         => 'dump_biaya_beban',
+                    'object_id'            => $staging->object_id,
+                    'deskripsi_narasi'     => $staging->deskripsi_narasi,
+                    'nominal'              => $staging->nominal,
+                    'risk_awal'            => $riskBaru,
+                    'jenis_exception_awal' => $flagNames,
+                    'status_review'        => 'Belum Review',
+                ]);
+                $tambahKka++;
+            }
+        }
+
+        return $tambahKka;
     }
 
     /**
