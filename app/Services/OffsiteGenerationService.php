@@ -63,7 +63,6 @@ class OffsiteGenerationService
             foreach ($this->dumpSources as $modelClass => $source) {
                 $rows = $modelClass::where('wp_offsite_id', $wp->id)->get();
 
-
                 foreach ($rows as $row) {
                     $totalDiproses++;
                     if ($this->processRow($row, $modelClass, $source, $wp)) {
@@ -71,6 +70,9 @@ class OffsiteGenerationService
                     }
                 }
             }
+
+            // Pass kedua: deteksi lintas-baris untuk Pengaduan berulang
+            $totalMasukKka += $this->tandaiPengaduanBerulang($wp);
 
             $this->rebuildRegisterHarian($wp);
 
@@ -212,17 +214,117 @@ class OffsiteGenerationService
                 'deskripsi_narasi'     => $row->keterangan_transaksi,
             ],
             'Pengaduan' => [
-                'kode_unit'         => $row->kode_unit,
-                'tanggal_data'      => $row->tanggal_data,
-                'object_id'         => $row->no_tiket,
-                'jenis_pengaduan'   => $row->jenis_pengaduan,
-                'isi_pengaduan'     => $row->isi_pengaduan,
-                'status_pengaduan'  => $row->status_pengaduan,
-                'deskripsi_narasi'  => trim(($row->jenis_pengaduan ?? '') . ' - ' . ($row->isi_pengaduan ?? '')),
-                'nominal'           => null,
+                'kode_unit'            => $row->kode_unit,
+                'tanggal_data'         => $row->tanggal_data,
+                'object_id'            => $row->no_tiket,
+                'no_nasabah'           => $row->no_nasabah,
+                'no_rekening_nasabah'  => $row->no_rekening_nasabah,
+                'jenis_pengaduan'      => $row->jenis_pengaduan,
+                'isi_pengaduan'        => $row->isi_pengaduan,
+                'status_pengaduan'     => $row->status_pengaduan,
+                'TGL_SELESAI'          => $row->tanggal_selesai,
+                'NOMINAL_KERUGIAN'     => $row->nominal_kerugian,
+                'BUKTI_PENYELESAIAN'   => $row->bukti_penyelesaian,
+                'CATATAN_TL_CABANG'    => $row->catatan_tl_cabang,
+                'TGL_TERIMA'           => $row->tanggal_pengaduan,
+                'deskripsi_narasi'     => trim(($row->jenis_pengaduan ?? '') . ' - ' . ($row->isi_pengaduan ?? '')),
+                'nominal'              => $row->nominal_kerugian,
             ],
             default => [],
         };
+    }
+
+    /**
+     * Pass kedua: tandai staging Pengaduan yang nasabahnya mengadu >1 kali dalam WP ini.
+     * Butuh query lintas-baris — tidak bisa dihitung per-baris di detectBaris().
+     * Identifier prioritas: no_nasabah, fallback ke no_rekening_nasabah.
+     * Baris Low yang berulang di-upgrade ke Moderate dan dibuatkan baris KKA.
+     */
+    private function tandaiPengaduanBerulang(WpOffsite $wp): int
+    {
+        $tambahKka = 0;
+
+        // Ambil semua staging Pengaduan WP ini yang punya identifier nasabah
+        $stagings = StagingOffsite::where('wp_offsite_id', $wp->id)
+            ->where('source_table', 'dump_pengaduan')
+            ->where('status_data_quality', 'VALID')
+            ->get();
+
+        if ($stagings->isEmpty()) {
+            return 0;
+        }
+
+        // Bangun map: identifier_nasabah -> [staging_ids]
+        $mapNasabah = [];
+        foreach ($stagings as $staging) {
+            $raw = $staging->deskripsi_narasi;
+            $data = is_array($raw) ? $raw : (json_decode($raw, true) ?? []);
+
+            // Cek berbagai kemungkinan nama kolom CSV
+            $identifier = $data['no_nasabah'] ?? $data['NO_NSB'] ?? $data['NO_CIF'] ?? $data['CIF']
+                ?? $data['no_rekening_nasabah'] ?? $data['NO_REK'] ?? $data['NO_REKENING']
+                ?? null;
+
+            if (!empty($identifier)) {
+                $mapNasabah[$identifier][] = $staging;
+            }
+        }
+
+        // Proses identifier yang muncul >1 kali
+        foreach ($mapNasabah as $identifier => $group) {
+            if (count($group) <= 1) {
+                continue;
+            }
+
+            foreach ($group as $staging) {
+                $flags = $staging->flags ?? [];
+                if ($flags['berulang'] ?? false) {
+                    continue; // sudah ditandai sebelumnya
+                }
+
+                $flags['berulang'] = true;
+                $riskLama = $staging->risk_level;
+
+                // Low berulang → upgrade ke Moderate
+                $riskBaru = ($riskLama === 'Low') ? 'Moderate' : $riskLama;
+                $perluKkaBaru = !in_array($riskBaru, ['Low', 'Exclude']);
+
+                $staging->update([
+                    'flags'              => $flags,
+                    'risk_level'         => $riskBaru,
+                    'kka_sheet_tujuan'   => $perluKkaBaru ? 'kka_pengaduan' : $staging->kka_sheet_tujuan,
+                    'masuk_kka_final'    => $perluKkaBaru,
+                    'alasan_tidak_masuk_kka' => $perluKkaBaru ? null : $staging->alasan_tidak_masuk_kka,
+                ]);
+
+                // Buat baris KKA baru hanya jika sebelumnya Low (belum ada KKA-nya)
+                if ($riskLama === 'Low' && $perluKkaBaru) {
+                    $raw = $staging->deskripsi_narasi;
+                    $data = is_array($raw) ? $raw : (json_decode($raw, true) ?? []);
+
+                    KkaPengaduan::create([
+                        'wp_offsite_id'    => $wp->id,
+                        'staging_id'       => $staging->id,
+                        'area_review'      => 'Pengaduan',
+                        'tanggal_data'     => $staging->tanggal_data,
+                        'kode_unit'        => $staging->kode_unit,
+                        'nama_unit'        => $staging->nama_unit,
+                        'ra_id'            => $wp->ra_pelaksana_id,
+                        'nama_ra'          => optional($wp->raPelaksana)->name,
+                        'source_sheet'     => 'dump_pengaduan',
+                        'object_id'        => $staging->object_id,
+                        'deskripsi_narasi' => $staging->deskripsi_narasi,
+                        'nominal'          => $staging->nominal,
+                        'risk_awal'        => $riskBaru,
+                        'jenis_exception_awal' => 'berulang',
+                        'status_review'    => 'Belum Review',
+                    ]);
+                    $tambahKka++;
+                }
+            }
+        }
+
+        return $tambahKka;
     }
 
     private function rebuildRegisterHarian(WpOffsite $wp): void
