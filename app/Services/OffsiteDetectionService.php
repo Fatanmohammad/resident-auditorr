@@ -287,9 +287,12 @@ class OffsiteDetectionService
         $buktiSelesai  = $data['BUKTI_PENYELESAIAN'] ?? null;
         $catatanCabang = $data['CATATAN_TL_CABANG'] ?? null;
 
-        $isSelesai = in_array($status, ['SELESAI', 'CLOSED']);
-        $tglSla    = Carbon::parse($tglTerima)->addWeekdays(14);
-        $overdue   = $isSelesai ? false : now()->greaterThan($tglSla);
+        $isSelesai    = in_array($status, ['SELESAI', 'CLOSED']);
+        $tglSla       = Carbon::parse($tglTerima)->addWeekdays(14);
+        $tglSelesai   = $data['TGL_SELESAI'] ?? $data['tgl_selesai'] ?? $data['TANGGAL_SELESAI'] ?? null;
+        $overdue      = $isSelesai
+            ? ($tglSelesai && Carbon::parse($tglSelesai)->greaterThan($tglSla))
+            : now()->greaterThan($tglSla);
 
         $flags = [
             'overdue_sla'                  => $overdue,
