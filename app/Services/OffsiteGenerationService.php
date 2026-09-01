@@ -75,6 +75,9 @@ class OffsiteGenerationService
             $totalMasukKka += $this->tandaiBiayaLintas($wp);
             $totalMasukKka += $this->tandaiPengaduanBerulang($wp);
 
+            // Pass ketiga: CBS case pairing net balance
+            $totalMasukKka += $this->tandaiCbsCasePairing($wp);
+
             $this->rebuildRegisterHarian($wp);
 
             return [
@@ -95,7 +98,7 @@ class OffsiteGenerationService
 
     private function processRow($row, string $modelClass, string $source, WpOffsite $wp): bool
     {
-        $data = $this->extractData($row, $source);
+        $data = $this->extractData($row, $source, $wp);
 
         $statusDq = $this->detection->validateDataQuality($data, $wp);
         $result   = $this->detection->detectBaris($data, $source, $wp);
@@ -167,12 +170,13 @@ class OffsiteGenerationService
     }
 
 
-    private function extractData($row, string $source): array
+    private function extractData($row, string $source, WpOffsite $wp): array
     {
         return match ($source) {
             'CBS' => [
                 'kode_unit'        => $row->kode_unit,
                 'tanggal_data'     => $row->tanggal_data,
+                'jenis_unit'       => $wp->jenis_unit,
                 'object_id'        => $row->no_referensi,
                 'no_referensi'     => $row->no_referensi,
                 'kode_transaksi'   => $row->kode_transaksi,
@@ -198,9 +202,9 @@ class OffsiteGenerationService
                 'object_id'          => $row->no_rekening_kredit,
                 'no_rekening_kredit' => $row->no_rekening_kredit,
                 'nama_debitur'       => $row->nama_debitur,
-
                 'produk_kredit'      => $row->produk_kredit,
                 'kolektibilitas'     => $row->kolektibilitas,
+                'tanggal_realisasi'  => $row->tanggal_realisasi,
                 'deskripsi_narasi'   => trim(($row->nama_debitur ?? '') . ' - ' . ($row->produk_kredit ?? '')),
                 'nominal'            => $row->baki_debet,
             ],
@@ -391,16 +395,17 @@ class OffsiteGenerationService
             return 0;
         }
 
-        // Bangun map: identifier_nasabah -> [staging_ids]
+        // Bangun lookup dump_pengaduan untuk identifier nasabah
+        $dumpIds = $stagings->pluck('source_record_id')->filter();
+        $dumpMap = DumpPengaduan::whereIn('id', $dumpIds)->get()->keyBy('id');
+
+        // Bangun map: identifier_nasabah -> [stagings]
         $mapNasabah = [];
         foreach ($stagings as $staging) {
-            $raw = $staging->deskripsi_narasi;
-            $data = is_array($raw) ? $raw : (json_decode($raw, true) ?? []);
-
-            // Cek berbagai kemungkinan nama kolom CSV
-            $identifier = $data['no_nasabah'] ?? $data['NO_NSB'] ?? $data['NO_CIF'] ?? $data['CIF']
-                ?? $data['no_rekening_nasabah'] ?? $data['NO_REK'] ?? $data['NO_REKENING']
-                ?? null;
+            $dump = $dumpMap[$staging->source_record_id] ?? null;
+            $identifier = $dump
+                ? ($dump->no_nasabah ?? $dump->no_rekening_nasabah ?? null)
+                : null;
 
             if (!empty($identifier)) {
                 $mapNasabah[$identifier][] = $staging;
@@ -422,8 +427,18 @@ class OffsiteGenerationService
                 $flags['berulang'] = true;
                 $riskLama = $staging->risk_level;
 
-                // Low berulang → upgrade ke Moderate
-                $riskBaru = ($riskLama === 'Low') ? 'Moderate' : $riskLama;
+                // Cek nominal_material dari dump asli
+                $dump = $dumpMap[$staging->source_record_id] ?? null;
+                $nominalMaterial = $dump && ((float)$dump->nominal_kerugian >= 5000000);
+
+                // berulang + nominal_material → High; berulang saja → Moderate
+                if ($nominalMaterial) {
+                    $riskBaru = 'High';
+                } elseif ($riskLama === 'Low') {
+                    $riskBaru = 'Moderate';
+                } else {
+                    $riskBaru = $riskLama;
+                }
                 $perluKkaBaru = !in_array($riskBaru, ['Low', 'Exclude']);
 
                 $staging->update([
@@ -436,9 +451,6 @@ class OffsiteGenerationService
 
                 // Buat baris KKA baru hanya jika sebelumnya Low (belum ada KKA-nya)
                 if ($riskLama === 'Low' && $perluKkaBaru) {
-                    $raw = $staging->deskripsi_narasi;
-                    $data = is_array($raw) ? $raw : (json_decode($raw, true) ?? []);
-
                     KkaPengaduan::create([
                         'wp_offsite_id'    => $wp->id,
                         'staging_id'       => $staging->id,
@@ -455,6 +467,119 @@ class OffsiteGenerationService
                         'risk_awal'        => $riskBaru,
                         'jenis_exception_awal' => 'berulang',
                         'status_review'    => 'Belum Review',
+                    ]);
+                    $tambahKka++;
+                }
+            }
+        }
+
+        return $tambahKka;
+    }
+
+    private function areaToKkaSheet(string $area): string
+    {
+        return [
+            'Teller/Kas'     => 'kka_teller_kas',
+            'Kredit'         => 'kka_kredit',
+            'Biaya/Beban'    => 'kka_biaya_beban',
+            'Biaya/Internal' => 'kka_biaya_internal',
+            'Pengaduan'      => 'kka_pengaduan',
+            'Transaksi Umum' => 'kka_transaksi_umum',
+            'Transfer/KU'    => 'kka_transfer_ku',
+            'DPK/APU-PPT'    => 'kka_transaksi_umum',
+        ][$area] ?? 'kka_teller_kas';
+    }
+
+    /**
+     * Pass ketiga CBS: Case Pairing net balance (§2.6).
+     * Key: tanggal(Ymd)|no_referensi — kumpulkan semua baris CBS dengan key sama,
+     * hitung net nominal (Debit - Kredit). Jika |net| > 1 → case_tidak_balance → High.
+     */
+    private function tandaiCbsCasePairing(WpOffsite $wp): int
+    {
+        $tambahKka = 0;
+
+        $stagings = StagingOffsite::where('wp_offsite_id', $wp->id)
+            ->where('source_table', 'dump_transaksi_cbs')
+            ->where('status_data_quality', 'VALID')
+            ->whereNotNull('case_id')
+            ->get();
+
+        if ($stagings->isEmpty()) {
+            return 0;
+        }
+
+        // Load dump CBS untuk ambil d_k (Debit/Kredit)
+        $dumpIds = $stagings->pluck('source_record_id')->filter();
+        $dumpMap = DumpTransaksiCbs::whereIn('id', $dumpIds)->get()->keyBy('id');
+
+        // Kelompokkan per case_id, hitung net nominal
+        $caseGroups = []; // case_id => ['net' => float, 'stagings' => []]
+        foreach ($stagings as $staging) {
+            $dump = $dumpMap[$staging->source_record_id] ?? null;
+            if (!$dump) continue;
+
+            $nominal = (float) ($dump->nominal ?? 0);
+            $dk      = strtoupper(trim($dump->d_k ?? ''));
+            // D = Debit (positif), K = Kredit (negatif)
+            $signed  = in_array($dk, ['D', 'DB', 'DEBIT']) ? $nominal : -$nominal;
+
+            $caseGroups[$staging->case_id]['net']       = ($caseGroups[$staging->case_id]['net'] ?? 0) + $signed;
+            $caseGroups[$staging->case_id]['stagings'][] = $staging;
+        }
+
+        foreach ($caseGroups as $caseId => $group) {
+            // Sesuai §2.6: |net| <= 1 = Balance (aman), > 1 = Tidak Balance (red flag)
+            if (abs($group['net']) <= 1) {
+                continue;
+            }
+
+            foreach ($group['stagings'] as $staging) {
+                $flags = $staging->flags ?? [];
+                if ($flags['case_tidak_balance'] ?? false) {
+                    continue;
+                }
+
+                $flags['case_tidak_balance'] = true;
+                $riskLama  = $staging->risk_level;
+                $riskBaru  = 'High'; // case_tidak_balance selalu High per §2.6
+                $perluKkaBaru = $riskLama === 'Low' || $riskLama === 'Moderate';
+
+                $staging->update([
+                    'flags'                  => $flags,
+                    'risk_level'             => $riskBaru,
+                    'kka_sheet_tujuan'       => $staging->kka_sheet_tujuan === 'Register'
+                        ? $this->areaToKkaSheet($staging->area_review)
+                        : $staging->kka_sheet_tujuan,
+                    'masuk_kka_final'        => true,
+                    'alasan_tidak_masuk_kka' => null,
+                ]);
+
+                // Buat KKA baru hanya jika sebelumnya belum masuk KKA
+                if ($perluKkaBaru) {
+                    $kkaSheet = $staging->kka_sheet_tujuan === 'Register'
+                        ? $this->areaToKkaSheet($staging->area_review)
+                        : $staging->kka_sheet_tujuan;
+                    $kkaModel = $this->kkaModelBySlug[$kkaSheet] ?? KkaTellerKas::class;
+
+                    $kkaModel::create([
+                        'wp_offsite_id'        => $wp->id,
+                        'staging_id'           => $staging->id,
+                        'area_review'          => $staging->area_review,
+                        'tanggal_data'         => $staging->tanggal_data,
+                        'kode_unit'            => $staging->kode_unit,
+                        'nama_unit'            => $staging->nama_unit,
+                        'ra_id'                => $wp->ra_pelaksana_id,
+                        'nama_ra'              => optional($wp->raPelaksana)->name,
+                        'source_sheet'         => 'dump_transaksi_cbs',
+                        'object_id'            => $staging->object_id,
+                        'case_id'              => $staging->case_id,
+                        'deskripsi_narasi'     => $staging->deskripsi_narasi,
+                        'nominal'              => $staging->nominal,
+                        'user_maker'           => $staging->user_maker,
+                        'risk_awal'            => $riskBaru,
+                        'jenis_exception_awal' => 'case_tidak_balance',
+                        'status_review'        => 'Belum Review',
                     ]);
                     $tambahKka++;
                 }

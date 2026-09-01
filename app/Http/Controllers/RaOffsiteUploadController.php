@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Cabang;
-use App\Models\Unit;
 use App\Models\WpOffsite;
 use App\Models\DumpTransaksiCbs;
 use App\Models\DumpDpkApuppt;
@@ -25,17 +23,21 @@ class RaOffsiteUploadController extends Controller
         $user = Auth::user();
         $accessibleIds = $user->cabangIdYangDapatDiakses();
 
-        $cabangs = $accessibleIds === null
-            ? Cabang::all()
-            : Cabang::whereIn('id', $accessibleIds)->get();
+        // Dropdown pakai units (bukan cabangs) karena WpOffsite pakai unit_id
+        $units = $accessibleIds === null
+            ? \App\Models\Unit::where('is_active', true)->orderBy('unit_name')->get()
+            : \App\Models\Unit::where('is_active', true)
+                ->whereIn('cabang_id', $accessibleIds)
+                ->orderBy('unit_name')
+                ->get();
 
-        return view('ra-offsite.upload', compact('cabangs'));
+        return view('ra-offsite.upload', compact('units'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'cabang_id'           => 'required|exists:cabangs,id',
+            'unit_id'             => 'required|exists:units,id',
             'domain_type'         => 'required|in:cbs,dpk,kredit,biaya,pengaduan',
             'file_csv'            => 'required|file|mimes:csv,txt|max:20480',
             'tanggal_data_manual' => 'nullable|required_if:domain_type,kredit,dpk|date',
@@ -43,7 +45,7 @@ class RaOffsiteUploadController extends Controller
 
         $file         = $request->file('file_csv');
         $domainType   = strtoupper($request->domain_type);
-        $cabangId     = $request->cabang_id;
+        $cabangId     = $request->unit_id;
         $tanggalManual = $request->tanggal_data_manual;
         $user         = Auth::user();
 
@@ -73,8 +75,8 @@ class RaOffsiteUploadController extends Controller
             // Buat atau ambil WP untuk unit & periode ini
             $sampleDate = $tanggalManual ?? now()->format('Y-m-d');
             $dt         = Carbon::parse($sampleDate);
-            $unit       = Cabang::find($cabangId);
-            $kodeUnit   = $unit->kode_cabang ?? str_pad($cabangId, 3, '0', STR_PAD_LEFT);
+            $unit       = \App\Models\Unit::find($cabangId);
+            $kodeUnit   = $unit->unit_code ?? str_pad($cabangId, 3, '0', STR_PAD_LEFT);
             $kodeWp     = 'WP-OFF-' . $kodeUnit . '-' . $dt->format('Ym');
 
             $wp = WpOffsite::firstOrCreate(
@@ -85,10 +87,11 @@ class RaOffsiteUploadController extends Controller
                 [
                     'kode_wp'               => $kodeWp,
                     'kode_unit'             => $kodeUnit,
-                    'nama_unit'             => $unit->nama_cabang ?? 'Kantor Cabang',
+                    'nama_unit'             => $unit->unit_name ?? 'Unit Kerja',
+                    'jenis_unit'            => $unit->unit_type ?? null,
                     'periode_selesai'       => $dt->copy()->endOfMonth()->format('Y-m-d'),
                     'ra_pelaksana_id'       => $user->id,
-                    'reviewer_bagian_ra_id' => $user->id,
+                    'reviewer_bagian_ra_id' => null,
                     'status_wp'             => 'Draft',
                 ]
             );
@@ -164,7 +167,7 @@ class RaOffsiteUploadController extends Controller
                 'user_maker'       => $d['KD_USER'] ?? $d['USER_MAKER'] ?? null,
                 'nama_user'        => $d['NAMA_USER'] ?? null,
                 'nominal'          => $this->parseNominal($d['JUMLAH_TX'] ?? null),
-                'd_k'              => $d['D_K'] ?? $d['DK'] ?? null,
+                'd_k'              => $d['DB_KR'] ?? $d['D_K'] ?? $d['DK'] ?? null,
                 'deskripsi_narasi' => $d['KET_TX'] ?? null,
             ]),
 

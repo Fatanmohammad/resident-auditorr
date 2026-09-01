@@ -4,36 +4,36 @@ namespace App\Services;
 
 use App\Models\Cabang;
 use App\Models\Unit;
-use App\Models\WpOffsite;
 use App\Models\RegisterHarian;
-use App\Models\StagingOffsite;
 use Illuminate\Support\Facades\DB;
 
 class OffsiteAdminService
 {
     public function getCabangStats(int $tahun, int $bulan)
     {
-        return Cabang::query()
-            ->where('cabangs.tipe', '!=', 'anak_cabang')
-            ->leftJoin('cabangs as anak_cabang', 'anak_cabang.parent_id', '=', 'cabangs.id')
+        // Kantor Pusat + cabang induk (parent_id=1), tanpa anak cabang
+        return Cabang::where(function($q) {
+                $q->where('cabangs.parent_id', 1)->orWhere('cabangs.id', 1);
+            })
+            ->leftJoin('cabangs as anak', 'anak.parent_id', '=', 'cabangs.id')
             ->leftJoin('units', function ($join) {
                 $join->on('units.cabang_id', '=', 'cabangs.id')
-                     ->orOn('units.cabang_id', '=', 'anak_cabang.id');
+                     ->orOn('units.cabang_id', '=', 'anak.id');
             })
             ->leftJoin('register_harian', function ($join) use ($tahun, $bulan) {
                 $join->on('units.unit_code', '=', 'register_harian.kode_unit')
                      ->whereYear('register_harian.tanggal_data', $tahun)
                      ->whereMonth('register_harian.tanggal_data', $bulan);
             })
+            ->where('units.is_active', 1)
             ->selectRaw('
                 cabangs.id, cabangs.kode_cabang, cabangs.nama_cabang,
                 COUNT(DISTINCT units.id) as total_unit,
-                COUNT(DISTINCT CASE WHEN register_harian.status_review IN ("Belum Review", "Dalam Review") 
+                COUNT(DISTINCT CASE WHEN register_harian.status_review IN ("Belum Review", "Dalam Review")
                       THEN units.id END) as unit_perlu_review,
-                COUNT(DISTINCT CASE WHEN register_harian.status_review = "Selesai" 
+                COUNT(DISTINCT CASE WHEN register_harian.status_review = "Selesai"
                       THEN units.id END) as unit_selesai_review
             ')
-            ->where('units.is_active', 1)
             ->groupBy('cabangs.id', 'cabangs.kode_cabang', 'cabangs.nama_cabang')
             ->orderBy('cabangs.kode_cabang')
             ->get();
@@ -95,71 +95,10 @@ class OffsiteAdminService
         return $units;
     }
 
-    /**
-     * Otomatis membuat WpOffsite dan menyalin data StagingOffsite ke RegisterHarian jika ada upload baru
-     */
     private function syncStagingToRegisterHarian(Unit $unit, int $tahun, int $bulan): void
     {
-        // 1. Ambil atau Buat Header WP Offsite
-        $kodeWp = 'SOP02-' . $unit->unit_code . '-' . $tahun . str_pad($bulan, 2, '0', STR_PAD_LEFT);
-        
-        $wp = WpOffsite::firstOrCreate(
-            [
-                'unit_id' => $unit->id,
-                'periode_mulai' => "$tahun-" . str_pad($bulan, 2, '0', STR_PAD_LEFT) . "-01"
-            ],
-            [
-                'kode_wp'         => $kodeWp,
-                'kode_unit'       => $unit->unit_code,
-                'nama_unit'       => $unit->unit_name,
-                'jenis_unit'      => $unit->unit_type ?? 'KC',
-                'kantor_induk'    => $unit->parent_office ?? 'KANTOR PUSAT',
-                'periode_selesai' => date('Y-m-t', strtotime("$tahun-$bulan-01")),
-                'ra_pelaksana_id' => $unit->ra_user_id ?? auth()->id(),
-                'status_wp'       => 'Draft',
-            ]
-        );
-
-        // 2. Hubungkan data staging_offsite yang belum punya wp_offsite_id
-        StagingOffsite::where('kode_unit', $unit->unit_code)
-            ->whereYear('tanggal_data', $tahun)
-            ->whereMonth('tanggal_data', $bulan)
-            ->whereNull('wp_offsite_id')
-            ->update(['wp_offsite_id' => $wp->id]);
-
-        // 3. Salin/Sync data dari StagingOffsite ke RegisterHarian
-        $stagings = StagingOffsite::where('wp_offsite_id', $wp->id)->get();
-
-        foreach ($stagings as $stg) {
-            // Memberikan fallback aman jika area_review di staging bernilai null
-            $areaReview = $stg->area_review 
-                ?? $stg->nama_kategori 
-                ?? $stg->modul 
-                ?? 'General Review';
-
-            RegisterHarian::updateOrCreate(
-                [
-                    'wp_offsite_id' => $wp->id,
-                    'kode_unit'     => $unit->unit_code,
-                    'tanggal_data'  => $stg->tanggal_data,
-                    'area_review'   => $areaReview,
-                ],
-                [
-                    'nama_unit'         => $unit->unit_name,
-                    'target_review_h1'  => $stg->target_review_h1 ?? $stg->tanggal_data,
-                    'ra_id'             => $stg->ra_id ?? auth()->id() ?? 1,
-                    'nama_ra'           => $stg->nama_ra ?? 'Resident Auditor',
-                    'populasi_eligible' => $stg->populasi_eligible ?? 0,
-                    'sampel_low'        => $stg->sampel_low ?? 0,
-                    'kka_final'         => $stg->masuk_kka_final ?? 0,
-                    'exception'         => $stg->exception_awal ?? 0,
-                    'risiko_tertinggi'  => $stg->risk_level ?? 'Low',
-                    'hasil_awal'        => $stg->catatan_ra ?? '-',
-                    'status_review'     => $stg->status_review ?? 'Belum Review',
-                    'updated_at'        => now(),
-                ]
-            );
-        }
+        // Flow baru: data sudah masuk register_harian via OffsiteGenerationService::generate()
+        // Tidak perlu sync otomatis di sini
     }
 
     private function hitungRisikoTertinggi(array $risikoLevels): string
@@ -168,21 +107,12 @@ class OffsiteAdminService
             return 'Tidak Ada Data';
         }
         $urutan = [
-            'Low' => 1,
-            'Low to Moderate' => 2,
-            'Moderate' => 3,
-            'Moderate to High' => 4,
-            'High' => 5,
+            'Low'      => 1,
+            'Moderate' => 2,
+            'High'     => 3,
         ];
-        $tertinggi = 'Low';
-        $nilaiTertinggi = 0;
-        foreach ($risikoLevels as $level) {
-            $nilai = $urutan[$level] ?? 0;
-            if ($nilai > $nilaiTertinggi) {
-                $nilaiTertinggi = $nilai;
-                $tertinggi = $level;
-            }
-        }
-        return $tertinggi;
+        return collect($risikoLevels)
+            ->sortByDesc(fn($r) => $urutan[$r] ?? 0)
+            ->first() ?? 'Tidak Ada Data';
     }
 }

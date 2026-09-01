@@ -36,15 +36,15 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                     {{-- 1. Pilihan Unit Naungan RA --}}
                     <div>
-                        <label for="cabang_id" style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-bottom: 0.4rem;">Pilih Cabang / Unit Kerja <span style="color: #ef4444;">*</span></label>
-                        <select name="cabang_id" id="cabang_id" class="form-select @error('cabang_id') is-invalid @enderror" style="width: 100%; font-size: 0.9rem; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; background-color: #fff;" required>
-                            <option value="">-- Pilih Unit Responsibility --</option>
-                            @foreach($cabangs as $cabang)
-                                <option value="{{ $cabang->id }}">{{ $cabang->kode_cabang ?? $cabang->id }} - {{ $cabang->nama_cabang }}</option>
+                        <label for="unit_id" style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-bottom: 0.4rem;">Pilih Unit Kerja <span style="color: #ef4444;">*</span></label>
+                        <select name="unit_id" id="unit_id" class="form-select @error('unit_id') is-invalid @enderror" style="width: 100%; font-size: 0.9rem; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; background-color: #fff;" required>
+                            <option value="">-- Pilih Unit Kerja --</option>
+                            @foreach($units as $unit)
+                                <option value="{{ $unit->id }}">{{ $unit->unit_code }} - {{ $unit->unit_name }}</option>
                             @endforeach
                         </select>
                         <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">Daftar unit otomatis dibatasi sesuai hak akses wilayah audit Anda.</div>
-                        @error('cabang_id') <div style="font-size: 0.8rem; color: #ef4444; margin-top: 0.25rem;">{{ $message }}</div> @enderror
+                        @error('unit_id') <div style="font-size: 0.8rem; color: #ef4444; margin-top: 0.25rem;">{{ $message }}</div> @enderror
                     </div>
 
                     {{-- 2. Jenis Domain Report --}}
