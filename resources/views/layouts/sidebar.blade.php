@@ -104,45 +104,8 @@
         </a>
         @endif
 
-        {{-- ===================== OFFSITE REVIEW (KHUSUS ROLE RA) ===================== --}}
-        @if($isRa || $role === 'kabag_ra' || $isAdmin)
-        <div class="nav-group {{ request()->routeIs('ra-offsite.*', 'offsite-review.*') ? 'open' : '' }}">
-            <div class="nav-group-toggle">
-                <i class="bi bi-clipboard2-data nav-icon"></i> Offsite Review
-                <i class="bi bi-chevron-down nav-arrow"></i>
-            </div>
-            <div class="nav-group-children">
-                
-                {{-- Upload CSV --}}
-                <a href="{{ route('ra-offsite.upload.index') }}" class="nav-item {{ request()->routeIs('ra-offsite.upload.*') ? 'active' : '' }}">
-                    <i class="bi bi-cloud-upload nav-icon"></i> Upload Data CSV
-                </a>
-
-                {{-- Register Harian & Review Staging --}}
-                <a href="{{ route('ra-offsite.register.index') }}" class="nav-item {{ request()->routeIs('ra-offsite.register.*') ? 'active' : '' }}">
-                    <i class="bi bi-journal-check nav-icon"></i> Register Harian & Review
-                </a>
-
-                {{-- Kertas Kerja Audit (KKA) --}}
-                <a href="{{ route('ra-offsite.kka.index') }}" class="nav-item {{ request()->routeIs('ra-offsite.kka.*') ? 'active' : '' }}">
-                    <i class="bi bi-file-earmark-spreadsheet nav-icon"></i> Sheet KKA Offsite
-                </a>
-
-                {{-- Dashboard Review --}}
-                <a href="{{ route('offsite-review.index') }}" class="nav-item {{ request()->routeIs('offsite-review.*') && !request()->routeIs('ra-offsite.*') ? 'active' : '' }}">
-                    <i class="bi bi-file-earmark-text nav-icon"></i> Dashboard & Review
-                </a>
-
-            </div>
-        </div>
-        @endif
-
         {{-- ===================== PENGATURAN & ADMIN ===================== --}}
         @if($isAdmin)
-        <a href="{{ route('admin-offsite.index') }}" class="nav-item {{ request()->routeIs('admin-offsite.*') ? 'active' : '' }}">
-            <i class="bi bi-house-check nav-icon"></i> Admin Offsite
-        </a>
-
         <a href="{{ route('master-setup.index') }}" class="nav-item {{ request()->routeIs('master-setup.*') ? 'active' : '' }}">
             <i class="bi bi-gear nav-icon"></i> Pengaturan Modul
         </a>

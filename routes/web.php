@@ -11,12 +11,6 @@ use App\Http\Controllers\CoverageController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\FinalAuditPlanController;
 use App\Http\Controllers\MasterSetupController;
-use App\Http\Controllers\OffsiteReviewController;
-use App\Http\Controllers\AdminOffsiteController;
-use App\Http\Controllers\RaOffsiteUploadController;
-use App\Http\Controllers\RaOffsiteRegisterController;
-use App\Http\Controllers\RaKkaController;
-use App\Http\Controllers\HistoryController; // Import HistoryController
 
 Route::get('/debug-test', function () {
     $unit = \App\Models\Unit::find(2);
@@ -41,13 +35,6 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    // ==========================================
-    // HISTORY & LOG AKTIVITAS (ADMIN & RA)
-    // ==========================================
-    Route::get('/history', [HistoryController::class, 'index'])
-        ->name('history.index')
-        ->middleware('role:admin,ra,kabag_ra,kadiv_skai');
 
     // ==========================================
     // AUDIT PLAN (approval workflow)
@@ -120,52 +107,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/change-log', [FinalAuditPlanController::class, 'storeChangeLog'])->name('change-log.store');
         Route::post('/generate-all', [FinalAuditPlanController::class, 'generateAll'])->name('generate-all')->middleware('role:kabag_ra,kadiv_skai,admin');
         Route::get('/{finalAuditPlan}', [FinalAuditPlanController::class, 'show'])->name('show');
-    });
-
-    // ==========================================
-    // SOP 02 — ADMIN OFFSITE (ADMIN ONLY)
-    // ==========================================
-    Route::prefix('admin/offsite')->name('admin-offsite.')->middleware('role:admin')->group(function () {
-        Route::get('/', [AdminOffsiteController::class, 'index'])->name('index');
-        Route::get('/cabang/{cabang}', [AdminOffsiteController::class, 'cabangDetail'])->name('cabang-detail');
-        Route::get('/unit/{unit}', [AdminOffsiteController::class, 'unitDetail'])->name('unit-detail');
-        Route::post('/unit/{unit}/upload-register', [AdminOffsiteController::class, 'uploadRegister'])->name('upload-register');
-        Route::patch('/unit/{unit}/status', [AdminOffsiteController::class, 'updateStatus'])->name('update-status');
-        Route::get('/wp/{wp}/kka/{area}', [AdminOffsiteController::class, 'kkaIndex'])->name('kka-index');
-        Route::get('/wp/{wp}/kka/{area}/{kkaId}', [AdminOffsiteController::class, 'kkaShow'])->name('kka-show');
-        Route::put('/wp/{wp}/kka/{area}/{kkaId}', [AdminOffsiteController::class, 'kkaUpdate'])->name('kka-update');
-        Route::patch('/wp/{wp}/kka/{area}/{kkaId}/reviewer-note', [AdminOffsiteController::class, 'kkaUpdateReviewerNote'])->name('kka-reviewer-note');
-    });
-
-    // ==========================================
-    // SOP 02 — OFFSITE REVIEW & REGISTER (RA ONLY)
-    // ==========================================
-    Route::prefix('offsite-review')->name('offsite-review.')->middleware('role:kabag_ra,kadiv_skai,ra,admin')->group(function () {
-        Route::get('/', [OffsiteReviewController::class, 'index'])->name('index');
-        Route::get('/create', [OffsiteReviewController::class, 'create'])->name('create');
-        Route::post('/', [OffsiteReviewController::class, 'store'])->name('store');
-        Route::get('/{wp}/dashboard', [OffsiteReviewController::class, 'dashboard'])->name('dashboard');
-        Route::patch('/{wp}/status', [OffsiteReviewController::class, 'updateStatus'])->name('status');
-        Route::post('/{wp}/refresh', [OffsiteReviewController::class, 'refresh'])->name('refresh');
-        Route::post('/{wp}/run-detection', [OffsiteReviewController::class, 'runDetection'])->name('run-detection');
-    });
-
-    // Upload & Register Data Offsite (Khusus RA & Admin)
-    Route::prefix('ra-offsite')->name('ra-offsite.')->middleware('role:ra,admin')->group(function () {
-        // Form Upload Data CSV 5 Domain
-        Route::get('/upload', [RaOffsiteUploadController::class, 'index'])->name('upload.index');
-        Route::post('/upload', [RaOffsiteUploadController::class, 'store'])->name('upload.store');
-
-        // Register Harian & Review Transaksi Staging
-        Route::get('/register', [RaOffsiteRegisterController::class, 'index'])->name('register.index');
-        Route::put('/register/{id}', [RaOffsiteRegisterController::class, 'update'])->name('register.update');
-
-        // Form Detail & Review KKA Khusus RA
-        Route::get('/kka/{area}/{kkaId}', [RaKkaController::class, 'show'])->name('kka.show');
-        Route::put('/kka/{area}/{kkaId}', [RaKkaController::class, 'update'])->name('kka.update');
-
-        // Review & Tampilan Sheet KKA
-        Route::get('/kka/{sheet?}', [RaKkaController::class, 'index'])->name('kka.index');
     });
 
     // ==========================================
