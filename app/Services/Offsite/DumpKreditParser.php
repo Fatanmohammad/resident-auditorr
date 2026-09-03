@@ -45,7 +45,7 @@ class DumpKreditParser
                     'kode_unit'            => $kodeUnit,
                     'source_sheet'         => 'KKA_Kredit',
                     'nominal_terkait'      => $plafon,
-                    'risk_awal'            => 'High',
+                    'risk_awal'            => $isPlafonJumbo ? 'High' : 'Moderate',
                     'jenis_exception_awal' => $isKolTurun ? 'Penurunan Kolektibilitas' : 'Pencairan Plafon Jumbo',
                     'created_at'           => now(),
                     'updated_at'           => now(),
