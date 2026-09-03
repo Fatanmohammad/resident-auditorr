@@ -13,56 +13,66 @@ class DumpCbsParser
      */
     public function parse($filePath, $kodeUnit)
     {
-        // 1. Buka file CSV (Membaca langsung dari folder tmp tanpa menyimpannya semua ke RAM)
+        // 1. Buka file CSV
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV tidak ditemukan di folder staging.");
         }
 
         $file = fopen($filePath, 'r');
-        $header = fgetcsv($file); // Melewati baris pertama (Header CSV)
+        fgetcsv($file); // Melewati baris pertama (Header CSV)
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
 
-        // 2. Baca baris per baris (Sangat ringan untuk server)
+        // 2. Baca baris per baris
         while (($row = fgetcsv($file)) !== false) {
-            // Asumsi penempatan kolom CSV (Bisa disesuaikan nanti dengan urutan Excel asli)
-            $tanggal = $row[0] ?? now()->toDateString();
+            
+            // --- MULAI PERBAIKAN: AUTO-DETECT DATE ---
+            $rawDate = trim($row[0] ?? '');
+            
+            // Jika isinya murni angka (seperti '451', '296', dll) atau kosong, pakai tanggal hari ini
+            if (empty($rawDate) || preg_match('/^[0-9]+$/', $rawDate)) {
+                $tanggal = now()->toDateString();
+            } else {
+                // Jika formatnya teks tapi bukan tanggal valid, fallback ke hari ini
+                $parsedDate = strtotime($rawDate);
+                $tanggal = $parsedDate ? date('Y-m-d', $parsedDate) : now()->toDateString();
+            }
+            // --- SELESAI PERBAIKAN ---
+
             $keterangan = strtoupper($row[1] ?? '');
             $nominal = (float) ($row[2] ?? 0);
 
             // 3. TRANSLASI LOGIKA EXCEL KE PHP
-            // Deteksi kata kunci (Menggantikan ISNUMBER(SEARCH(...)))
             $isReversal = strpos($keterangan, 'REV-') !== false || strpos($keterangan, 'PEMBATALAN') !== false;
             
-            // Deteksi limit batas (Menggantikan VLOOKUP Threshold)
-            // Catatan: Nanti angka 50000000 ini akan kita ambil dinamis dari tabel master_parameters
+            // Deteksi limit batas
             $isHighNominal = $nominal >= 50000000; 
 
-            // 4. PEMISAHAN JALUR RISIKO (Menggantikan Sheet Staging)
+            // 4. PEMISAHAN JALUR RISIKO
             if ($isReversal || $isHighNominal) {
                 // Masuk kategori Moderate/High -> Langsung tembak ke KKA Teller Kas
                 $moderateHighRiskData[] = [
-                    'tanggal_data' => $tanggal,
-                    'kode_unit' => $kodeUnit,
-                    'source_sheet' => 'KKA_Teller_Kas', // Arahkan ke modul KKA yang tepat
-                    'nominal_terkait' => $nominal,
-                    'risk_awal' => $isHighNominal ? 'High' : 'Moderate',
+                    'tanggal_data'         => $tanggal,
+                    'kode_unit'            => $kodeUnit,
+                    'source_sheet'         => 'KKA_Teller_Kas',
+                    'nominal_terkait'      => $nominal,
+                    'risk_awal'            => $isHighNominal ? 'High' : 'Moderate',
                     'jenis_exception_awal' => $isReversal ? 'Indikasi Reversal' : 'Nominal Melewati Limit',
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'created_at'           => now(),
+                    'updated_at'           => now(),
                 ];
             } else {
                 // Masuk kategori Low -> Masuk Register Harian saja
                 $lowRiskData[] = [
-                    'tanggal_data' => $tanggal,
-                    'kode_unit' => $kodeUnit,
-                    'source_sheet' => 'DUMP_01_CBS',
-                    'kategori' => 'Transaksi Wajar / Low Risk',
+                    'tanggal_data'    => $tanggal,
+                    'kode_unit'       => $kodeUnit,
+                    'source_sheet'    => 'DUMP_01_CBS',
+                    'kategori'        => 'Transaksi Wajar / Low Risk',
                     'nominal_terkait' => $nominal,
-                    'rincian' => $keterangan,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'rincian'         => $keterangan,
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
                 ];
             }
         }
@@ -70,7 +80,6 @@ class DumpCbsParser
         fclose($file);
 
         // 5. INSERT KE DATABASE (Teknik Batch Insert via Chunk)
-        // Memasukkan data per 1000 baris sekaligus agar prosesnya hitungan detik!
         if (!empty($lowRiskData)) {
             foreach (array_chunk($lowRiskData, 1000) as $chunk) {
                 DailyRegister::insert($chunk);
