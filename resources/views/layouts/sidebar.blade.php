@@ -104,6 +104,40 @@
         </a>
         @endif
 
+        {{-- ===================== MODUL OFFSITE (SOP 02) ===================== --}}
+        <div class="nav-group {{ request()->is('offsite*') ? 'open' : '' }}">
+            <div class="nav-group-toggle">
+                <i class="bi bi-laptop nav-icon"></i> Modul Offsite
+                <i class="bi bi-chevron-down nav-arrow"></i>
+            </div>
+            <div class="nav-group-children">
+                
+                {{-- MENU KHUSUS ADMIN / PIMPINAN: Rekapitulasi Per Cabang --}}
+                @if(in_array($role, ['admin', 'kabag_ra', 'kadiv_skai']))
+                <a href="{{ url('/offsite') }}" class="nav-item {{ request()->is('offsite') ? 'active' : '' }}">
+                    <i class="bi bi-building-check nav-icon"></i> Rekapitulasi Cabang
+                </a>
+                @endif
+
+                {{-- MENU KHUSUS RA: Upload Data CSV --}}
+                @if($role === 'ra')  <!-- UBAH BAGIAN INI -->
+                <a href="{{ url('/offsite/upload') }}" class="nav-item {{ request()->is('offsite/upload*') ? 'active' : '' }}">
+                    <i class="bi bi-cloud-upload nav-icon"></i> Upload Data (Dump)
+                </a>
+                @endif
+
+                {{-- MENU BERSAMA (Register & KKA) --}}
+                <a href="{{ url('/offsite/register') }}" class="nav-item {{ request()->is('offsite/register*') ? 'active' : '' }}">
+                    <i class="bi bi-journal-text nav-icon"></i> Register Harian
+                </a>
+                
+                <a href="{{ url('/offsite/kka') }}" class="nav-item {{ request()->is('offsite/kka*') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-check nav-icon"></i> KKA Offsite
+                </a>
+            </div>
+        </div>
+        {{-- ================================================================== --}}
+
         {{-- ===================== PENGATURAN & ADMIN ===================== --}}
         @if($isAdmin)
         <a href="{{ route('master-setup.index') }}" class="nav-item {{ request()->routeIs('master-setup.*') ? 'active' : '' }}">

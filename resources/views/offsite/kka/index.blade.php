@@ -281,13 +281,15 @@
     </div>
   </div>
 </div>
-@endsection
 
-@section('scripts')
+<!-- ======================= SCRIPT JS ======================= -->
+<!-- BOOTSTRAP WAJIB DITAMBAHKAN AGAR MODAL BISA MUNCUL -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
 <script>
     const baseUrl = '{{ url("/offsite/kka") }}'; 
-    const userRole = '{{ strtolower(trim(auth()->user()->role)) }}'; // Dinormalisasi ke lowercase & tanpa spasi
+    const userRole = '{{ strtolower(trim(auth()->user()->role)) }}'; 
     const csrfToken = '{{ csrf_token() }}';
     
     let globalFindings = [];
@@ -403,17 +405,13 @@
         const isRa = userRole === 'ra';
 
         if (isRa) {
-            // RA BISA EDIT ISI RA, TAPI ADMIN LOCKED (READONLY)
             raFields.forEach(el => el.disabled = false);
             adminFields.forEach(el => el.disabled = true);
-            
             document.getElementById('badge_ra_lock').innerText = "Mode Edit (RA)";
             document.getElementById('badge_admin_lock').innerText = "Read Only (Bukan Porsi RA)";
         } else {
-            // ADMIN BISA EDIT ISI ADMIN, TAPI RA LOCKED (READONLY)
             raFields.forEach(el => el.disabled = true);
             adminFields.forEach(el => el.disabled = false);
-
             document.getElementById('badge_ra_lock').innerText = "Read Only (Bukan Porsi Admin)";
             document.getElementById('badge_admin_lock').innerText = "Mode Edit (Admin/Pimsie)";
         }
