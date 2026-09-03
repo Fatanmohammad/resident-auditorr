@@ -18,7 +18,17 @@ class DumpDpkParser
         $moderateHighRiskData = [];
 
         while (($row = fgetcsv($file)) !== false) {
-            $tanggal = $row[0] ?? now()->toDateString();
+            
+            // --- AUTO-DETECT DATE ---
+            $rawDate = trim($row[0] ?? '');
+            if (empty($rawDate) || preg_match('/^[0-9]+$/', $rawDate)) {
+                $tanggal = now()->toDateString();
+            } else {
+                $parsedDate = strtotime($rawDate);
+                $tanggal = $parsedDate ? date('Y-m-d', $parsedDate) : now()->toDateString();
+            }
+            // ------------------------
+
             $statusRekening = strtoupper($row[1] ?? ''); // Misal: BARU, DORMANT, AKTIF
             $nominal = (float) ($row[2] ?? 0);
 
