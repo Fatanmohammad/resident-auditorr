@@ -11,27 +11,32 @@ use Illuminate\Http\Request;
 class KkaController extends Controller
 {
     /**
-     * Menampilkan daftar KKA
+     * HANYA untuk menampilkan halaman UI (Blade)
+     */
+    public function index()
+    {
+        return view('offsite.kka.index');
+    }
+
+    /**
+     * HANYA untuk mengambil data JSON (dipanggil oleh Axios/AJAX di Javascript)
      * Automatic Filter berdasarkan Wewenang Cabang
      */
-    public function index(Request $request)
+    public function data(Request $request)
     {
         $user = auth()->user();
         $query = KkaFinding::query();
 
         if ($user->role === 'ra') {
             // === LOGIKA KEAMANAN RA ===
-            // Mengambil ID Cabang Induk + Anak Cabang yang dinaungi RA
             $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
                 ? $user->cabangIdYangDapatDiakses() 
                 : [$user->cabang_id];
 
-            // Otomatis memfilter data KKA hanya untuk wilayahnya
             $query->whereIn('cabang_id', $allowedCabangIds);
 
         } else {
             // === LOGIKA BUKAN RA (ADMIN / KORWAS) ===
-            // Admin bisa melihat seluruh cabang induk
             if ($request->has('cabang_id')) {
                 $query->where('cabang_id', $request->cabang_id);
             }
@@ -53,7 +58,6 @@ class KkaController extends Controller
         $user = auth()->user();
         $finding = KkaFinding::findOrFail($id);
 
-        // Kunci Keamanan: Pastikan temuan ini milik wilayah cabang RA tersebut
         $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
             ? $user->cabangIdYangDapatDiakses() 
             : [$user->cabang_id];
