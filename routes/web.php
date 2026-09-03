@@ -11,6 +11,8 @@ use App\Http\Controllers\CoverageController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\FinalAuditPlanController;
 use App\Http\Controllers\MasterSetupController;
+use App\Http\Controllers\Offsite\OffsiteController;
+use App\Http\Controllers\Offsite\KkaController;
 
 Route::get('/debug-test', function () {
     $unit = \App\Models\Unit::find(2);
@@ -116,6 +118,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [MasterSetupController::class, 'index'])->name('index');
         Route::post('/field-weights', [MasterSetupController::class, 'storeFieldWeights'])->name('field-weights');
         Route::post('/bidang-weights', [MasterSetupController::class, 'storeBidangWeights'])->name('bidang-weights');
+    });
+
+    // =========================================================================
+    // MODUL OFFSITE AUDIT (BLADE UI)
+    // =========================================================================
+    Route::middleware(['auth'])->prefix('offsite')->group(function () {
+        
+        // 1. Halaman Upload & Proses DUMP
+        Route::get('/upload', [OffsiteController::class, 'create'])->name('offsite.upload.create');
+        Route::post('/upload', [OffsiteController::class, 'upload'])->name('offsite.upload.store');
+
+        // 2. Halaman Kertas Kerja (KKA)
+        Route::get('/kka', [KkaController::class, 'index'])->name('offsite.kka.index');
+        Route::put('/kka/{id}/ra', [KkaController::class, 'updateRa'])->name('offsite.kka.update.ra');
+        Route::put('/kka/{id}/admin', [KkaController::class, 'updateAdmin'])->name('offsite.kka.update.admin');
+        
     });
 
 });
