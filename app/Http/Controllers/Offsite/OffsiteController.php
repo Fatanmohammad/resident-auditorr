@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Offsite;
 
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Offsite\UploadDumpRequest;
 use App\Models\Offsite\AuditLog;
@@ -14,6 +15,14 @@ use Illuminate\Support\Facades\DB;
 
 class OffsiteController extends Controller
 {
+    /**
+     * Menampilkan Halaman Form Upload DUMP
+     */
+    public function create()
+    {
+        return view('offsite.upload');
+    }
+
     /**
      * Memproses upload file DUMP dari RA
      */
@@ -29,77 +38,58 @@ class OffsiteController extends Controller
         $file = $request->file('file_csv');
         $jenisFile = $request->jenis_file;
 
-        // Simpan file sementara di folder tmp (staging)
-        $filePath = $file->storeAs('offsite_staging', time() . '_' . $file->getClientOriginalName());
-        $fullPath = storage_path('app/' . $filePath);
+        $filePath = $file->storeAs('offsite_staging', time() . '_' . $file->getClientOriginalName(), 'local');
+        $fullPath = Storage::disk('local')->path($filePath);
 
-        // Ambil kode unit / cabang utama tempat RA bertugas
+        // Ambil kode unit dari relasi cabang (jika RA punya cabang, kalau tidak set '000')
         $kodeUnit = $user->cabang ? $user->cabang->kode_cabang : '000';
 
         DB::beginTransaction();
         try {
-            // Jalankan parser sesuai jenis file yang diunggah
+            // Proses parsing sesuai jenis file DUMP
             switch ($jenisFile) {
-                case 'DUMP_01':
-                    $cbsParser->parse($fullPath, $kodeUnit);
-                    break;
-                case 'DUMP_02':
-                    $dpkParser->parse($fullPath, $kodeUnit);
-                    break;
-                case 'DUMP_03':
-                    $kreditParser->parse($fullPath, $kodeUnit);
-                    break;
-                case 'DUMP_04':
-                    $biayaParser->parse($fullPath, $kodeUnit);
-                    break;
-                case 'DUMP_05':
-                    $pengaduanParser->parse($fullPath, $kodeUnit);
-                    break;
+                case 'DUMP_01': $cbsParser->parse($fullPath, $kodeUnit); break;
+                case 'DUMP_02': $dpkParser->parse($fullPath, $kodeUnit); break;
+                case 'DUMP_03': $kreditParser->parse($fullPath, $kodeUnit); break;
+                case 'DUMP_04': $biayaParser->parse($fullPath, $kodeUnit); break;
+                case 'DUMP_05': $pengaduanParser->parse($fullPath, $kodeUnit); break;
             }
 
-            // Catat log aktivitas upload
+            // Catat log sukses
             AuditLog::create([
                 'user_id'    => $user->id,
                 'kode_unit'  => $kodeUnit,
                 'jenis_file' => $jenisFile,
                 'nama_file'  => $file->getClientOriginalName(),
-                'status'     => 'Sukses',
+                'status'     => 'Berhasil',
             ]);
 
             DB::commit();
 
-            // Hapus file fisik dari tmp/staging agar storage server tidak penuh (bebas bloatware)
-            if (file_exists($fullPath)) {
-                unlink($fullPath);
-            }
+            // Hapus file staging setelah selesai diproses
+            if (file_exists($fullPath)) unlink($fullPath);
 
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'File ' . $jenisFile . ' berhasil diproses dan dikategorikan otomatis.'
-            ]);
+            // Redirect kembali ke halaman web dengan pesan sukses
+            return redirect()->back()->with('success', 'File ' . $jenisFile . ' berhasil diproses. Data telah dikategorikan ke Register Harian & Temuan KKA.');
 
         } catch (\Exception $e) {
             DB::rollBack();
 
-            // Hapus file fisik jika terjadi error
-            if (file_exists($fullPath)) {
-                unlink($fullPath);
-            }
+            // Tetap hapus file staging jika terjadi error
+            if (file_exists($fullPath)) unlink($fullPath);
 
-            // Catat log error
+            // Catat log gagal
             AuditLog::create([
                 'user_id'     => $user->id,
                 'kode_unit'   => $kodeUnit,
                 'jenis_file'  => $jenisFile,
                 'nama_file'   => $file->getClientOriginalName(),
                 'status'      => 'Gagal',
-                'pesan_error' => $e->getMessage(),
+                'pesan_error' => \Illuminate\Support\Str::limit($e->getMessage(), 250),
             ]);
 
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal memproses file: ' . $e->getMessage()
-            ], 500);
+            // Redirect kembali dengan pesan error
+            return redirect()->back()->with('error', 'Gagal memproses file: ' . $e->getMessage());
         }
     }
 }
