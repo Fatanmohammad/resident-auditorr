@@ -131,6 +131,7 @@ Route::middleware('auth')->group(function () {
 
         // 2. Halaman Kertas Kerja (KKA)
         Route::get('/kka', [KkaController::class, 'index'])->name('offsite.kka.index');
+        Route::get('/kka/data', [KkaController::class, 'data'])->name('offsite.kka.data');
         Route::put('/kka/{id}/ra', [KkaController::class, 'updateRa'])->name('offsite.kka.update.ra');
         Route::put('/kka/{id}/admin', [KkaController::class, 'updateAdmin'])->name('offsite.kka.update.admin');
         
