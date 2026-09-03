@@ -18,7 +18,17 @@ class DumpPengaduanParser
         $moderateHighRiskData = [];
 
         while (($row = fgetcsv($file)) !== false) {
-            $tanggalMasuk = $row[0] ?? now()->toDateString();
+            
+            // --- AUTO-DETECT DATE ---
+            $rawDate = trim($row[0] ?? '');
+            if (empty($rawDate) || preg_match('/^[0-9]+$/', $rawDate)) {
+                $tanggalMasuk = now()->toDateString();
+            } else {
+                $parsedDate = strtotime($rawDate);
+                $tanggalMasuk = $parsedDate ? date('Y-m-d', $parsedDate) : now()->toDateString();
+            }
+            // ------------------------
+
             $jenisPengaduan = strtoupper($row[1] ?? ''); 
             $hariPenyelesaian = (int) ($row[2] ?? 0); // Jumlah hari (SLA)
 
