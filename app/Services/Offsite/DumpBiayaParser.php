@@ -12,13 +12,26 @@ class DumpBiayaParser
         if (!file_exists($filePath)) throw new \Exception("File CSV Biaya tidak ditemukan.");
 
         $file = fopen($filePath, 'r');
-        fgetcsv($file); 
+        fgetcsv($file); // Melewati header
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
 
         while (($row = fgetcsv($file)) !== false) {
-            $tanggal = $row[0] ?? now()->toDateString();
+            
+            // --- MULAI PERBAIKAN: AUTO-DETECT DATE ---
+            $rawDate = trim($row[0] ?? '');
+            
+            // Jika isinya murni angka (seperti '199', '299', dll) atau kosong, pakai tanggal hari ini
+            if (empty($rawDate) || preg_match('/^[0-9]+$/', $rawDate)) {
+                $tanggal = now()->toDateString();
+            } else {
+                // Jika formatnya teks tapi bukan tanggal valid, fallback ke hari ini
+                $parsedDate = strtotime($rawDate);
+                $tanggal = $parsedDate ? date('Y-m-d', $parsedDate) : now()->toDateString();
+            }
+            // --- SELESAI PERBAIKAN ---
+
             $akunGl = strtoupper($row[1] ?? ''); // Misal: BIAYA PROMOSI, BIAYA ENTERTAIN
             $nominal = (float) ($row[2] ?? 0);
 
@@ -29,25 +42,25 @@ class DumpBiayaParser
 
             if ($isBiayaJumbo || $isAkunSensitif) {
                 $moderateHighRiskData[] = [
-                    'tanggal_data' => $tanggal,
-                    'kode_unit' => $kodeUnit,
-                    'source_sheet' => 'KKA_Biaya_Beban', // Masuk ke KKA Biaya
-                    'nominal_terkait' => $nominal,
-                    'risk_awal' => $isBiayaJumbo ? 'High' : 'Moderate',
+                    'tanggal_data'         => $tanggal,
+                    'kode_unit'            => $kodeUnit,
+                    'source_sheet'         => 'KKA_Biaya_Beban', // Masuk ke KKA Biaya
+                    'nominal_terkait'      => $nominal,
+                    'risk_awal'            => $isBiayaJumbo ? 'High' : 'Moderate',
                     'jenis_exception_awal' => $isAkunSensitif ? 'Akun GL Sensitif' : 'Nominal Biaya Melebihi Toleransi',
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'created_at'           => now(),
+                    'updated_at'           => now(),
                 ];
             } else {
                 $lowRiskData[] = [
-                    'tanggal_data' => $tanggal,
-                    'kode_unit' => $kodeUnit,
-                    'source_sheet' => 'DUMP_04_BIAYA',
-                    'kategori' => 'Pengeluaran Wajar',
+                    'tanggal_data'    => $tanggal,
+                    'kode_unit'       => $kodeUnit,
+                    'source_sheet'    => 'DUMP_04_BIAYA',
+                    'kategori'        => 'Pengeluaran Wajar',
                     'nominal_terkait' => $nominal,
-                    'rincian' => 'Akun: ' . $akunGl,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'rincian'         => 'Akun: ' . $akunGl,
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
                 ];
             }
         }
