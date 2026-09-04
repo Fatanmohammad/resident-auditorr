@@ -27,22 +27,37 @@ class KkaController extends Controller
         $user = auth()->user();
         $query = KkaFinding::query();
 
-        if ($user->role === 'ra') {
-            // === LOGIKA KEAMANAN RA ===
+        // 1. Filter Keamanan Wilayah RA vs Admin
+        if (strtolower($user->role) === 'ra') {
             $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
                 ? $user->cabangIdYangDapatDiakses() 
                 : [$user->cabang_id];
 
-            $query->whereIn('cabang_id', $allowedCabangIds);
-
+            // Dapatkan unit_code dari cabang id yang diizinkan
+            $unitCodes = \App\Models\Unit::whereIn('cabang_id', $allowedCabangIds)->pluck('unit_code');
+            $query->whereIn('kode_unit', $unitCodes);
         } else {
-            // === LOGIKA BUKAN RA (ADMIN / KORWAS) ===
-            if ($request->has('cabang_id')) {
-                $query->where('cabang_id', $request->cabang_id);
+            if ($request->filled('cabang_id')) {
+                $unitCodes = \App\Models\Unit::where('cabang_id', $request->cabang_id)->pluck('unit_code');
+                $query->whereIn('kode_unit', $unitCodes);
+            }
+            if ($request->filled('kode_unit')) {
+                $query->where('kode_unit', $request->kode_unit);
             }
         }
 
-        $findings = $query->latest()->paginate(15);
+        // 2. Filter Spesifik dari UI (Sheet KKA, Risk, Tanggal)
+        if ($request->filled('source_sheet')) {
+            $query->where('source_sheet', $request->source_sheet);
+        }
+        if ($request->filled('risk_awal')) {
+            $query->where('risk_awal', $request->risk_awal);
+        }
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal_data', $request->tanggal);
+        }
+
+        $findings = $query->latest('tanggal_data')->paginate(15);
 
         return response()->json([
             'status' => 'success',
