@@ -14,6 +14,7 @@ use App\Http\Controllers\MasterSetupController;
 use App\Http\Controllers\Offsite\OffsiteController;
 use App\Http\Controllers\Offsite\KkaController;
 use App\Http\Controllers\Offsite\DailyRegisterController;
+use App\Http\Controllers\Offsite\AuditLogController;
 
 Route::get('/debug-test', function () {
     $unit = \App\Models\Unit::find(2);
@@ -129,6 +130,9 @@ Route::middleware('auth')->group(function () {
         // Halaman Utama Rekapitulasi Cabang (Dashboard Admin/Pimsie)
         Route::get('/', [OffsiteController::class, 'index'])->name('offsite.index');
 
+        // Halaman Riwayat Upload CSV (History)
+        Route::get('/history', [AuditLogController::class, 'index'])->name('offsite.history.index');
+
         // 1. Halaman Upload & Proses DUMP (Khusus RA/Admin)
         Route::get('/upload', [OffsiteController::class, 'create'])->name('offsite.upload.create');
         Route::post('/upload', [OffsiteController::class, 'upload'])->name('offsite.upload.store');
@@ -136,7 +140,7 @@ Route::middleware('auth')->group(function () {
         // 2. Halaman Kertas Kerja (KKA)
         Route::get('/kka', [KkaController::class, 'index'])->name('offsite.kka.index');
         Route::get('/kka/data', [KkaController::class, 'data'])->name('offsite.kka.data');
-        Route::put('/kka/{id}/ra', [KkaController::class, 'updateRa'])->name('offsite.kka.update.ra');
+        Route::post('/kka/{id}/ra', [KkaController::class, 'updateRa'])->name('offsite.kka.update.ra');
         Route::put('/kka/{id}/admin', [KkaController::class, 'updateAdmin'])->name('offsite.kka.update.admin');
 
         // Halaman & Data Register Offsite Harian (Low Risk)
