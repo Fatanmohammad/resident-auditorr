@@ -24,17 +24,24 @@ class DailyRegisterController extends Controller
         $user = auth()->user();
         $query = DailyRegister::query();
 
-        // Filter Keamanan Cabang untuk RA (memakai strtolower agar aman)
+        // Filter Keamanan Cabang untuk RA
         if (strtolower($user->role) === 'ra') {
             $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
                 ? $user->cabangIdYangDapatDiakses() 
                 : [$user->cabang_id];
 
-            $query->whereIn('kode_unit', $allowedCabangIds);
+            // Ambil unit_code yang terikat ke cabang_id tersebut
+            $unitCodes = \App\Models\Unit::whereIn('cabang_id', $allowedCabangIds)->pluck('unit_code');
+
+            $query->whereIn('kode_unit', $unitCodes);
         } else {
-            if ($request->has('kode_unit')) {
+            if ($request->filled('kode_unit')) {
                 $query->where('kode_unit', $request->kode_unit);
             }
+        }
+
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal_data', $request->tanggal);
         }
 
         $registers = $query->latest('tanggal_data')->paginate(15);

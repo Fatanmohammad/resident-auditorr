@@ -7,55 +7,56 @@ use App\Models\Offsite\DailyRegister;
 
 class DumpCbsParser
 {
-    /**
-     * Memproses file DUMP_01 (Transaksi CBS)
-     * Menggantikan logika rumus excel untuk mendeteksi Reversal & Anomali Nominal
-     */
     public function parse($filePath, $kodeUnit)
     {
-        // 1. Buka file CSV
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV tidak ditemukan di folder staging.");
         }
 
         $file = fopen($filePath, 'r');
-        fgetcsv($file); // Melewati baris pertama (Header CSV)
+        fgetcsv($file); // Skip Header
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
 
-        // 2. Baca baris per baris
         while (($row = fgetcsv($file)) !== false) {
             
-            // --- MULAI PERBAIKAN: AUTO-DETECT DATE ---
+            // Auto-detect Date
             $rawDate = trim($row[0] ?? '');
-            
-            // Jika isinya murni angka (seperti '451', '296', dll) atau kosong, pakai tanggal hari ini
             if (empty($rawDate) || preg_match('/^[0-9]+$/', $rawDate)) {
                 $tanggal = now()->toDateString();
             } else {
-                // Jika formatnya teks tapi bukan tanggal valid, fallback ke hari ini
                 $parsedDate = strtotime($rawDate);
                 $tanggal = $parsedDate ? date('Y-m-d', $parsedDate) : now()->toDateString();
             }
-            // --- SELESAI PERBAIKAN ---
 
-            $keterangan = strtoupper($row[1] ?? '');
+            $keterangan = strtoupper(trim($row[1] ?? ''));
             $nominal = (float) ($row[2] ?? 0);
 
-            // 3. TRANSLASI LOGIKA EXCEL KE PHP
+            // DETEKSI LOGIKA EXCEL SOP 02
             $isReversal = strpos($keterangan, 'REV-') !== false || strpos($keterangan, 'PEMBATALAN') !== false;
-            
-            // Deteksi limit batas
-            $isHighNominal = $nominal >= 50000000; 
+            $isHighNominal = $nominal >= 50000000;
 
-            // 4. PEMISAHAN JALUR RISIKO
             if ($isReversal || $isHighNominal) {
-                // Masuk kategori Moderate/High -> Langsung tembak ke KKA Teller Kas
+                // =========================================================
+                // PEMETAAAN OTOMATIS KE 5 SHEET KKA TUJUAN DARI DUMP_01
+                // =========================================================
+                $sourceSheet = 'KKA_Transaksi_Umum'; // Default Fallback
+
+                if (preg_match('/(TRANSFER|KLIRING|SKN|RTGS|KIRIMAN UANG|INWARD|OUTWARD)/i', $keterangan)) {
+                    $sourceSheet = 'KKA_Transfer_KU';
+                } elseif (preg_match('/(TELLER|KAS|SETOR|TARIK|OTORISASI|SELISIH KAS)/i', $keterangan)) {
+                    $sourceSheet = 'KKA_Teller_Kas';
+                } elseif (preg_match('/(BIAYA|INTERN|JURNAL INTERN|PENAMPUNG|OVERBOOKING AKUN)/i', $keterangan)) {
+                    $sourceSheet = 'KKA_Biaya_Internal';
+                } elseif (preg_match('/(KREDIT|PENCAIRAN|ANGSURAN|PELUNASAN)/i', $keterangan)) {
+                    $sourceSheet = 'KKA_Kredit';
+                }
+
                 $moderateHighRiskData[] = [
                     'tanggal_data'         => $tanggal,
                     'kode_unit'            => $kodeUnit,
-                    'source_sheet'         => 'KKA_Teller_Kas',
+                    'source_sheet'         => $sourceSheet, // Mengikuti aturan Excel
                     'nominal_terkait'      => $nominal,
                     'risk_awal'            => $isHighNominal ? 'High' : 'Moderate',
                     'jenis_exception_awal' => $isReversal ? 'Indikasi Reversal' : 'Nominal Melewati Limit',
@@ -63,7 +64,6 @@ class DumpCbsParser
                     'updated_at'           => now(),
                 ];
             } else {
-                // Masuk kategori Low -> Masuk Register Harian saja
                 $lowRiskData[] = [
                     'tanggal_data'    => $tanggal,
                     'kode_unit'       => $kodeUnit,
@@ -79,17 +79,11 @@ class DumpCbsParser
 
         fclose($file);
 
-        // 5. INSERT KE DATABASE (Teknik Batch Insert via Chunk)
         if (!empty($lowRiskData)) {
-            foreach (array_chunk($lowRiskData, 1000) as $chunk) {
-                DailyRegister::insert($chunk);
-            }
+            foreach (array_chunk($lowRiskData, 1000) as $chunk) DailyRegister::insert($chunk);
         }
-
         if (!empty($moderateHighRiskData)) {
-            foreach (array_chunk($moderateHighRiskData, 1000) as $chunk) {
-                KkaFinding::insert($chunk);
-            }
+            foreach (array_chunk($moderateHighRiskData, 1000) as $chunk) KkaFinding::insert($chunk);
         }
 
         return true;

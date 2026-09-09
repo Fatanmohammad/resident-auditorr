@@ -103,23 +103,38 @@ class UnitSeeder extends Seeder
             ['001-pp6', 'Payment Point SAMSAT Corner Palu',                'Payment Point', 'CABANG UTAMA',           'PALU',          true,  'CABANG UTAMA',    0, 'Rendah'],
         ];
 
-$now = now();
+        $now = now();
         $rows = [];
 
-        // Petakan base_ra_unit ke cabang (kode_cabang) agar unit punya cabang_id
-        // yang sesuai dengan hirarki cabang. RA hanya bisa melihat unit pada
-        // cabangnya sendiri beserta seluruh anak cabangnya (lihat User::cabangIdYangDapatDiakses).
+        // PEMETAAN LENGKAP BERSERTA PREFIX BS- KE SEMUA CABANG INDUK
         $cabangIdByKode = DB::table('cabangs')->pluck('id', 'kode_cabang');
+        
         $cabangKodeByBaseRa = [
-            'KANTOR PUSAT'      => 'BS-000',
-            'CABANG UTAMA'      => 'BS-001',    // KCU Palu
-            'CABANG PALU BARAT' => 'BS-001',    // area Palu di bawah KCU
-            'CABANG SIGI'       => 'BS-001-A',  // anak cabang Sigi
-            'CABANG LUWUK'      => 'BS-002',
+            'KANTOR PUSAT'          => 'BS-000',
+            'CABANG UTAMA'          => 'BS-001',
+            'CABANG LUWUK'          => 'BS-002',
+            'CABANG POSO'           => 'BS-003',
+            'CABANG DONGGALA'       => 'BS-004',
+            'CABANG SIGI'           => 'BS-005',
+            'CABANG BUOL'           => 'BS-006',
+            'CABANG SALAKAN'        => 'BS-007',
+            'CABANG BANGGAI LAUT'   => 'BS-008',
+            'CABANG PARIGI'         => 'BS-009',
+            'CABANG PALU BARAT'     => 'BS-010',
+            'CABANG TOLITOLI'       => 'BS-011',
+            'CABANG BUNGKU'         => 'BS-012',
+            'CABANG AMPANA'         => 'BS-013',
+            'CABANG KOLONODALE'     => 'BS-014',
+            'CABANG JAKARTA'        => 'BS-015',
         ];
 
         foreach ($units as [$code, $name, $type, $parent, $region, $active, $base_ra, $distance, $vol]) {
             $isKcKcu = in_array($type, ['KC', 'KCU']);
+            
+            // Dapatkan cabang_id induk
+            $targetKodeCabang = $cabangKodeByBaseRa[$base_ra] ?? null;
+            $cabangId = $cabangIdByKode[$targetKodeCabang] ?? null;
+
             $rows[] = [
                 'unit_code'                  => $code,
                 'unit_name'                  => $name,
@@ -128,7 +143,7 @@ $now = now();
                 'region'                     => $region,
                 'is_active'                  => $active,
                 'base_ra_unit'               => $base_ra,
-                'cabang_id'                  => $cabangIdByKode[$cabangKodeByBaseRa[$base_ra] ?? null] ?? null,
+                'cabang_id'                  => $cabangId,
                 'distance_from_parent_km'    => $distance,
                 'transaction_volume_category'=> $vol,
                 'auto_description'           => $isKcKcu

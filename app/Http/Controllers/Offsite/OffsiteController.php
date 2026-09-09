@@ -23,30 +23,60 @@ class OffsiteController extends Controller
         $user = auth()->user();
 
         if (strtolower($user->role) === 'ra') {
-            return redirect()->route('offsite.register');
+            return redirect()->route('offsite.register.index');
         }
 
-        $cabangs = \App\Models\Cabang::whereIn('tipe', ['pusat', 'kcu', 'cabang_a', 'cabang_b'])->get();
+        // Ambil SEMUA Induk Cabang (parent_id = null)
+        $indukCabangs = \App\Models\Cabang::whereNull('parent_id')
+            ->orderBy('kode_cabang', 'asc')
+            ->get();
 
-        $rekapCabang = $cabangs->map(function($cabang) {
-            $unitCodes = \App\Models\Unit::where('cabang_id', $cabang->id)
-                ->orWhereIn('cabang_id', function($q) use ($cabang) {
-                    $q->select('id')->from('cabangs')->where('parent_id', $cabang->id);
-                })
-                ->pluck('unit_code');
+        $rekapCabang = $indukCabangs->map(function($induk) {
+            // Ambil unit code milik Induk Cabang Ini
+            $unitCodesInduk = \App\Models\Unit::where('cabang_id', $induk->id)->pluck('unit_code')->toArray();
+            
+            // Bersihkan prefix BS- untuk kecocokan langsung ke kode DUMP (contoh: BS-001 -> 001)
+            $cleanKodeInduk = ltrim(str_replace('BS-', '', $induk->kode_cabang), '0');
+            if (!empty($cleanKodeInduk)) {
+                $unitCodesInduk[] = str_pad($cleanKodeInduk, 3, '0', STR_PAD_LEFT);
+            }
 
-            $totalLow = \App\Models\Offsite\DailyRegister::whereIn('kode_unit', $unitCodes)->count();
-            $totalModerate = \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodes)->where('risk_awal', 'Moderate')->count();
-            $totalHigh = \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodes)->where('risk_awal', 'High')->count();
+            // Hitung temuan khusus Induk Cabang
+            $lowInduk = \App\Models\Offsite\DailyRegister::whereIn('kode_unit', $unitCodesInduk)->count();
+            $modInduk = \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodesInduk)->where('risk_awal', 'Moderate')->count();
+            $highInduk = \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodesInduk)->where('risk_awal', 'High')->count();
+
+            // Ambil Anak Cabang yang terhubung via parent_id
+            $anakCabangs = \App\Models\Cabang::where('parent_id', $induk->id)->get()->map(function($anak) {
+                $unitCodesAnak = \App\Models\Unit::where('cabang_id', $anak->id)->pluck('unit_code')->toArray();
+
+                return [
+                    'id' => $anak->id,
+                    'kode_cabang' => $anak->kode_cabang,
+                    'nama_cabang' => $anak->nama_cabang,
+                    'total_low' => \App\Models\Offsite\DailyRegister::whereIn('kode_unit', $unitCodesAnak)->count(),
+                    'total_moderate' => \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodesAnak)->where('risk_awal', 'Moderate')->count(),
+                    'total_high' => \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodesAnak)->where('risk_awal', 'High')->count(),
+                ];
+            });
+
+            // Total gabungan Induk + Seluruh Anak Cabang
+            $totalLowAll = $lowInduk + $anakCabangs->sum('total_low');
+            $totalModerateAll = $modInduk + $anakCabangs->sum('total_moderate');
+            $totalHighAll = $highInduk + $anakCabangs->sum('total_high');
 
             return [
-                'id' => $cabang->id,
-                'kode_cabang' => $cabang->kode_cabang,
-                'nama_cabang' => $cabang->nama_cabang,
-                'total_low' => $totalLow,
-                'total_moderate' => $totalModerate,
-                'total_high' => $totalHigh,
-                'total_risiko' => $totalModerate + $totalHigh
+                'id' => $induk->id,
+                'kode_cabang' => $induk->kode_cabang,
+                'nama_cabang' => $induk->nama_cabang,
+                'total_low' => $lowInduk,
+                'total_moderate' => $modInduk,
+                'total_high' => $highInduk,
+                'total_low_all' => $totalLowAll,
+                'total_moderate_all' => $totalModerateAll,
+                'total_high_all' => $totalHighAll,
+                'total_risiko_all' => $totalModerateAll + $totalHighAll,
+                'anak_cabang' => $anakCabangs
             ];
         });
 
@@ -63,6 +93,7 @@ class OffsiteController extends Controller
         if (in_array(strtolower($user->role), ['admin', 'kabag_ra', 'kadiv_skai'])) {
             $cabangs = \App\Models\Unit::orderBy('unit_name', 'asc')->get();
         } else {
+            // Memastikan RA (termasuk jika 1 wilayah ada 2 RA) hanya melihat cabang induk & anak cabangnya
             $cabangs = \App\Models\Unit::where(function($query) use ($user) {
                 if ($user->cabang_id) {
                     $query->where('cabang_id', $user->cabang_id)
