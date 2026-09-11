@@ -1,47 +1,75 @@
-@extends('layouts.app') <!-- Sesuaikan dengan nama file master layout/template kamu -->
+@extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">Upload Data DUMP Offsite</h2>
-        <p class="text-gray-600">Unggah file CSV Core Banking System untuk dianalisis oleh mesin Offsite Audit.</p>
+
+<div style="margin-bottom: 1.5rem;">
+    <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 0.3rem;">Upload Data DUMP Offsite</h4>
+    <p style="color: #64748b; font-size: 0.9rem; margin: 0;">Unggah file CSV Core Banking System untuk dianalisis oleh mesin Offsite Audit.</p>
+</div>
+
+<!-- Tampilkan Pesan Sukses atau Error -->
+@if(session('success'))
+    <div class="alert alert-success" style="max-width: 600px; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+        <i class="bi bi-check-circle-fill"></i>
+        <div><strong>Berhasil!</strong> {{ session('success') }}</div>
     </div>
+@endif
 
-    <!-- Tampilkan Pesan Sukses atau Error -->
-    @if(session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <strong class="font-bold">Berhasil!</strong>
-            <span class="block sm:inline">{{ session('success') }}</span>
+@if(session('error'))
+    <div class="alert alert-danger" style="max-width: 600px; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <div><strong>Error!</strong> {{ session('error') }}</div>
+    </div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-danger" style="max-width: 600px; font-size: 0.9rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+            <i class="bi bi-exclamation-triangle-fill"></i> <strong>Terdapat Kesalahan:</strong>
         </div>
-    @endif
+        <ul style="margin: 0; padding-left: 1.5rem;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
-    @if(session('error'))
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <strong class="font-bold">Error!</strong>
-            <span class="block sm:inline">{{ session('error') }}</span>
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-            <ul class="list-disc ml-5">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <!-- Form Upload -->
-    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+<!-- Form Upload -->
+<div class="card" style="max-width: 600px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+    <div class="card-body" style="padding: 2rem;">
+        
         <form action="{{ route('offsite.upload.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
             
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="jenis_file">
-                    Pilih Jenis File DUMP
+            <!-- 1. INFORMASI TUJUAN PENGIRIMAN (Visual Saja) -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="font-weight: 600; color: #334155; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">
+                    Tujuan Pengiriman Data
                 </label>
-                <select name="jenis_file" id="jenis_file" required class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <div style="padding: 0.6rem 0.8rem; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; color: #1e3a8a; font-weight:600;">
+                    <i class="bi bi-send-check-fill me-2"></i> Admin Pusat (KCU Palu)
+                </div>
+            </div>
+
+            <!-- 2. PEMILIK DATA CSV (Fungsional - Wajib diisi agar backend tidak menolak) -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="kode_unit" style="font-weight: 600; color: #334155; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">
+                    Data CSV ini milik Unit/Cabang mana? <span style="color: #dc2626;">*</span>
+                </label>
+                <select name="kode_unit" id="kode_unit" required class="form-select" style="font-size: 0.9rem; border-radius: 6px;">
+                    <option value="">-- Pilih Unit/Cabang Anda --</option>
+                    @foreach($cabangs as $cabang)
+                        <option value="{{ $cabang->unit_code }}">{{ $cabang->unit_code }} - {{ $cabang->unit_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label for="jenis_file" style="font-weight: 600; color: #334155; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">
+                    Pilih Jenis File DUMP <span style="color: #dc2626;">*</span>
+                </label>
+                <select name="jenis_file" id="jenis_file" required class="form-select" style="font-size: 0.9rem; border-radius: 6px;">
                     <option value="">-- Pilih Jenis File --</option>
                     <option value="DUMP_01">DUMP 01 - Transaksi Teller / CBS</option>
                     <option value="DUMP_02">DUMP 02 - DPK / CS SPU</option>
@@ -51,20 +79,22 @@
                 </select>
             </div>
 
-            <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="file_csv">
-                    File CSV DUMP
+            <div style="margin-bottom: 2rem;">
+                <label for="file_csv" style="font-weight: 600; color: #334155; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">
+                    File CSV DUMP <span style="color: #dc2626;">*</span>
                 </label>
-                <input type="file" name="file_csv" id="file_csv" accept=".csv" required class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                <p class="text-sm text-gray-500 mt-1">Pastikan format file adalah .csv dengan ukuran maksimal 50MB.</p>
+                <input type="file" name="file_csv" id="file_csv" accept=".csv" required class="form-control" style="font-size: 0.9rem; border-radius: 6px;">
+                <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; margin-bottom: 0;">
+                    Pastikan format file adalah .csv dengan ukuran maksimal 50MB.
+                </p>
             </div>
 
-            <div class="flex items-center justify-between">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200">
-                    Proses dan Analisis Data
-                </button>
-            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600; padding: 0.6rem; border-radius: 6px; background-color: #1e3a8a; border-color: #1e3a8a;">
+                Proses dan Kirim Data ke Pusat
+            </button>
         </form>
+        
     </div>
 </div>
+
 @endsection

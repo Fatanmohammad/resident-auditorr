@@ -30,7 +30,6 @@
                 </tr>
             </thead>
             <tbody id="registerTableBody">
-
                 <tr>
                     <td colspan="7">
                         <div class="empty-state">
@@ -55,20 +54,27 @@
 
     function loadData() {
         axios.get(`${baseUrl}/data`)
-            .then(response => renderTable(response.data.data))
-            .catch(() => {
+            .then(response => {
+                // PERBAIKAN DI SINI: Harus pakai .data.data.data karena pakai paginate(15)
+                const arrayData = response.data.data.data;
+                renderTable(arrayData);
+            })
+            .catch(error => {
+                console.error("Penyebab error:", error); // Supaya error-nya terlihat di inspect element
                 document.getElementById('registerTableBody').innerHTML =
                     '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Gagal memuat data register harian.</p></div></td></tr>';
             });
     }
 
     function renderTable(data) {
-
         const tbody = document.getElementById('registerTableBody');
-        if (!data || data.length === 0) {
+        
+        // Pastikan variabel 'data' adalah array
+        if (!data || !Array.isArray(data) || data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox"></i><p>Tidak ada catatan register harian untuk saat ini.</p></div></td></tr>';
             return;
         }
+        
         tbody.innerHTML = data.map((item, index) => {
             const nominal = item.nominal_terkait > 0
                 ? 'Rp ' + new Intl.NumberFormat('id-ID').format(item.nominal_terkait)

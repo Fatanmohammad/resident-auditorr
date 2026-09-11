@@ -123,7 +123,8 @@ class OffsiteController extends Controller
         $jenisFile = $request->jenis_file;
         $kodeUnitDipilih = $request->kode_unit;
 
-        if (!in_array(strtolower($user->role), ['admin', 'kabag_ra', 'kadiv_skai'])) {
+        // PENAMBAHAN 'ra' PADA VALIDASI HAK AKSES
+        if (!in_array(strtolower($user->role), ['admin', 'kabag_ra', 'kadiv_skai', 'ra'])) {
             $unitValid = \App\Models\Unit::where('unit_code', $kodeUnitDipilih)
                 ->where(function($query) use ($user) {
                     if ($user->cabang_id) {

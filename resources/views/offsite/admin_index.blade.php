@@ -1,65 +1,113 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    .rekap-card { border-radius: 12px; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+    .table-custom th { background-color: #f8fafc; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+    .table-custom td { vertical-align: middle; color: #334155; border-bottom: 1px solid #f1f5f9; padding: 1rem 0.5rem; }
+    .table-custom tbody tr:hover { background-color: #f8fafc; transition: all 0.2s; }
+    .risk-badge { padding: 0.4rem 0.8rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; min-width: 90px; }
+    .risk-low { background-color: #f1f5f9; color: #475569; }
+    .risk-mod { background-color: #fef3c7; color: #d97706; }
+    .risk-high { background-color: #fee2e2; color: #ef4444; }
+    .branch-icon { width: 35px; height: 35px; background: #eff6ff; color: #3b82f6; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+</style>
+
 <div class="container-fluid py-4">
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <div>
-                <h5 class="m-0 font-weight-bold text-primary">Rekapitulasi Pengawasan Offsite Per Cabang</h5>
-                <small class="text-muted">Pilih Kantor Cabang di bawah untuk melihat rincian unit dan temuan risiko.</small>
-            </div>
-            <span class="badge bg-success">Role: {{ strtoupper(auth()->user()->role) }}</span>
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold" style="color: #0f172a; margin-bottom: 0.2rem;">Dashboard Rekapitulasi Offsite</h4>
+            <p class="text-muted mb-0" style="font-size: 0.9rem;">Pantau tingkat risiko dan temuan KKA di seluruh cabang Bank Sulteng.</p>
         </div>
-        <div class="card-body">
-            
+        <div class="badge bg-primary px-3 py-2" style="border-radius: 8px; font-size: 0.85rem; font-weight: 600;">
+            <i class="bi bi-shield-lock-fill me-1"></i> AKSES: {{ strtoupper(auth()->user()->role) }}
+        </div>
+    </div>
+
+    <!-- Data Card -->
+    <div class="card rekap-card">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-light">
+                <table class="table table-custom mb-0">
+                    <thead>
                         <tr>
-                            <th>No</th>
-                            <th>Kode Cabang</th>
-                            <th>Nama Kantor Cabang / Wilayah</th>
-                            <th class="text-center">Register Harian (Low)</th>
-                            <th class="text-center">Temuan KKA (Moderate)</th>
-                            <th class="text-center">Temuan KKA (High)</th>
-                            <th class="text-center">Aksi</th>
+                            <th class="text-center" style="width: 5%;">NO</th>
+                            <th style="width: 25%;">KANTOR CABANG / WILAYAH</th>
+                            <th class="text-center">REGISTER HARIAN (LOW)</th>
+                            <th class="text-center">TEMUAN (MODERATE)</th>
+                            <th class="text-center">TEMUAN (HIGH RISK)</th>
+                            <th class="text-center" style="width: 15%;">TINDAKAN</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($rekapCabang as $index => $cabang)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td><strong>{{ $cabang['kode_cabang'] }}</strong></td>
+                            <td class="text-center text-muted fw-bold">{{ $index + 1 }}</td>
                             <td>
-                                <a href="#" class="text-decoration-none fw-bold text-primary">
-                                    {{ $cabang['nama_cabang'] }}
-                                </a>
+                                <div class="d-flex align-items-center">
+                                    <div class="branch-icon me-3 shadow-sm">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold" style="color: #1e293b;">{{ $cabang['nama_cabang'] }}</h6>
+                                        <small class="text-muted" style="font-family: monospace;">Kode: {{ $cabang['kode_cabang'] }}</small>
+                                    </div>
+                                </div>
                             </td>
+                            
+                            <!-- PERBAIKAN LOGIKA: Menggunakan total_low_all -->
                             <td class="text-center">
-                                <span class="badge bg-secondary">{{ $cabang['total_low'] }} Data</span>
+                                @if(($cabang['total_low_all'] ?? $cabang['total_low']) > 0)
+                                    <span class="risk-badge risk-low shadow-sm">
+                                        {{ $cabang['total_low_all'] ?? $cabang['total_low'] }} Data
+                                    </span>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
                             </td>
+                            
                             <td class="text-center">
-                                <span class="badge bg-warning text-dark">{{ $cabang['total_moderate'] }} Temuan</span>
+                                @if(($cabang['total_moderate_all'] ?? $cabang['total_moderate']) > 0)
+                                    <span class="risk-badge risk-mod shadow-sm">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ $cabang['total_moderate_all'] ?? $cabang['total_moderate'] }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
                             </td>
+                            
                             <td class="text-center">
-                                <span class="badge bg-danger">{{ $cabang['total_high'] }} Temuan</span>
+                                @if(($cabang['total_high_all'] ?? $cabang['total_high']) > 0)
+                                    <span class="risk-badge risk-high shadow-sm">
+                                        <i class="bi bi-exclamation-octagon-fill me-1"></i> {{ $cabang['total_high_all'] ?? $cabang['total_high'] }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
                             </td>
+                            
                             <td class="text-center">
-                                <!-- Tombol untuk melihat detail cabang tersebut -->
-                                <a href="{{ url('/offsite/kka?cabang=' . $cabang['kode_cabang']) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-search">}</i> Lihat KKA Cabang
+                                <!-- Tombol disesuaikan dengan route lama Anda -->
+                                <a href="{{ url('/offsite/kka?cabang=' . $cabang['kode_cabang']) }}" class="btn btn-primary btn-sm px-3 shadow-sm" style="border-radius: 8px; font-weight: 600;">
+                                    Buka KKA <i class="bi bi-arrow-right ms-1"></i>
                                 </a>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">Belum ada data cabang yang tersedia.</td>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                                    <h6 class="fw-bold">Belum Ada Data Wilayah</h6>
+                                    <p class="mb-0 fs-7">Sistem belum merekam data cabang untuk ditampilkan.</p>
+                                </div>
+                            </td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-
         </div>
     </div>
 </div>
