@@ -7,7 +7,7 @@ use App\Models\Offsite\DailyRegister;
 
 class DumpCbsParser
 {
-    public function parse($filePath, $kodeUnit)
+    public function parse($filePath, $kodeUnit): array
     {
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV tidak ditemukan di folder staging.");
@@ -18,6 +18,8 @@ class DumpCbsParser
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
+        $countHigh = 0;
+        $countModerate = 0;
 
         while (($row = fgetcsv($file)) !== false) {
             
@@ -28,6 +30,7 @@ class DumpCbsParser
             } else {
                 $parsedDate = strtotime($rawDate);
                 $tanggal = $parsedDate ? date('Y-m-d', $parsedDate) : now()->toDateString();
+
             }
 
             $keterangan = strtoupper(trim($row[1] ?? ''));
@@ -53,12 +56,21 @@ class DumpCbsParser
                     $sourceSheet = 'KKA_Kredit';
                 }
 
+                $riskLevel = $isHighNominal ? 'High' : 'Moderate';
+                if ($riskLevel === 'High') {
+                    $countHigh++;
+                } else {
+                    $countModerate++;
+                }
+
+
                 $moderateHighRiskData[] = [
                     'tanggal_data'         => $tanggal,
+                    'periode'              => date('Y-m-01', strtotime($tanggal)), // awal bulan sebagai penanda periode
                     'kode_unit'            => $kodeUnit,
                     'source_sheet'         => $sourceSheet, // Mengikuti aturan Excel
                     'nominal_terkait'      => $nominal,
-                    'risk_awal'            => $isHighNominal ? 'High' : 'Moderate',
+                    'risk_awal'            => $riskLevel,
                     'jenis_exception_awal' => $isReversal ? 'Indikasi Reversal' : 'Nominal Melewati Limit',
                     'created_at'           => now(),
                     'updated_at'           => now(),
@@ -84,8 +96,13 @@ class DumpCbsParser
         }
         if (!empty($moderateHighRiskData)) {
             foreach (array_chunk($moderateHighRiskData, 1000) as $chunk) KkaFinding::insert($chunk);
+
         }
 
-        return true;
+        return [
+            'total_low'      => count($lowRiskData),
+            'total_moderate' => $countModerate,
+            'total_high'     => $countHigh,
+        ];
     }
 }

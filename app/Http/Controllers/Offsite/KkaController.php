@@ -73,15 +73,20 @@ class KkaController extends Controller
         $user = auth()->user();
         $finding = KkaFinding::findOrFail($id);
 
-        $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
-            ? $user->cabangIdYangDapatDiakses() 
-            : [$user->cabang_id];
+        // Jika user adalah RA, validasi berdasarkan izin kode_unit cabang yang diakses
+        if (strtolower($user->role) === 'ra') {
+            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
+                ? $user->cabangIdYangDapatDiakses() 
+                : [$user->cabang_id];
 
-        if (!in_array($finding->cabang_id, $allowedCabangIds)) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Akses ditolak: Anda tidak memiliki wewenang untuk mengubah data cabang ini.'
-            ], 403);
+            $allowedUnitCodes = \App\Models\Unit::whereIn('cabang_id', $allowedCabangIds)->pluck('unit_code')->toArray();
+
+            if (!in_array($finding->kode_unit, $allowedUnitCodes)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Akses ditolak: Anda tidak memiliki wewenang untuk mengubah data cabang ini.'
+                ], 403);
+            }
         }
 
         $finding->update($request->validated());
@@ -98,13 +103,20 @@ class KkaController extends Controller
      */
     public function updateAdmin(UpdateKkaAdminRequest $request, $id)
     {
-        $finding = KkaFinding::findOrFail($id);
-        $finding->update($request->validated());
+        try {
+            $finding = KkaFinding::findOrFail($id);
+            $finding->update($request->validated());
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Review KKA berhasil diperbarui oleh Admin.',
-            'data'    => $finding
-        ]);
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Review KKA berhasil diperbarui oleh Admin.',
+                'data'    => $finding
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Error Database: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -7,7 +7,7 @@ use App\Models\Offsite\DailyRegister;
 
 class DumpDpkParser
 {
-    public function parse($filePath, $kodeUnit)
+    public function parse($filePath, $kodeUnit): array
     {
         if (!file_exists($filePath)) throw new \Exception("File CSV DPK tidak ditemukan.");
 
@@ -31,6 +31,8 @@ class DumpDpkParser
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
+        $countHigh = 0;
+        $countModerate = 0;
 
         while (($row = fgetcsv($file)) !== false) {
             if (empty($row) || count($row) < 3) continue;
@@ -55,14 +57,22 @@ class DumpDpkParser
                 $jenisTemuan = $isDormantActive ? 'Aktivasi Dormant Ireguler' : 'Rekening Baru Nominal Besar';
                 $deskripsiOtomatis = "Terdeteksi anomali pada rekening {$noRekening} atas nama {$namaNasabah} dengan status '{$statusRekening}' dan saldo/nominal Rp " . number_format($nominal, 0, ',', '.') . " di Unit {$kodeUnit}.";
 
+                $riskLevel = $isDormantActive ? 'High' : 'Moderate';
+                if ($riskLevel === 'High') {
+                    $countHigh++;
+                } else {
+                    $countModerate++;
+                }
+
                 $moderateHighRiskData[] = [
                     'tanggal_data' => $tanggal,
+                    'periode' => date('Y-m-01', strtotime($tanggal)), // awal bulan sebagai penanda periode
                     'kode_unit' => $kodeUnit,
                     'source_sheet' => 'KKA Transaksi Umum', 
                     'nominal_terkait' => $nominal,
-                    'risk_awal' => $isDormantActive ? 'High' : 'Moderate',
+                    'risk_awal' => $riskLevel,
                     'jenis_exception_awal' => $jenisTemuan,
-                    'deskripsi' => $deskripsiOtomatis, // Kolom deskripsi sekarang terisi dengan benar
+                    'deskripsi' => $deskripsiOtomatis,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -88,6 +98,10 @@ class DumpDpkParser
             foreach (array_chunk($moderateHighRiskData, 1000) as $chunk) KkaFinding::insert($chunk);
         }
 
-        return true;
+        return [
+            'total_low'      => count($lowRiskData),
+            'total_moderate' => $countModerate,
+            'total_high'     => $countHigh,
+        ];
     }
 }

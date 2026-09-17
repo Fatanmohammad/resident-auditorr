@@ -45,6 +45,20 @@
     .kka-tab-item .badge-count { background: #f1f5f9; color: #475569; padding: 0.1rem 0.5rem; border-radius: 10px; font-size: 0.7rem; }
     .kka-tab-item.active .badge-count { background: #dbeafe; color: var(--primary-blue); }
 
+    /* Filter Box Style */
+    .filter-card {
+        background: #fff; border: 1px solid var(--border-color); border-radius: 12px;
+        padding: 1.25rem; margin-bottom: 1.5rem;
+    }
+    .filter-grid {
+        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto; gap: 1rem; align-items: flex-end;
+    }
+    .filter-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase; display: block; }
+    .filter-control { width: 100%; border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; font-size: 0.85rem; border-radius: 8px; background: #fff; }
+    
+    .btn-filter { background: var(--primary-blue); color: #fff; border: none; padding: 0.5rem 1.2rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .btn-reset { background: #f1f5f9; color: var(--text-dark); border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+
     /* Fix Tabel */
     .table-wrapper { overflow-x: auto; width: 100%; }
     .data-table { width: 100%; min-width: 1000px; border-collapse: collapse; }
@@ -90,9 +104,14 @@
 <!-- 1. VIEW DASHBOARD & TABEL -->
 <!-- ========================================== -->
 <div id="dashboardView">
-    <div class="dashboard-header mb-4">
-        <h4>Kertas Kerja Audit (KKA) Offsite</h4>
-        <p>Review, verifikasi, dan tindak lanjuti indikasi temuan exception transaksi.</p>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+        <div class="dashboard-header">
+            <h4>Kertas Kerja Audit (KKA) Offsite</h4>
+            <p>Review, verifikasi, dan tindak lanjuti indikasi temuan exception transaksi.</p>
+        </div>
+        <button type="button" id="btnToggleRiwayat" onclick="toggleRiwayatMode()" class="btn-filter" style="background: #f1f5f9; color: #475569; border: 1px solid var(--border-color);">
+            <i class="bi bi-clock-history"></i> <span id="btnRiwayatText">Lihat Arsip Riwayat Selesai</span>
+        </button>
     </div>
 
     <!-- 4 SUMMARY CARDS -->
@@ -126,7 +145,35 @@
             <div class="stat-details">
                 <h6>SELESAI REVIEW</h6>
                 <h3 id="statSelesaiReview">0</h3>
-                <p>Sudah Ditindaklanjuti <a href="#" style="font-weight: 600; color: #6366f1; text-decoration: none; margin-left: 5px;">Riwayat</a></p>
+                <p>Sudah Ditindaklanjuti</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTER KHUSUS RIWAYAT (Hanya tampil saat mode riwayat aktif) -->
+    <div id="riwayatFilterCard" class="filter-card" style="display: none;">
+        <div style="font-weight: 700; color: var(--primary-blue); margin-bottom: 1rem; font-size: 0.9rem;">
+            <i class="bi bi-funnel"></i> Filter Pencarian Arsip Riwayat Selesai
+        </div>
+        <div class="filter-grid">
+            <div>
+                <label class="filter-label">Cari Kata Kunci / No Referensi / User</label>
+                <input type="text" id="filterKeyword" class="filter-control" placeholder="Ketik kata kunci...">
+            </div>
+            <div>
+                <label class="filter-label">Status Klarifikasi</label>
+                <select id="filterKlarifikasi" class="filter-control">
+                    <option value="">-- Semua Status --</option>
+                    <option value="Sesuai / Selesai">Sesuai / Selesai</option>
+                    <option value="Belum Sesuai">Belum Sesuai</option>
+                    <option value="Tidak Ada Klarifikasi">Tidak Ada Klarifikasi</option>
+                </select>
+            </div>
+            <div>
+                <button type="button" class="btn-filter" onclick="applyCustomFilter()"><i class="bi bi-search"></i> Filter</button>
+            </div>
+            <div>
+                <button type="button" class="btn-reset" onclick="resetCustomFilter()">Reset</button>
             </div>
         </div>
     </div>
@@ -493,6 +540,7 @@
     
     let globalFindings = [];
     let currentActiveSheet = 'KKA Teller & Kas';
+    let isShowingRiwayat = false;
 
     document.addEventListener("DOMContentLoaded", function() {
         loadData();
@@ -504,8 +552,13 @@
         allTabs.forEach(tab => tab.classList.remove('active'));
 
         clickedElement.classList.add('active');
-        document.getElementById('tableTitle').innerText = tabName;
         currentActiveSheet = tabName;
+        
+        if (isShowingRiwayat) {
+            document.getElementById('tableTitle').innerText = `${tabName} (Arsip Riwayat Selesai)`;
+        } else {
+            document.getElementById('tableTitle').innerText = tabName;
+        }
         
         loadData();
     }
@@ -534,11 +587,77 @@
                 const activeTabBadge = document.querySelector('.kka-tab-item.active .badge-count');
                 if(activeTabBadge) activeTabBadge.innerText = globalFindings.length;
 
-                renderTable(globalFindings);
+                processDataDisplay();
             })
             .catch(error => {
                 tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: #dc2626;"><i class="bi bi-exclamation-triangle" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i><p>Gagal memuat data.</p></div></td></tr>`;
             });
+    }
+
+    // Toggle Mode Riwayat Selesai
+    function toggleRiwayatMode() {
+        isShowingRiwayat = !isShowingRiwayat;
+        const btn = document.getElementById('btnToggleRiwayat');
+        const filterCard = document.getElementById('riwayatFilterCard');
+        const btnText = document.getElementById('btnRiwayatText');
+        
+        if (isShowingRiwayat) {
+            btn.style.background = 'var(--primary-blue)';
+            btn.style.color = '#fff';
+            btn.style.borderColor = 'var(--primary-blue)';
+            btnText.innerText = `Kembali ke Data Utama`;
+            filterCard.style.display = 'block';
+            
+            document.getElementById('tableTitle').innerText = `${currentActiveSheet} (Arsip Riwayat Selesai)`;
+        } else {
+            btn.style.background = '#f1f5f9';
+            btn.style.color = '#475569';
+            btn.style.borderColor = 'var(--border-color)';
+            btnText.innerText = `Lihat Arsip Riwayat Selesai`;
+            filterCard.style.display = 'none';
+            
+            document.getElementById('tableTitle').innerText = currentActiveSheet;
+        }
+        processDataDisplay();
+    }
+
+    // Proses Data untuk Ditampilkan (Filter Arsip & Pencarian)
+    function processDataDisplay() {
+        let dataToRender = globalFindings;
+
+        if (isShowingRiwayat) {
+            // Hanya ambil yang status review-nya Approved
+            dataToRender = dataToRender.filter(x => (x.status_review || '').trim() === 'Approved');
+
+            // Ambil parameter filter tambahan
+            const keyword = document.getElementById('filterKeyword').value.toLowerCase();
+            const klarifikasi = document.getElementById('filterKlarifikasi').value;
+
+            if (keyword) {
+                dataToRender = dataToRender.filter(x => 
+                    (x.no_referensi || '').toLowerCase().includes(keyword) ||
+                    (x.offsite_id || '').toLowerCase().includes(keyword) ||
+                    (x.user_maker || '').toLowerCase().includes(keyword) ||
+                    (x.deskripsi || '').toLowerCase().includes(keyword)
+                );
+            }
+
+            if (klarifikasi) {
+                dataToRender = dataToRender.filter(x => (x.status_klarifikasi || '') === klarifikasi);
+            }
+        }
+
+        renderTable(dataToRender);
+    }
+
+    function applyCustomFilter() {
+        processDataDisplay();
+    }
+
+    function resetCustomFilter() {
+        document.getElementById('filterKeyword').value = '';
+        document.getElementById('filterKlarifikasi').value = '';
+        processDataDisplay();
     }
 
     // Render Tabel Utama
@@ -547,7 +666,7 @@
         tbody.innerHTML = '';
 
         if(!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 2.5rem; color: #cbd5e1; display: block; margin-bottom: 1rem;"></i><p>Tidak ada temuan pada ${currentActiveSheet}.</p></div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 2.5rem; color: #cbd5e1; display: block; margin-bottom: 1rem;"></i><p>Tidak ada data ditemukan.</p></div></td></tr>`;
             return;
         }
 
@@ -555,13 +674,16 @@
             let riskClass = (item.risk_awal || '').toLowerCase() === 'high' ? 'bg-danger text-white' : 'bg-warning text-dark';
             let riskBadge = `<span class="badge ${riskClass}" style="border-radius:12px; padding:0.4rem 0.8rem;">${item.risk_awal || 'Moderate'}</span>`;
             let nominalStr = item.nominal_terkait > 0 ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.nominal_terkait) : '-';
+            
+            // Pengecekan agar user_maker yang kosong atau strip (-) otomatis tertulis "Sistem / Tidak Tercatat"
+            let userMakerDisplay = (!item.user_maker || item.user_maker === '-') ? 'Sistem / Tidak Tercatat' : item.user_maker;
 
             const tr = `<tr>
                 <td style="text-align:center; color:var(--text-muted);">${index + 1}</td>
                 <td style="white-space:nowrap;">${item.tanggal_data || '-'}</td>
                 <td><span class="badge bg-light text-dark border" style="border-radius:20px; padding: 0.3rem 0.6rem;">${item.kode_unit || '-'}</span></td>
                 <td>${item.no_referensi || item.offsite_id || '-'}</td>
-                <td>${item.user_maker || '-'}</td>
+                <td>${userMakerDisplay}</td>
                 <td>${item.kode_trx || '-'}</td>
                 <td style="font-weight:700; text-align:right;">${nominalStr}</td>
                 <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
@@ -578,11 +700,27 @@
         });
     }
 
-    // FUNGSI TOGGLE KE FULL PAGE DETAIL VIEW
+    // FUNGSI TOGGLE KE FULL PAGE DETAIL VIEW (DIPERBARUI AGAR SELALU AMBIL DATA FRESH)
     function openDetailView(id) {
-        const item = globalFindings.find(x => x.id == id);
+        let item = globalFindings.find(x => x.id == id);
         if(!item) return;
 
+        // Ambil data terbaru langsung dari server berdasarkan ID untuk memastikan data Admin ikut termuat
+        axios.get(`${baseUrl}/data?source_sheet=${currentActiveSheet}`)
+            .then(response => {
+                const freshData = response.data.data.data;
+                const freshItem = freshData.find(x => x.id == id);
+                if(freshItem) {
+                    item = freshItem;
+                }
+                populateDetailForm(item);
+            })
+            .catch(() => {
+                populateDetailForm(item);
+            });
+    }
+
+    function populateDetailForm(item) {
         // Populate Header & Summary
         document.getElementById('header_nama_sheet').innerText = currentActiveSheet;
         document.getElementById('head_staging_id').innerText = item.offsite_id || item.staging_id || `KKA-${item.id}`;
@@ -590,7 +728,7 @@
         
         document.getElementById('sum_tanggal').innerText = item.tanggal_data || '-';
         document.getElementById('sum_unit').innerText = item.kode_unit || '-';
-        document.getElementById('sum_user').innerText = item.user_maker || '-';
+        document.getElementById('sum_user').innerText = (!item.user_maker || item.user_maker === '-') ? 'Sistem / Tidak Tercatat' : item.user_maker;
         document.getElementById('sum_nominal').innerText = item.nominal_terkait > 0 ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(item.nominal_terkait) : 'Rp 0';
         
         // Custom Badge Generator
@@ -611,7 +749,6 @@
         document.getElementById('sys_risk_awal').innerHTML = document.getElementById('sum_risk_badge').innerHTML;
         document.getElementById('sys_exception_awal').innerText = item.jenis_exception_awal || item.deskripsi || '-';
         
-        // Mengisi otomatis teks deskripsi dari hasil parsing CSV
         document.getElementById('sys_catatan_rule').innerText = item.deskripsi || item.catatan_rule || '-';
         document.getElementById('sys_prosedur_uji').innerText = item.prosedur_uji || 'Uji Ketaatan & Keabsahan Dokumen Transaksi Offsite';
 
@@ -699,7 +836,6 @@
         formData.append('perlu_onsite', document.getElementById('perlu_onsite').value);
         formData.append('tanggal_ditemukan', document.getElementById('tanggal_ditemukan').value);
         formData.append('simpulan_ra', document.getElementById('simpulan_ra').value);
-        formData.append('_method', 'PUT');
 
         const fileInput = document.getElementById('file_bukti');
         if (fileInput.files.length > 0) {
@@ -712,7 +848,22 @@
             alert(res.data.message || 'Review RA berhasil disubmit!');
             closeDetailView();
             loadData();
-        }).catch(err => alert('Gagal mensubmit review RA!'));
+        }).catch(err => {
+            if (err.response) {
+                if (err.response.status === 422) {
+                    let errors = err.response.data.errors;
+                    let msg = "Validasi Gagal:\n";
+                    for (let key in errors) {
+                        msg += `- ${errors[key][0]}\n`;
+                    }
+                    alert(msg);
+                } else {
+                    alert("Error Server (" + err.response.status + "): " + (err.response.data.message || 'Terjadi kesalahan sistem'));
+                }
+            } else {
+                alert('Gagal terhubung ke server!');
+            }
+        });
     }
 
     function submitAdminForm() {

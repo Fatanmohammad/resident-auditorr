@@ -11,6 +11,7 @@ use App\Services\Offsite\DumpDpkParser;
 use App\Services\Offsite\DumpKreditParser;
 use App\Services\Offsite\DumpBiayaParser;
 use App\Services\Offsite\DumpPengaduanParser;
+use App\Services\Offsite\SamplingEngineService;
 use Illuminate\Support\Facades\DB;
 
 class OffsiteController extends Controller
@@ -29,6 +30,7 @@ class OffsiteController extends Controller
         // Ambil SEMUA Induk Cabang (parent_id = null)
         $indukCabangs = \App\Models\Cabang::whereNull('parent_id')
             ->orderBy('kode_cabang', 'asc')
+
             ->get();
 
         $rekapCabang = $indukCabangs->map(function($induk) {
@@ -61,6 +63,7 @@ class OffsiteController extends Controller
             });
 
             // Total gabungan Induk + Seluruh Anak Cabang
+
             $totalLowAll = $lowInduk + $anakCabangs->sum('total_low');
             $totalModerateAll = $modInduk + $anakCabangs->sum('total_moderate');
             $totalHighAll = $highInduk + $anakCabangs->sum('total_high');
@@ -93,6 +96,7 @@ class OffsiteController extends Controller
         if (in_array(strtolower($user->role), ['admin', 'kabag_ra', 'kadiv_skai'])) {
             $cabangs = \App\Models\Unit::orderBy('unit_name', 'asc')->get();
         } else {
+
             // Memastikan RA (termasuk jika 1 wilayah ada 2 RA) hanya melihat cabang induk & anak cabangnya
             $cabangs = \App\Models\Unit::where(function($query) use ($user) {
                 if ($user->cabang_id) {
@@ -116,14 +120,17 @@ class OffsiteController extends Controller
         DumpDpkParser $dpkParser,
         DumpKreditParser $kreditParser,
         DumpBiayaParser $biayaParser,
-        DumpPengaduanParser $pengaduanParser
+        DumpPengaduanParser $pengaduanParser,
+        SamplingEngineService $samplingEngine
     ) {
         $user = auth()->user();
         $file = $request->file('file_csv');
         $jenisFile = $request->jenis_file;
         $kodeUnitDipilih = $request->kode_unit;
+        $periode = $request->input('periode', date('Y-m-01')); // Awal bulan sebagai penanda periode sampling
 
-        // PENAMBAHAN 'ra' PADA VALIDASI HAK AKSES
+
+        // VALIDASI HAK AKSES
         if (!in_array(strtolower($user->role), ['admin', 'kabag_ra', 'kadiv_skai', 'ra'])) {
             $unitValid = \App\Models\Unit::where('unit_code', $kodeUnitDipilih)
                 ->where(function($query) use ($user) {
@@ -145,30 +152,50 @@ class OffsiteController extends Controller
 
         DB::beginTransaction();
         try {
+            // Hasil parser sekarang berupa array ['total_low'=>.., 'total_moderate'=>.., 'total_high'=>..]
+            // Beberapa parser lama mungkin masih return true (belum diperbarui) -> ditangani aman di bawah.
+            $parseResult = null;
+
             switch ($jenisFile) {
-                case 'DUMP_01': $cbsParser->parse($fullPath, $kodeUnitDipilih); break;
-                case 'DUMP_02': $dpkParser->parse($fullPath, $kodeUnitDipilih); break;
-                case 'DUMP_03': $kreditParser->parse($fullPath, $kodeUnitDipilih); break;
-                case 'DUMP_04': $biayaParser->parse($fullPath, $kodeUnitDipilih); break;
-                case 'DUMP_05': $pengaduanParser->parse($fullPath, $kodeUnitDipilih); break;
+                case 'DUMP_01': $parseResult = $cbsParser->parse($fullPath, $kodeUnitDipilih); break;
+                case 'DUMP_02': $parseResult = $dpkParser->parse($fullPath, $kodeUnitDipilih); break;
+                case 'DUMP_03': $parseResult = $kreditParser->parse($fullPath, $kodeUnitDipilih); break;
+                case 'DUMP_04': $parseResult = $biayaParser->parse($fullPath, $kodeUnitDipilih); break;
+                case 'DUMP_05': $parseResult = $pengaduanParser->parse($fullPath, $kodeUnitDipilih); break;
+
             }
 
+            $totalLow      = is_array($parseResult) ? ($parseResult['total_low'] ?? 0) : 0;
+            $totalModerate = is_array($parseResult) ? ($parseResult['total_moderate'] ?? 0) : 0;
+            $totalHigh     = is_array($parseResult) ? ($parseResult['total_high'] ?? 0) : 0;
+
             AuditLog::create([
-                'user_id'    => $user->id,
-                'kode_unit'  => $kodeUnitDipilih,
-                'jenis_file' => $jenisFile,
-                'nama_file'  => $file->getClientOriginalName(),
-                'status'     => 'Berhasil',
+                'user_id'        => $user->id,
+                'kode_unit'      => $kodeUnitDipilih,
+                'jenis_file'     => $jenisFile,
+                'nama_file'      => $file->getClientOriginalName(),
+                'status'         => 'Berhasil',
+                'total_low'      => $totalLow,
+                'total_moderate' => $totalModerate,
+                'total_high'     => $totalHigh,
             ]);
 
             DB::commit();
 
             if (file_exists($fullPath)) unlink($fullPath);
 
-            return redirect()->back()->with('success', 'File ' . $jenisFile . ' untuk Unit ' . $kodeUnitDipilih . ' berhasil diproses. Data telah dikategorikan ke Register Harian & Temuan KKA.');
+            // JALANKAN MESIN SAMPLING OTOMATIS
+            $samplingResult = $samplingEngine->runSampling($kodeUnitDipilih, $periode);
+
+            $msgExtra = isset($samplingResult['total_sampel']) 
+                ? ' (' . $samplingResult['total_sampel'] . ' sampel otomatis masuk antrean KKA)' 
+                : '';
+
+            return redirect()->back()->with('success', 'File ' . $jenisFile . ' untuk Unit ' . $kodeUnitDipilih . ' berhasil diproses.' . $msgExtra);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
 
             if (file_exists($fullPath)) unlink($fullPath);
 
