@@ -119,4 +119,69 @@ class KkaController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Konfirmasi Temuan KKA oleh RA / Cabang & Sinkronisasi ke RawMetric (SOP 01)
+     */
+    public function konfirmasiCabang(Request $request, $id)
+    {
+        $request->validate([
+            'status_konfirmasi'     => 'required|in:Sesuai,Tidak Sesuai',
+            'komitmen_penyelesaian' => 'required_if:status_konfirmasi,Tidak Sesuai|nullable|string',
+            'target_penyelesaian'   => 'required_if:status_konfirmasi,Tidak Sesuai|nullable|date',
+        ]);
+
+        $finding = KkaFinding::findOrFail($id);
+
+        $finding->update([
+            'status_konfirmasi'     => $request->status_konfirmasi,
+            'komitmen_penyelesaian' => $request->status_konfirmasi === 'Tidak Sesuai' ? $request->komitmen_penyelesaian : null,
+            'target_penyelesaian'   => $request->status_konfirmasi === 'Tidak Sesuai' ? $request->target_penyelesaian : null,
+            'tanggal_konfirmasi'    => now(),
+        ]);
+
+        // Sinkronisasi otomatis ke RawMetric berdasarkan unit dan periode temuan
+        if ($finding->kode_unit && $finding->periode) {
+            $this->syncRawMetricDeviations($finding->kode_unit, $finding->periode);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Konfirmasi KKA berhasil disimpan dan disinkronkan ke jadwal audit.',
+            'data'    => $finding
+        ]);
+    }
+
+    /**
+     * Helper privat untuk kalkulasi ulang deviasi offsite ke tabel RawMetric
+     */
+    private function syncRawMetricDeviations(string $kodeUnit, string $periode)
+    {
+        $unit = \App\Models\Unit::where('unit_code', $kodeUnit)->first();
+        if (!$unit) return;
+
+        $yearPeriod = date('Y', strtotime($periode));
+
+        $rawMetric = \App\Models\RawMetric::where('unit_id', $unit->id)
+            ->where('period', 'LIKE', "$yearPeriod%")
+            ->first();
+
+        if ($rawMetric) {
+            $totalTidakSesuai = KkaFinding::where('kode_unit', $kodeUnit)
+                ->where('periode', 'LIKE', "$yearPeriod%")
+                ->where('status_konfirmasi', 'Tidak Sesuai')
+                ->count();
+
+            $totalSignifikan = KkaFinding::where('kode_unit', $kodeUnit)
+                ->where('periode', 'LIKE', "$yearPeriod%")
+                ->where('status_konfirmasi', 'Tidak Sesuai')
+                ->where('risk_awal', 'High')
+                ->count();
+
+            $rawMetric->update([
+                'offsite_deviation'             => $totalTidakSesuai,
+                'offsite_deviation_significant' => $totalSignifikan,
+            ]);
+        }
+    }
 }
