@@ -104,6 +104,22 @@
         </a>
         @endif
 
+        {{-- ===================== MODUL ONSITE (SOP 04) ===================== --}}
+        <div class="nav-group {{ request()->is('onsite*') ? 'open' : '' }}">
+            <div class="nav-group-toggle">
+                <i class="bi bi-building-check nav-icon"></i> Modul Onsite
+                <i class="bi bi-chevron-down nav-arrow"></i>
+            </div>
+            <div class="nav-group-children">
+                <a href="{{ route('onsite.index') }}" class="nav-item {{ request()->is('onsite') || request()->is('onsite/create') ? 'active' : '' }}">
+                    <i class="bi bi-calendar2-check nav-icon"></i> Daftar Kunjungan
+                </a>
+                <a href="{{ route('onsite.create') }}" class="nav-item {{ request()->is('onsite/create') ? 'active' : '' }}">
+                    <i class="bi bi-plus-circle nav-icon"></i> Buat Kunjungan
+                </a>
+            </div>
+        </div>
+
         {{-- ===================== MODUL OFFSITE (SOP 02) ===================== --}}
         <div class="nav-group {{ request()->is('offsite*') ? 'open' : '' }}">
             <div class="nav-group-toggle">

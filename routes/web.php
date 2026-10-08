@@ -15,6 +15,9 @@ use App\Http\Controllers\Offsite\OffsiteController;
 use App\Http\Controllers\Offsite\KkaController;
 use App\Http\Controllers\Offsite\DailyRegisterController;
 use App\Http\Controllers\Offsite\AuditLogController;
+use App\Http\Controllers\Onsite\OnsiteController;
+use App\Http\Controllers\Onsite\PermintaanDataController;
+use App\Http\Controllers\Onsite\ObservasiController;
 
 Route::get('/debug-test', function () {
     $unit = \App\Models\Unit::find(2);
@@ -123,31 +126,76 @@ Route::middleware('auth')->group(function () {
     });
 
     // =========================================================================
+    // MODUL ONSITE AUDIT
+    // =========================================================================
+    Route::prefix('onsite')->name('onsite.')->middleware('role:ra,kabag_ra,kadiv_skai,admin')->group(function () {
+        Route::get('/', [OnsiteController::class, 'index'])->name('index');
+        Route::get('/create', [OnsiteController::class, 'create'])->name('create');
+        Route::post('/', [OnsiteController::class, 'store'])->name('store');
+        Route::get('/{visit}/upload', [OnsiteController::class, 'uploadForm'])->name('upload');
+        Route::post('/{visit}/upload', [OnsiteController::class, 'uploadProcess'])->name('upload.process');
+        Route::get('/{visit}/kka', [OnsiteController::class, 'kka'])->name('kka');
+        Route::get('/{visit}/kka/data', [OnsiteController::class, 'kkaData'])->name('kka.data');
+        Route::patch('/kka/{finding}', [OnsiteController::class, 'updateKka'])->name('kka.update');
+        Route::patch('/kka/{finding}/review', [OnsiteController::class, 'reviewKka'])->name('kka.review')->middleware('role:admin,kabag_ra,kadiv_skai');
+
+        // KKA Observasi Lingkungan
+        Route::get('/{visit}/observasi', [ObservasiController::class, 'create'])->name('observasi.create');
+        Route::post('/{visit}/observasi', [ObservasiController::class, 'store'])->name('observasi.store');
+        Route::get('/{visit}/observasi/{observasi}', [ObservasiController::class, 'show'])->name('observasi.show');
+        Route::patch('/observasi/item/{item}', [ObservasiController::class, 'updateItem'])->name('observasi.item.update');
+        Route::patch('/observasi/item/{item}/review', [ObservasiController::class, 'reviewItem'])->name('observasi.item.review')->middleware('role:admin,kabag_ra,kadiv_skai');
+
+        Route::get('/{visit}/permintaan', [PermintaanDataController::class, 'create'])->name('permintaan.create');
+        Route::post('/{visit}/permintaan', [PermintaanDataController::class, 'store'])->name('permintaan.store');
+        Route::get('/{visit}/permintaan/{permintaan}/print', [PermintaanDataController::class, 'print'])->name('permintaan.print');
+    });
+
+    // =========================================================================
     // MODUL OFFSITE AUDIT (BLADE UI)
     // =========================================================================
-    Route::middleware(['auth'])->prefix('offsite')->group(function () {
-        
-        // Halaman Utama Rekapitulasi Cabang (Dashboard Admin/Pimsie)
-        Route::get('/', [OffsiteController::class, 'index'])->name('offsite.index');
-        Route::get('/cabang/{id}', [OffsiteController::class, 'detail'])->name('offsite.detail');
+    Route::prefix('offsite')->group(function () {
 
-        // Halaman Riwayat Upload CSV (History)
-        Route::get('/history', [AuditLogController::class, 'index'])->name('offsite.history.index');
+        // Rekapitulasi Cabang — Admin/Kabag/Kadiv
+        Route::get('/', [OffsiteController::class, 'index'])
+            ->name('offsite.index')
+            ->middleware('role:admin,kabag_ra,kadiv_skai');
 
-        // 1. Halaman Upload & Proses DUMP (Khusus RA/Admin)
-        Route::get('/upload', [OffsiteController::class, 'create'])->name('offsite.upload.create');
-        Route::post('/upload', [OffsiteController::class, 'upload'])->name('offsite.upload.store');
+        // Riwayat Upload
+        Route::get('/history', [AuditLogController::class, 'index'])
+            ->name('offsite.history.index')
+            ->middleware('role:admin,kabag_ra,kadiv_skai,ra');
 
-        // 2. Halaman Kertas Kerja (KKA)
+        // Upload DUMP — RA & Admin
+        Route::get('/upload', [OffsiteController::class, 'create'])
+            ->name('offsite.upload.create')
+            ->middleware('role:ra,admin,kabag_ra,kadiv_skai');
+        Route::post('/upload', [OffsiteController::class, 'upload'])
+            ->name('offsite.upload.store')
+            ->middleware('role:ra,admin,kabag_ra,kadiv_skai');
+
+        // KKA Offsite — semua role bisa lihat
         Route::get('/kka', [KkaController::class, 'index'])->name('offsite.kka.index');
         Route::get('/kka/data', [KkaController::class, 'data'])->name('offsite.kka.data');
-        Route::post('/kka/{id}/ra', [KkaController::class, 'updateRa'])->name('offsite.kka.update.ra');
-        Route::put('/kka/{id}/admin', [KkaController::class, 'updateAdmin'])->name('offsite.kka.update.admin');
 
-        // Halaman & Data Register Offsite Harian (Low Risk)
+        // Update KKA oleh RA
+        Route::post('/kka/{id}/ra', [KkaController::class, 'updateRa'])
+            ->name('offsite.kka.update.ra')
+            ->middleware('role:ra,admin');
+
+        // Update KKA oleh Admin/Kabag (review)
+        Route::put('/kka/{id}/admin', [KkaController::class, 'updateAdmin'])
+            ->name('offsite.kka.update.admin')
+            ->middleware('role:admin,kabag_ra,kadiv_skai');
+
+        // Konfirmasi temuan
+        Route::post('/kka/{id}/konfirmasi', [KkaController::class, 'konfirmasiCabang'])
+            ->name('offsite.kka.konfirmasi')
+            ->middleware('role:ra,admin,kabag_ra');
+
+        // Register Harian
         Route::get('/register', [DailyRegisterController::class, 'index'])->name('offsite.register.index');
         Route::get('/register/data', [DailyRegisterController::class, 'data'])->name('offsite.register.data');
-        
     });
 
 });
