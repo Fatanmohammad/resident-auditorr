@@ -57,11 +57,24 @@ class KkaController extends Controller
             $query->whereDate('tanggal_data', $request->tanggal);
         }
 
+        // Hitung Summary Global (sebelum pagination)
+        $summaryQuery = clone $query;
+        $totalException = $summaryQuery->count();
+        $totalNominal = $summaryQuery->sum('nominal_terkait');
+        $highRiskCount = (clone $summaryQuery)->where('risk_awal', 'High')->count();
+        $selesaiReviewCount = (clone $summaryQuery)->where('status_review', 'Approved')->count();
+
         $findings = $query->latest('tanggal_data')->paginate(15);
 
         return response()->json([
             'status' => 'success',
-            'data'   => $findings
+            'data'   => $findings,
+            'summary' => [
+                'total_exception' => $totalException,
+                'total_nominal'   => (float) $totalNominal,
+                'high_risk'       => $highRiskCount,
+                'selesai_review'  => $selesaiReviewCount
+            ]
         ]);
     }
 

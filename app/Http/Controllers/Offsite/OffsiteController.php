@@ -29,61 +29,103 @@ class OffsiteController extends Controller
 
         // Ambil SEMUA Induk Cabang (parent_id = null)
         $indukCabangs = \App\Models\Cabang::whereNull('parent_id')
+            ->where('kode_cabang', 'like', 'BS-%')
             ->orderBy('kode_cabang', 'asc')
-
             ->get();
 
         $rekapCabang = $indukCabangs->map(function($induk) {
-            // Ambil unit code milik Induk Cabang Ini
-            $unitCodesInduk = \App\Models\Unit::where('cabang_id', $induk->id)->pluck('unit_code')->toArray();
+            // Ambil KC Unit langsung dari tabel units
+            $kcUnit = \App\Models\Unit::where('cabang_id', $induk->id)
+                ->whereIn('unit_type', ['KC', 'KCU', 'KP'])
+                ->first();
             
-            // Bersihkan prefix BS- untuk kecocokan langsung ke kode DUMP (contoh: BS-001 -> 001)
-            $cleanKodeInduk = ltrim(str_replace('BS-', '', $induk->kode_cabang), '0');
-            if (!empty($cleanKodeInduk)) {
-                $unitCodesInduk[] = str_pad($cleanKodeInduk, 3, '0', STR_PAD_LEFT);
-            }
+            $kodeKC = $kcUnit ? $kcUnit->unit_code : '-';
+            $namaKC = $kcUnit ? $kcUnit->unit_name : $induk->nama_cabang;
 
-            // Hitung temuan khusus Induk Cabang
-            $lowInduk = \App\Models\Offsite\DailyRegister::whereIn('kode_unit', $unitCodesInduk)->count();
-            $modInduk = \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodesInduk)->where('risk_awal', 'Moderate')->count();
-            $highInduk = \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodesInduk)->where('risk_awal', 'High')->count();
+            // Kumpulkan semua unit code yang dinaungi KC ini (KC itu sendiri + KCP/KCPLK)
+            $allUnitCodes = \App\Models\Unit::where('cabang_id', $induk->id)
+                ->whereNotIn('unit_type', ['Payment Point'])
+                ->pluck('unit_code')->toArray();
 
-            // Ambil Anak Cabang yang terhubung via parent_id
-            $anakCabangs = \App\Models\Cabang::where('parent_id', $induk->id)->get()->map(function($anak) {
-                $unitCodesAnak = \App\Models\Unit::where('cabang_id', $anak->id)->pluck('unit_code')->toArray();
+            $anakCabangIds = \App\Models\Cabang::where('parent_id', $induk->id)->pluck('id')->toArray();
+            $anakUnitCodes = \App\Models\Unit::whereIn('cabang_id', $anakCabangIds)
+                ->whereNotIn('unit_type', ['Payment Point'])
+                ->pluck('unit_code')->toArray();
+            
+            $allUnitCodes = array_merge($allUnitCodes, $anakUnitCodes);
 
-                return [
-                    'id' => $anak->id,
-                    'kode_cabang' => $anak->kode_cabang,
-                    'nama_cabang' => $anak->nama_cabang,
-                    'total_low' => \App\Models\Offsite\DailyRegister::whereIn('kode_unit', $unitCodesAnak)->count(),
-                    'total_moderate' => \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodesAnak)->where('risk_awal', 'Moderate')->count(),
-                    'total_high' => \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $unitCodesAnak)->where('risk_awal', 'High')->count(),
-                ];
-            });
-
-            // Total gabungan Induk + Seluruh Anak Cabang
-
-            $totalLowAll = $lowInduk + $anakCabangs->sum('total_low');
-            $totalModerateAll = $modInduk + $anakCabangs->sum('total_moderate');
-            $totalHighAll = $highInduk + $anakCabangs->sum('total_high');
+            $totalLowAll = \App\Models\Offsite\DailyRegister::whereIn('kode_unit', $allUnitCodes)->count();
+            $totalModerateAll = \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $allUnitCodes)->where('risk_awal', 'Moderate')->count();
+            $totalHighAll = \App\Models\Offsite\KkaFinding::whereIn('kode_unit', $allUnitCodes)->where('risk_awal', 'High')->count();
 
             return [
                 'id' => $induk->id,
-                'kode_cabang' => $induk->kode_cabang,
-                'nama_cabang' => $induk->nama_cabang,
-                'total_low' => $lowInduk,
-                'total_moderate' => $modInduk,
-                'total_high' => $highInduk,
+                'kode_unit' => $kodeKC,
+                'nama_cabang' => $namaKC,
                 'total_low_all' => $totalLowAll,
                 'total_moderate_all' => $totalModerateAll,
                 'total_high_all' => $totalHighAll,
                 'total_risiko_all' => $totalModerateAll + $totalHighAll,
-                'anak_cabang' => $anakCabangs
             ];
         });
 
         return view('offsite.admin_index', compact('rekapCabang'));
+    }
+
+    /**
+     * Menampilkan Detail Cabang beserta KCP/KCPLK di bawahnya
+     */
+    public function detail($id)
+    {
+        $user = auth()->user();
+
+        if (strtolower($user->role) === 'ra') {
+            return redirect()->route('offsite.register.index');
+        }
+
+        $induk = \App\Models\Cabang::findOrFail($id);
+
+        $kcUnit = \App\Models\Unit::where('cabang_id', $induk->id)
+            ->whereIn('unit_type', ['KC', 'KCU', 'KP'])
+            ->first();
+        
+        $namaKC = $kcUnit ? $kcUnit->unit_name : $induk->nama_cabang;
+
+        $units = [];
+        
+        // 1. Masukkan KC itu sendiri
+        if ($kcUnit) {
+            $units[] = [
+                'kode_unit' => $kcUnit->unit_code,
+                'nama_unit' => $kcUnit->unit_name,
+                'tipe_unit' => $kcUnit->unit_type,
+                'total_low' => \App\Models\Offsite\DailyRegister::where('kode_unit', $kcUnit->unit_code)->count(),
+                'total_moderate' => \App\Models\Offsite\KkaFinding::where('kode_unit', $kcUnit->unit_code)->where('risk_awal', 'Moderate')->count(),
+                'total_high' => \App\Models\Offsite\KkaFinding::where('kode_unit', $kcUnit->unit_code)->where('risk_awal', 'High')->count(),
+            ];
+        }
+
+        // 2. Masukkan semua KCP / KCPLK (bisa dari cabang_id induk atau cabang_id anak)
+        $anakCabangIds = \App\Models\Cabang::where('parent_id', $induk->id)->pluck('id')->toArray();
+        $allCabangIds = array_merge([$induk->id], $anakCabangIds);
+
+        $anakUnits = \App\Models\Unit::whereIn('cabang_id', $allCabangIds)
+            ->whereNotIn('unit_type', ['KC', 'KCU', 'KP', 'Payment Point'])
+            ->orderBy('unit_code', 'asc')
+            ->get();
+
+        foreach ($anakUnits as $anak) {
+            $units[] = [
+                'kode_unit' => $anak->unit_code,
+                'nama_unit' => $anak->unit_name,
+                'tipe_unit' => $anak->unit_type,
+                'total_low' => \App\Models\Offsite\DailyRegister::where('kode_unit', $anak->unit_code)->count(),
+                'total_moderate' => \App\Models\Offsite\KkaFinding::where('kode_unit', $anak->unit_code)->where('risk_awal', 'Moderate')->count(),
+                'total_high' => \App\Models\Offsite\KkaFinding::where('kode_unit', $anak->unit_code)->where('risk_awal', 'High')->count(),
+            ];
+        }
+
+        return view('offsite.admin_detail', compact('induk', 'namaKC', 'units'));
     }
 
     /**

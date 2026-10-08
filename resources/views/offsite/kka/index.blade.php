@@ -568,7 +568,15 @@
         const tbody = document.getElementById('kkaTableBody');
         tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);"><i class="bi bi-hourglass-split" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i><p>Memuat data...</p></div></td></tr>`;
 
-        axios.get(`${baseUrl}/data?page=${page}&source_sheet=${currentActiveSheet}`)
+        let url = `${baseUrl}/data?page=${page}&source_sheet=${currentActiveSheet}`;
+        @if(request()->has('kode_unit'))
+        url += `&kode_unit={{ request('kode_unit') }}`;
+        @endif
+        @if(request()->has('cabang'))
+        url += `&cabang_id={{ request('cabang') }}`;
+        @endif
+
+        axios.get(url)
             .then(response => {
                 globalFindings = response.data.data.data;
                 

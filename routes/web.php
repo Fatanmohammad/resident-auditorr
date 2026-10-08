@@ -129,6 +129,7 @@ Route::middleware('auth')->group(function () {
         
         // Halaman Utama Rekapitulasi Cabang (Dashboard Admin/Pimsie)
         Route::get('/', [OffsiteController::class, 'index'])->name('offsite.index');
+        Route::get('/cabang/{id}', [OffsiteController::class, 'detail'])->name('offsite.detail');
 
         // Halaman Riwayat Upload CSV (History)
         Route::get('/history', [AuditLogController::class, 'index'])->name('offsite.history.index');
