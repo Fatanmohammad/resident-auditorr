@@ -124,7 +124,6 @@ class CbsOnsiteParser
 
     /**
      * Hitung Stable Score = jumlah transaksi unik (per kd_user per tgl_tx)
-     * Stable Score = count distinct no_arsip per user per hari
      */
     private function hitungStableScore(array $rows): array
     {
@@ -148,23 +147,19 @@ class CbsOnsiteParser
     }
 
     /**
-     * Jalankan 4 jenis sampling, ambil baris D (debit) saja sebagai representasi kasus
+     * Jalankan jenis sampling, ambil baris D (debit) saja sebagai representasi kasus
      */
     private function runSampling(OnsiteVisit $visit, float $threshold): int
     {
-        // Ambil semua populasi untuk kunjungan ini, hanya baris D
         $populations = OnsitePopulation::where('onsite_visit_id', $visit->id)
             ->where('db_kr', 'D')
             ->get()
             ->keyBy('populasi_key');
 
-        // Kumpulkan semua populasi_key yang sudah dipilih (hindari duplikat)
         $dipilih = [];
         $kkaInsert = [];
 
-        // =============================================
-        // 1. MANDATORY — aturan kritis wajib dipilih
-        // =============================================
+        // 1. MANDATORY
         foreach ($populations as $key => $pop) {
             if (isset($dipilih[$key])) continue;
 
@@ -175,9 +170,7 @@ class CbsOnsiteParser
             }
         }
 
-        // =============================================
-        // 2. CERTAINTY — nominal >= threshold
-        // =============================================
+        // 2. CERTAINTY
         foreach ($populations as $key => $pop) {
             if (isset($dipilih[$key])) continue;
 
@@ -188,9 +181,7 @@ class CbsOnsiteParser
             }
         }
 
-        // =============================================
-        // 3. TARGETED — anomali (di luar jam, pegawai terkait)
-        // =============================================
+        // 3. TARGETED
         foreach ($populations as $key => $pop) {
             if (isset($dipilih[$key])) continue;
 
@@ -201,14 +192,11 @@ class CbsOnsiteParser
             }
         }
 
-        // =============================================
-        // 4. INITIAL — sisa kuota minimum SOP 02
-        // =============================================
+        // 4. INITIAL
         $kuotaInitial = $this->hitungKuotaInitial($visit);
         $sisaKuota    = max(0, $kuotaInitial - count($dipilih));
 
         if ($sisaKuota > 0) {
-            // Pilih secara acak dari yang belum dipilih
             $belumDipilih = $populations->filter(fn($p) => !isset($dipilih[$p->populasi_key]));
             $sample = $belumDipilih->random(min($sisaKuota, $belumDipilih->count()));
 
@@ -220,7 +208,6 @@ class CbsOnsiteParser
             }
         }
 
-        // Insert semua KKA sekaligus
         foreach (array_chunk($kkaInsert, 500) as $chunk) {
             OnsiteKkaFinding::insert($chunk);
         }
@@ -257,7 +244,6 @@ class CbsOnsiteParser
     {
         $jam = $pop->time_stamp ?? '';
 
-        // Transaksi di luar jam kerja normal
         if ($jam && ($jam < self::JAM_MULAI_NORMAL || $jam > self::JAM_SELESAI_NORMAL)) {
             return 'Transaksi Di Luar Jam Kerja (' . $jam . ')';
         }
@@ -265,10 +251,6 @@ class CbsOnsiteParser
         return null;
     }
 
-    /**
-     * Kuota Initial = jumlah HARI KERJA kunjungan × 5 (default minimum per hari)
-     * Mengabaikan hari Sabtu dan Minggu (weekend)
-     */
     private function hitungKuotaInitial(OnsiteVisit $visit): int
     {
         $perHari = (int) (MasterParameter::where('kategori', 'ONSITE_INITIAL_PER_HARI')->value('nilai_batas') ?? 5);
@@ -276,7 +258,6 @@ class CbsOnsiteParser
         $start = Carbon::parse($visit->tanggal_mulai)->startOfDay();
         $end   = Carbon::parse($visit->tanggal_selesai)->startOfDay();
 
-        // Hitung hanya hari kerja (Senin - Jumat) di rentang tanggal kunjungan
         $jumlahHariKerja = $start->diffInDaysFiltered(function (Carbon $date) {
             return !$date->isWeekend();
         }, $end) + 1;
