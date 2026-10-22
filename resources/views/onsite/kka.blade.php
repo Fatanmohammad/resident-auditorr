@@ -9,7 +9,7 @@
     .stat-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:1.25rem; display:flex; align-items:flex-start; gap:1rem; }
     .stat-icon { width:48px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0; }
     .kka-tabs { display:flex; gap:0.5rem; overflow-x:auto; padding-bottom:0.5rem; margin-bottom:1rem; border-bottom:1px solid var(--border); flex-wrap:nowrap; }
-    .kka-tab-item { background:transparent; padding:0.6rem 1rem; font-size:0.85rem; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:0.5rem; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; flex-shrink:0; border-top:none; border-left:none; border-right:none; }
+    .kka-tab-item { background:transparent; padding:0.6rem 1rem; font-size:0.85rem; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:0.5rem; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; flex-shrink:0; border-top:none; border-left:none; border-right:none; text-decoration:none; }
     .kka-tab-item.active { color:var(--primary); border-bottom-color:var(--primary); }
     .kka-tab-item .badge-count { background:#f1f5f9; color:#475569; padding:0.1rem 0.5rem; border-radius:10px; font-size:0.7rem; }
     .kka-tab-item.active .badge-count { background:#dbeafe; color:var(--primary); }
@@ -89,25 +89,51 @@
         </div>
     </div>
 
-    {{-- Tabs --}}
+    {{-- Tabs Navigasi Lengkap (Termasuk Kontrol & Integrasi KKA serta 6 Area CBS & Pendukung) --}}
     <div class="kka-tabs">
         <button class="kka-tab-item active" onclick="switchTab(this,'sampling')">
-            <i class="bi bi-file-earmark-bar-graph"></i> KKA Sampling CBS <span class="badge-count" id="tabCountSampling">0</span>
+            <i class="bi bi-file-earmark-bar-graph"></i> Ringkasan CBS <span class="badge-count" id="tabCountSampling">0</span>
         </button>
+        <a href="{{ route('onsite.kka.integration.index', $visit->id) }}" class="kka-tab-item {{ request()->routeIs('onsite.kka.integration.*') ? 'active' : '' }}">
+            <i class="bi bi-shield-check"></i> Kontrol & Integrasi KKA
+        </a>
+        <a href="{{ route('onsite.kka.teller_kas.index', $visit->id) }}" class="kka-tab-item">
+            <i class="bi bi-wallet2"></i> 1. Teller & Kas
+        </a>
+        <a href="{{ route('onsite.kka.dpk.index', $visit->id) }}" class="kka-tab-item">
+            <i class="bi bi-piggy-bank"></i> 2. DPK & Layanan
+        </a>
+        <a href="{{ route('onsite.kka.kredit.index', $visit->id) }}" class="kka-tab-item">
+            <i class="bi bi-cash-coin"></i> 3. Kredit
+        </a>
+        <a href="{{ route('onsite.kka.biaya.index', $visit->id) }}" class="kka-tab-item">
+            <i class="bi bi-receipt"></i> 4. Biaya & Beban
+        </a>
+        <a href="{{ route('onsite.kka.atm.index', $visit->id) }}" class="kka-tab-item">
+            <i class="bi bi-credit-card"></i> 5. Kartu ATM
+        </a>
+        <a href="{{ route('onsite.kka.pengaduan.index', $visit->id) }}" class="kka-tab-item">
+            <i class="bi bi-headset"></i> 6. Pengaduan
+        </a>
         <button class="kka-tab-item" onclick="switchTab(this,'observasi')">
             <i class="bi bi-building-check"></i> Observasi Lingkungan
         </button>
         <button class="kka-tab-item" onclick="switchTab(this,'cash_opname')">
             <i class="bi bi-cash-stack"></i> Cash Opname
         </button>
+        <button class="kka-tab-item" onclick="switchTab(this,'bct')">
+            <i class="bi bi-journals"></i> Rekon Barang Cetakan
+        </button>
+        <button class="kka-tab-item" onclick="switchTab(this,'cekbg')">
+            <i class="bi bi-file-earmark-ruled"></i> Rekon Cek &amp; BG
+        </button>
         <button class="kka-tab-item" onclick="switchTab(this,'rekonsiliasi')">
-            <i class="bi bi-arrow-left-right"></i> Rekonsiliasi
+            <i class="bi bi-arrow-left-right"></i> Rekon Kartu ATM
         </button>
     </div>
 
     {{-- Tab Content --}}
     <div id="tabSampling">
-        {{-- Badge jenis sampling --}}
         <div style="display:flex; gap:0.75rem; margin-bottom:1.25rem; flex-wrap:wrap;">
             <div style="background:#fef2f2; border:1px solid #dc262640; border-radius:8px; padding:0.5rem 1rem; min-width:110px;">
                 <div style="font-size:0.72rem; color:#dc2626; font-weight:600;">Mandatory</div>
@@ -158,10 +184,10 @@
     </div>
 
     <div id="tabObservasi" style="display:none;">
-        @php $observasi = \App\Models\Onsite\OnsiteObservasi::where('onsite_visit_id', $visit->id)->first(); @endphp
+        @php $observasi = \App\Models\Onsite\OnsiteObservasi::where('onsite_visit_id',$visit->id)->first(); @endphp
         @if($observasi)
             <div style="text-align:center; padding:2rem;">
-                <a href="{{ route('onsite.observasi.show', [$visit, $observasi]) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
+                <a href="{{ route('onsite.observasi.show', [$visit,$observasi]) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
                     <i class="bi bi-building-check me-1"></i> Buka Checklist Observasi ({{ $observasi->items()->count() }} item)
                 </a>
             </div>
@@ -176,14 +202,99 @@
         @endif
     </div>
 
-    <div id="tabCashOpname" style="display:none; text-align:center; padding:3rem 1rem;">
-        <i class="bi bi-tools" style="font-size:2.5rem; color:#cbd5e1; display:block; margin-bottom:1rem;"></i>
-        <p style="color:var(--muted); font-weight:600;">Modul Cash Opname sedang dalam pengembangan.</p>
+    <div id="tabCashOpname" style="display:none;">
+        @php 
+            $cashOpname = null;
+            $hasRouteCreate = \Illuminate\Support\Facades\Route::has('onsite.cash_opname.create');
+            $hasRouteShow = \Illuminate\Support\Facades\Route::has('onsite.cash_opname.show');
+            try {
+                if (class_exists(\App\Models\Onsite\OnsiteCashOpname::class)) {
+                    $cashOpname = \App\Models\Onsite\OnsiteCashOpname::where('onsite_visit_id',$visit->id)->first();
+                }
+            } catch (\Throwable $e) {$cashOpname = null;
+            }
+        @endphp
+
+        @if($cashOpname && $hasRouteShow)
+            <div style="text-align:center; padding:2rem;">
+                <a href="{{ route('onsite.cash_opname.show', [$visit,$cashOpname]) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
+                    <i class="bi bi-cash-stack me-1"></i> Buka Berita Acara Cash Opname ({{ method_exists($cashOpname, 'items') ?$cashOpname->items()->count() : 0 }} item)
+                </a>
+            </div>
+        @elseif($hasRouteCreate)
+            <div style="text-align:center; padding:3rem 1rem;">
+                <i class="bi bi-cash-stack" style="font-size:2.5rem; color:#cbd5e1; display:block; margin-bottom:1rem;"></i>
+                <p style="color:var(--muted); margin-bottom:1.25rem;">Berita Acara Cash Opname belum dibuat.</p>
+                <a href="{{ route('onsite.cash_opname.create', $visit) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
+                    <i class="bi bi-plus-circle me-1"></i> Buat Berita Acara Cash Opname
+                </a>
+            </div>
+        @else
+            <div style="text-align:center; padding:3rem 1rem;">
+                <i class="bi bi-tools" style="font-size:2.5rem; color:#cbd5e1; display:block; margin-bottom:1rem;"></i>
+                <p style="color:var(--muted); font-weight:600;">Modul Cash Opname sedang dalam konfigurasi rute.</p>
+            </div>
+        @endif
     </div>
 
-    <div id="tabRekonsiliasi" style="display:none; text-align:center; padding:3rem 1rem;">
-        <i class="bi bi-tools" style="font-size:2.5rem; color:#cbd5e1; display:block; margin-bottom:1rem;"></i>
-        <p style="color:var(--muted); font-weight:600;">Modul Rekonsiliasi sedang dalam pengembangan.</p>
+    @php
+        $rekonBct   = \App\Models\Onsite\OnsiteRekonBarangCetakan::where('onsite_visit_id',$visit->id)->first();
+        $rekonCekBg = \App\Models\Onsite\OnsiteRekonCekBg::where('onsite_visit_id',$visit->id)->first();
+        $rekonAtm   = \App\Models\Onsite\OnsiteRekonKartuAtm::where('onsite_visit_id',$visit->id)->first();
+    @endphp
+
+    <div id="tabBct" style="display:none;">
+        @if($rekonBct)
+            <div style="text-align:center; padding:2rem;">
+                <a href="{{ route('onsite.rekon.bct.show', [$visit,$rekonBct]) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
+                    <i class="bi bi-journals me-1"></i> Buka Checklist Barang Cetakan ({{ $rekonBct->items()->count() }} item)
+                </a>
+            </div>
+        @else
+            <div style="text-align:center; padding:3rem 1rem;">
+                <i class="bi bi-journals" style="font-size:2.5rem; color:#cbd5e1; display:block; margin-bottom:1rem;"></i>
+                <p style="color:var(--muted); margin-bottom:1.25rem;">Checklist Rekon Barang Cetakan belum dibuat.</p>
+                <a href="{{ route('onsite.rekon.bct.create', $visit) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
+                    <i class="bi bi-plus-circle me-1"></i> Buat Checklist
+                </a>
+            </div>
+        @endif
+    </div>
+
+    <div id="tabCekBg" style="display:none;">
+        @if($rekonCekBg)
+            <div style="text-align:center; padding:2rem;">
+                <a href="{{ route('onsite.rekon.cekbg.show', [$visit,$rekonCekBg]) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
+                    <i class="bi bi-file-earmark-ruled me-1"></i> Buka Checklist Cek &amp; BG ({{ $rekonCekBg->items()->count() }} item)
+                </a>
+            </div>
+        @else
+            <div style="text-align:center; padding:3rem 1rem;">
+                <i class="bi bi-file-earmark-ruled" style="font-size:2.5rem; color:#cbd5e1; display:block; margin-bottom:1rem;"></i>
+                <p style="color:var(--muted); margin-bottom:1.25rem;">Checklist Rekon Cek &amp; BG belum dibuat.</p>
+                <a href="{{ route('onsite.rekon.cekbg.create', $visit) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
+                    <i class="bi bi-plus-circle me-1"></i> Buat Checklist
+                </a>
+            </div>
+        @endif
+    </div>
+
+    <div id="tabRekonsiliasi" style="display:none;">
+        @if($rekonAtm)
+            <div style="text-align:center; padding:2rem;">
+                <a href="{{ route('onsite.rekon.katm.show', [$visit,$rekonAtm]) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
+                    <i class="bi bi-credit-card-2-front me-1"></i> Buka Berita Acara Rekon Kartu ATM ({{ $rekonAtm->items()->count() }} item)
+                </a>
+            </div>
+        @else
+            <div style="text-align:center; padding:3rem 1rem;">
+                <i class="bi bi-credit-card-2-front" style="font-size:2.5rem; color:#cbd5e1; display:block; margin-bottom:1rem;"></i>
+                <p style="color:var(--muted); margin-bottom:1.25rem;">Berita Acara Rekonsiliasi Kartu ATM belum dibuat.</p>
+                <a href="{{ route('onsite.rekon.katm.create', $visit) }}" class="btn btn-sm btn-primary" style="background:var(--primary); border-color:var(--primary);">
+                    <i class="bi bi-plus-circle me-1"></i> Buat Berita Acara Rekon Kartu ATM
+                </a>
+            </div>
+        @endif
     </div>
 
 </div>{{-- end dashboardView --}}
@@ -337,6 +448,8 @@
 
 </div>{{-- end detailView --}}
 
+@endsection
+
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
@@ -421,150 +534,137 @@ function renderTable(data) {
                 <div style="font-size:0.75rem; color:#94a3b8;">${f.tgl_tx || ''}</div>
             </td>
             <td style="text-align:center;">
-                <span style="background:${bm.bg}; color:${bm.color}; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.72rem; font-weight:600;">${f.jenis_sampling}</span>
+                <span style="background:${bm.bg}; color:${bm.color}; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.72rem; font-weight:600;">${f.jenis_sampling || '—'}</span>
             </td>
             <td style="text-align:right; font-weight:600;">${nominal}</td>
-            <td style="text-align:center; font-weight:700; font-size:0.8rem; color:${riskColor};">${f.risk_level || '—'}</td>
-            <td style="text-align:center; font-size:0.78rem; font-weight:600; color:${reviewColor};">${f.status_review}</td>
-            <td style="text-align:right;">
-                <button class="btn-review" onclick="event.stopPropagation(); openDetail(${f.id})">
-                    <i class="bi bi-arrow-right"></i> Review
-                </button>
+            <td style="text-align:center;">
+                <span style="color:${riskColor}; font-weight:700;">${f.risk_level || 'Low'}</span>
+            </td>
+            <td style="text-align:center;">
+                <span style="color:${reviewColor}; font-weight:600;">${f.status_review || 'Belum Direview'}</span>
+            </td>
+            <td style="text-align:center;">
+                <button class="btn-review" onclick="event.stopPropagation(); openDetail(${f.id})">Review</button>
             </td>
         </tr>`);
     });
 }
 
-function switchTab(el, tab) {
-    document.querySelectorAll('.kka-tab-item').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
-    currentTab = tab;
+function switchTab(btn, tab) {
+    document.querySelectorAll('.kka-tab-item').forEach(e => e.classList.remove('active'));
+    btn.classList.add('active');
 
-    document.getElementById('tabSampling').style.display    = tab === 'sampling'    ? 'block' : 'none';
-    document.getElementById('tabObservasi').style.display   = tab === 'observasi'   ? 'block' : 'none';
-    document.getElementById('tabCashOpname').style.display  = tab === 'cash_opname' ? 'block' : 'none';
-    document.getElementById('tabRekonsiliasi').style.display= tab === 'rekonsiliasi'? 'block' : 'none';
+    document.getElementById('tabSampling').style.display     = tab === 'sampling' ? 'block' : 'none';
+    document.getElementById('tabObservasi').style.display    = tab === 'observasi' ? 'block' : 'none';
+    document.getElementById('tabCashOpname').style.display   = tab === 'cash_opname' ? 'block' : 'none';
+    document.getElementById('tabBct').style.display          = tab === 'bct' ? 'block' : 'none';
+    document.getElementById('tabCekBg').style.display        = tab === 'cekbg' ? 'block' : 'none';
+    document.getElementById('tabRekonsiliasi').style.display = tab === 'rekonsiliasi' ? 'block' : 'none';
+    currentTab = tab;
 }
 
 function openDetail(id) {
-    // Ambil data fresh dari server
-    axios.get(dataUrl).then(res => {
-        globalFindings = res.data.data;
-        updateStats();
-        const f = globalFindings.find(x => x.id == id);
-        if (!f) return;
-        populateDetail(f);
-    }).catch(() => {
-        const f = globalFindings.find(x => x.id == id);
-        if (f) populateDetail(f);
-    });
-}
+    const f = globalFindings.find(x => x.id === id);
+    if (!f) return;
 
-function populateDetail(f) {
-    const bm = badgeMap[f.jenis_sampling] || { bg: '#f8fafc', color: '#64748b' };
-
-    document.getElementById('det_id').innerText       = f.id;
-    document.getElementById('det_jenis').innerText    = f.jenis_sampling;
-    document.getElementById('det_kd_user').innerText  = f.kd_user || '—';
-    document.getElementById('det_tgl_tx').innerText   = f.tgl_tx || '—';
+    document.getElementById('det_id').innerText = f.id;
+    document.getElementById('det_jenis').innerText = f.jenis_sampling || '—';
+    document.getElementById('det_kd_user').innerText = f.kd_user || '—';
+    document.getElementById('det_tgl_tx').innerText = f.tgl_tx || '—';
     document.getElementById('det_no_arsip').innerText = f.no_arsip || '—';
-    document.getElementById('det_nominal').innerText  = 'Rp ' + Number(f.jumlah_tx).toLocaleString('id-ID');
-    document.getElementById('det_ket_tx').innerText   = f.ket_tx || '—';
-    document.getElementById('det_alasan').innerText   = f.alasan_sampling || '—';
-    document.getElementById('det_status_badge').innerText = f.status_review;
-    document.getElementById('det_jenis_badge').innerHTML =
-        `<span style="background:${bm.bg}; color:${bm.color}; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.78rem; font-weight:600;">${f.jenis_sampling}</span>`;
+    document.getElementById('det_nominal').innerText = 'Rp ' + Number(f.jumlah_tx).toLocaleString('id-ID');
+    document.getElementById('det_ket_tx').innerText = f.ket_tx || '—';
+    document.getElementById('det_alasan').innerText = f.alasan_sampling || '—';
 
-    // Form RA
-    document.getElementById('ra_finding_id').value        = f.id;
-    document.getElementById('ra_hasil_uji').value         = f.hasil_uji || '';
-    document.getElementById('ra_bukti_referensi').value   = f.bukti_referensi || '';
-    document.getElementById('ra_skor_dampak').value       = f.skor_dampak || 1;
-    document.getElementById('ra_skor_kemungkinan').value  = f.skor_kemungkinan || 1;
+    const bm = badgeMap[f.jenis_sampling] || { bg: '#f8fafc', color: '#64748b' };
+    document.getElementById('det_jenis_badge').innerHTML = `<span style="background:${bm.bg}; color:${bm.color}; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.75rem; font-weight:600;">${f.jenis_sampling}</span>`;
+
+    document.getElementById('ra_finding_id').value = f.id;
+    document.getElementById('ra_hasil_uji').value = f.hasil_uji || '';
+    document.getElementById('ra_bukti_referensi').value = f.bukti_referensi || '';
+    document.getElementById('ra_skor_dampak').value = f.skor_dampak || 1;
+    document.getElementById('ra_skor_kemungkinan').value = f.skor_kemungkinan || 1;
     document.getElementById('ra_tanggal_ditemukan').value = f.tanggal_ditemukan || '';
-    document.getElementById('ra_simpulan_ra').value       = f.simpulan_ra || '';
+    document.getElementById('ra_simpulan_ra').value = f.simpulan_ra || '';
     hitungRisk();
 
-    // Lock jika Approved
-    const isApproved = f.status_review === 'Approved';
-    ['ra_hasil_uji','ra_bukti_referensi','ra_skor_dampak','ra_skor_kemungkinan','ra_tanggal_ditemukan','ra_simpulan_ra']
-        .forEach(id => { document.getElementById(id).disabled = isApproved; });
-    document.getElementById('ra_actions').style.display = isApproved ? 'none' : 'flex';
-    document.getElementById('badge_ra_lock').innerText   = isApproved ? '🔒 Terkunci' : 'Mode Edit';
-
-    // Form Admin
-    const admId = document.getElementById('adm_finding_id');
-    if (admId) {
-        admId.value = f.id;
-        document.getElementById('adm_status_review').value    = f.status_review || 'Belum Direview';
+    if (document.getElementById('adm_finding_id')) {
+        document.getElementById('adm_finding_id').value = f.id;
+        document.getElementById('adm_status_review').value = f.status_review || 'Belum Direview';
         document.getElementById('adm_catatan_reviewer').value = f.catatan_reviewer || '';
     }
 
     document.getElementById('dashboardView').style.display = 'none';
-    document.getElementById('detailView').style.display    = 'block';
-    window.scrollTo(0, 0);
+    document.getElementById('detailView').style.display = 'block';
 }
 
 function closeDetail() {
-    document.getElementById('detailView').style.display    = 'none';
+    document.getElementById('detailView').style.display = 'none';
     document.getElementById('dashboardView').style.display = 'block';
-    renderTable(globalFindings);
 }
 
 function hitungRisk() {
     const d = parseInt(document.getElementById('ra_skor_dampak').value) || 1;
     const k = parseInt(document.getElementById('ra_skor_kemungkinan').value) || 1;
-    const s = d * k;
-    let level = 'Low', bg = '#dcfce7', color = '#16a34a';
-    if (s >= 20)      { level = 'Critical'; bg = '#ede9fe'; color = '#7c3aed'; }
-    else if (s >= 12) { level = 'High';     bg = '#fef2f2'; color = '#dc2626'; }
-    else if (s >= 6)  { level = 'Moderate'; bg = '#fffbeb'; color = '#ca8a04'; }
+    const score = d * k;
 
-    document.getElementById('ra_risk_score').innerText = s;
-    const badge = document.getElementById('ra_risk_badge');
-    badge.innerText = level;
-    badge.style.background = bg;
-    badge.style.color = color;
+    let badgeText = 'Low';
+    let bg = '#dcfce7';
+    let color = '#16a34a';
+
+    if (score >= 12) {
+        badgeText = 'High';
+        bg = '#fee2e2';
+        color = '#dc2626';
+    } else if (score >= 6) {
+        badgeText = 'Moderate';
+        bg = '#ffedd5';
+        color = '#ea580c';
+    }
+
+    document.getElementById('ra_risk_score').innerText = score;
+    const rb = document.getElementById('ra_risk_badge');
+    rb.innerText = badgeText;
+    rb.style.background = bg;
+    rb.style.color = color;
 }
 
 function submitRa() {
     const id = document.getElementById('ra_finding_id').value;
-    const payload = new URLSearchParams({
-        _token:            csrfToken,
-        _method:           'PATCH',
-        hasil_uji:         document.getElementById('ra_hasil_uji').value,
-        bukti_referensi:   document.getElementById('ra_bukti_referensi').value,
-        skor_dampak:       document.getElementById('ra_skor_dampak').value,
-        skor_kemungkinan:  document.getElementById('ra_skor_kemungkinan').value,
+    const payload = {
+        hasil_uji: document.getElementById('ra_hasil_uji').value,
+        bukti_referensi: document.getElementById('ra_bukti_referensi').value,
+        skor_dampak: document.getElementById('ra_skor_dampak').value,
+        skor_kemungkinan: document.getElementById('ra_skor_kemungkinan').value,
         tanggal_ditemukan: document.getElementById('ra_tanggal_ditemukan').value,
-        simpulan_ra:       document.getElementById('ra_simpulan_ra').value,
-    });
+        simpulan_ra: document.getElementById('ra_simpulan_ra').value,
+        _token: csrfToken
+    };
 
-    axios.post(`${kkaUrl}/${id}`, payload, { headers: { 'X-CSRF-TOKEN': csrfToken } })
-        .then(() => { closeDetail(); loadData(); })
-        .catch(err => {
-            const msg = err.response?.data?.message || 'Gagal menyimpan.';
-            alert(msg);
-        });
+    axios.patch(`${kkaUrl}/${id}`, payload)
+        .then(() => {
+            alert('Hasil pengujian RA berhasil disimpan.');
+            closeDetail();
+            loadData();
+        })
+        .catch(() => alert('Gagal menyimpan hasil pengujian.'));
 }
 
 function submitAdm() {
     const id = document.getElementById('adm_finding_id').value;
-    const payload = new URLSearchParams({
-        _token:           csrfToken,
-        _method:          'PATCH',
-        status_review:    document.getElementById('adm_status_review').value,
+    const payload = {
+        status_review: document.getElementById('adm_status_review').value,
         catatan_reviewer: document.getElementById('adm_catatan_reviewer').value,
-    });
+        _token: csrfToken
+    };
 
-    axios.post(`${kkaUrl}/${id}/review`, payload, { headers: { 'X-CSRF-TOKEN': csrfToken } })
-        .then(() => { closeDetail(); loadData(); })
-        .catch(err => {
-            const msg = err.response?.data?.message || 'Gagal menyimpan review.';
-            alert(msg);
-        });
+    axios.patch(`${kkaUrl}/${id}/review`, payload)
+        .then(() => {
+            alert('Status review berhasil disimpan.');
+            closeDetail();
+            loadData();
+        })
+        .catch(() => alert('Gagal menyimpan review.'));
 }
 </script>
 @endpush
-
-@endsection

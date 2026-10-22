@@ -29,7 +29,7 @@
                     <th style="padding: 0.9rem 1rem; color: #64748b; font-weight: 600; text-align: center;">Populasi</th>
                     <th style="padding: 0.9rem 1rem; color: #64748b; font-weight: 600; text-align: center;">Sampel</th>
                     <th style="padding: 0.9rem 1rem; color: #64748b; font-weight: 600; text-align: center;">Status</th>
-                    <th style="padding: 0.9rem 1rem; color: #64748b; font-weight: 600;"></th>
+                    <th style="padding: 0.9rem 1rem; color: #64748b; font-weight: 600; text-align: right;">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,21 +64,25 @@
                         </span>
                     </td>
                     <td style="padding: 0.8rem 1rem; vertical-align: middle; text-align: right;">
-                        @if($visit->status === 'Persiapan')
-                            <a href="{{ route('onsite.permintaan.create', $visit->id) }}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.8rem; margin-right: 0.3rem;">
-                                <i class="bi bi-printer me-1"></i> Surat
-                            </a>
-                            <a href="{{ route('onsite.upload', $visit->id) }}" class="btn btn-sm" style="background-color: #1e3a8a; color: white; font-size: 0.8rem;">
-                                <i class="bi bi-cloud-upload me-1"></i> Upload CBS
-                            </a>
-                        @else
-                            <a href="{{ route('onsite.kka', $visit->id) }}" class="btn btn-sm btn-outline-primary" style="font-size: 0.8rem; margin-right: 0.3rem;">
-                                <i class="bi bi-file-earmark-check me-1"></i> KKA Sampling
-                            </a>
-                            <a href="{{ route('onsite.observasi.create', $visit->id) }}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.8rem;">
-                                <i class="bi bi-building-check me-1"></i> Observasi
-                            </a>
-                        @endif
+                        <!-- Tombol Cetak Surat -->
+                        <a href="{{ route('onsite.permintaan.create', $visit->id) }}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.8rem; margin-right: 0.2rem;" title="Cetak Surat Permintaan">
+                            <i class="bi bi-printer me-1"></i> Surat
+                        </a>
+
+                        <!-- Tombol Upload CBS -->
+                        <a href="{{ route('onsite.upload', $visit->id) }}" class="btn btn-sm" style="background-color: #1e3a8a; color: white; font-size: 0.8rem; margin-right: 0.2rem;" title="Upload File CBS">
+                            <i class="bi bi-cloud-upload me-1"></i> Upload CBS
+                        </a>
+
+                        <!-- Tombol Akses KKA Onsite -->
+                        <a href="{{ route('onsite.kka', $visit->id) }}" class="btn btn-sm btn-success" style="font-size: 0.8rem; font-weight: 600; margin-right: 0.2rem;" title="Buka Halaman KKA Onsite">
+                            <i class="bi bi-file-earmark-check me-1"></i> KKA
+                        </a>
+
+                        <!-- Tombol Observasi -->
+                        <a href="{{ route('onsite.observasi.create', $visit->id) }}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.8rem;" title="Observasi Lapangan">
+                            <i class="bi bi-building-check"></i>
+                        </a>
                     </td>
                 </tr>
                 @empty

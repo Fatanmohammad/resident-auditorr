@@ -7,7 +7,7 @@
 
     <div class="sidebar-nav">
         @php
-            $role = auth()->user()->role;
+            $role = auth()->user()->role ?? '';
             $isRa = $role === 'ra';
             $isAdmin = $role === 'admin';
             
@@ -136,7 +136,7 @@
                 @endif
 
                 {{-- MENU KHUSUS RA: Upload Data CSV --}}
-                @if($role === 'ra')  <!-- UBAH BAGIAN INI -->
+                @if($role === 'ra')
                 <a href="{{ url('/offsite/upload') }}" class="nav-item {{ request()->is('offsite/upload*') ? 'active' : '' }}">
                     <i class="bi bi-cloud-upload nav-icon"></i> Upload Data (Dump)
                 </a>
@@ -197,6 +197,84 @@
         </div>
         @endif
         {{-- ================================================================== --}}
+
+        {{-- ===================== MODUL SURPRISE AUDIT (SOP 05) ===================== --}}
+        <div class="nav-group {{ request()->is('surprise-audit*') ? 'open' : '' }}">
+            <div class="nav-group-toggle">
+                <i class="bi bi-shield-lock nav-icon"></i> Modul Surprise Audit
+                <i class="bi bi-chevron-down nav-arrow"></i>
+            </div>
+            <div class="nav-group-children">
+                <a href="{{ route('surprise_audit.index') }}" class="nav-item {{ request()->routeIs('surprise_audit.index') ? 'active' : '' }}">
+                    <i class="bi bi-list-check nav-icon"></i> Daftar Surprise Audit
+                </a>
+                <a href="{{ route('surprise_audit.create') }}" class="nav-item {{ request()->routeIs('surprise_audit.create') ? 'active' : '' }}">
+                    <i class="bi bi-plus-circle nav-icon"></i> Buat Penugasan Baru
+                </a>
+            </div>
+        </div>
+
+        {{-- ===================== MODUL MONITORING TINDAK LANJUT (SOP 07) ===================== --}}
+        <div class="nav-group {{ request()->is('monitoring*') ? 'open' : '' }}">
+            <div class="nav-group-toggle">
+                <i class="bi bi-shield-check nav-icon"></i> Monitoring Tindak Lanjut
+                <i class="bi bi-chevron-down nav-arrow"></i>
+            </div>
+            <div class="nav-group-children">
+                <a href="{{ route('monitoring.index') }}" class="nav-item {{ request()->routeIs('monitoring.index') ? 'active' : '' }}">
+                    <i class="bi bi-speedometer2 nav-icon"></i> Ringkasan & Control
+                </a>
+                <a href="{{ route('monitoring.register_tl') }}" class="nav-item {{ request()->routeIs('monitoring.register_tl') ? 'active' : '' }}">
+                    <i class="bi bi-table nav-icon"></i> Register TL
+                </a>
+                <a href="{{ route('monitoring.rencana_reminder') }}" class="nav-item {{ request()->routeIs('monitoring.rencana_reminder') ? 'active' : '' }}">
+                    <i class="bi bi-calendar-event nav-icon"></i> Rencana & Reminder
+                </a>
+                <a href="{{ route('monitoring.log_bukti') }}" class="nav-item {{ request()->routeIs('monitoring.log_bukti') ? 'active' : '' }}">
+                    <i class="bi bi-journal-check nav-icon"></i> Log Bukti & Komunikasi
+                </a>
+                <a href="{{ route('monitoring.kka_verifikasi') }}" class="nav-item {{ request()->routeIs('monitoring.kka_verifikasi') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-text nav-icon"></i> KKA Verifikasi
+                </a>
+                <a href="{{ route('monitoring.closure_review') }}" class="nav-item {{ request()->routeIs('monitoring.closure_review') ? 'active' : '' }}">
+                    <i class="bi bi-check2-all nav-icon"></i> Closure Review
+                </a>
+                <a href="{{ route('monitoring.eskalasi') }}" class="nav-item {{ request()->routeIs('monitoring.eskalasi') ? 'active' : '' }}">
+                    <i class="bi bi-exclamation-triangle nav-icon"></i> Perpanjangan & Eskalasi
+                </a>
+                <a href="{{ route('monitoring.status_aging') }}" class="nav-item {{ request()->routeIs('monitoring.status_aging') ? 'active' : '' }}">
+                    <i class="bi bi-clock-history nav-icon"></i> Status & Aging
+                </a>
+            </div>
+        </div>
+
+        {{-- ===================== MODUL PEMERIKSAAN AWAL FRAUD (SOP 09) ===================== --}}
+        <div class="nav-group {{ request()->is('pemeriksaan-awal*') ? 'open' : '' }}">
+            <div class="nav-group-toggle">
+                <i class="bi bi-shield-exclamation nav-icon"></i> Pemeriksaan Awal Fraud
+                <i class="bi bi-chevron-down nav-arrow"></i>
+            </div>
+            <div class="nav-group-children">
+                <a href="{{ route('pemeriksaan_awal.index') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.index') ? 'active' : '' }}">
+                    <i class="bi bi-speedometer2 nav-icon"></i> Dashboard Indikasi
+                </a>
+                <a href="{{ route('pemeriksaan_awal.register') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.register') ? 'active' : '' }}">
+                    <i class="bi bi-journal-plus nav-icon"></i> Register Indikasi
+                </a>
+                <a href="{{ route('pemeriksaan_awal.triase') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.triase') ? 'active' : '' }}">
+                    <i class="bi bi-diagram-3 nav-icon"></i> Triase Awal
+                </a>
+                <a href="{{ route('pemeriksaan_awal.bukti_custody') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.bukti_custody') ? 'active' : '' }}">
+                    <i class="bi bi-shield-check nav-icon"></i> Chain of Custody
+                </a>
+                <a href="{{ route('pemeriksaan_awal.kka') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.kka') ? 'active' : '' }}">
+                    <i class="bi bi-journal-check nav-icon"></i> KKA Pemeriksaan
+                </a>
+                <a href="{{ route('pemeriksaan_awal.eskalasi') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.eskalasi') ? 'active' : '' }}">
+                    <i class="bi bi-arrow-up-right-circle nav-icon"></i> Keputusan & Eskalasi
+                </a>
+            </div>
+        </div>
 
         {{-- ===================== RISK TRIGGER VISIT (SOP 06) ===================== --}}
         @php
