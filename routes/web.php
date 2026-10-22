@@ -13,10 +13,10 @@ use App\Http\Controllers\FinalAuditPlanController;
 use App\Http\Controllers\MasterSetupController;
 use App\Http\Controllers\Offsite\OffsiteController;
 use App\Http\Controllers\Offsite\KkaController as OffsiteKkaController;
-use App\Http\Controllers\Offsite\KkaController;
 use App\Http\Controllers\DailyRegister\KkaDailyRegisterController;
 use App\Http\Controllers\DailyRegister\PhysicalKkaController;
 use App\Http\Controllers\DailyRegister\CarryOverController;
+use App\Http\Controllers\DailyRegister\KontrolMingguanController;
 use App\Http\Controllers\Offsite\DailyRegisterController as OffsiteDailyRegisterController;
 use App\Http\Controllers\DailyRegister\DailyRegisterController as ModuleDailyRegisterController;
 use App\Http\Controllers\Offsite\AuditLogController;
@@ -36,6 +36,7 @@ use App\Http\Controllers\Onsite\KkaIntegrationController;
 use App\Http\Controllers\SurpriseAudit\SurpriseAuditController;
 use App\Http\Controllers\Monitoring\MonitoringController;
 use App\Http\Controllers\FraudIn\PemeriksaanAwalController;
+use App\Http\Controllers\RiskTrigger\RiskTriggerController;
 
 Route::get('/debug-test', function () {
     $unit = \App\Models\Unit::find(2);
@@ -413,62 +414,62 @@ Route::middleware('auth')->group(function () {
         Route::post('/carry-over/process', [CarryOverController::class, 'processExtension'])->name('daily-register.carry-over.process');
 
         // 6. Kontrol Mingguan & Kapasitas Harian (SOP 04.2)
-        Route::get('/kapasitas', [\App\Http\Controllers\DailyRegister\KontrolMingguanController::class, 'getKapasitas'])->name('daily-register.kapasitas');
-        Route::post('/kontrol-mingguan/update', [\App\Http\Controllers\DailyRegister\KontrolMingguanController::class, 'updateSchedule'])->name('daily-register.kontrol-mingguan.update');
+        Route::get('/kapasitas', [KontrolMingguanController::class, 'getKapasitas'])->name('daily-register.kapasitas');
+        Route::post('/kontrol-mingguan/update', [KontrolMingguanController::class, 'updateSchedule'])->name('daily-register.kontrol-mingguan.update');
 
         // 7. KKA Control & Integrasi (SOP 04.2)
-        Route::get('/control-integrasi', [\App\Http\Controllers\DailyRegister\KkaDailyRegisterController::class, 'getControlIntegrasi'])->name('daily-register.control-integrasi');
-        Route::post('/rerun-sampling', [\App\Http\Controllers\DailyRegister\KkaDailyRegisterController::class, 'rerunSampling'])->name('daily-register.rerun-sampling');
+        Route::get('/control-integrasi', [KkaDailyRegisterController::class, 'getControlIntegrasi'])->name('daily-register.control-integrasi');
+        Route::post('/rerun-sampling', [KkaDailyRegisterController::class, 'rerunSampling'])->name('daily-register.rerun-sampling');
     });
 
     // =========================================================================
     // RISK TRIGGER VISIT (SOP 06)
     // =========================================================================
     Route::prefix('risk-trigger')->middleware('role:admin,kabag_ra,kadiv_skai,ra,reviewer,pimsie')->group(function () {
-        Route::get('/control', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'control'])->name('risk-trigger.control');
-        Route::get('/register', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'register'])->name('risk-trigger.register');
-        Route::get('/create', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'create'])->name('risk-trigger.create');
-        Route::post('/manual', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'storeManual'])->name('risk-trigger.store-manual');
-        Route::post('/sync', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'sync'])->name('risk-trigger.sync');
+        Route::get('/control', [RiskTriggerController::class, 'control'])->name('risk-trigger.control');
+        Route::get('/register', [RiskTriggerController::class, 'register'])->name('risk-trigger.register');
+        Route::get('/create', [RiskTriggerController::class, 'create'])->name('risk-trigger.create');
+        Route::post('/manual', [RiskTriggerController::class, 'storeManual'])->name('risk-trigger.store-manual');
+        Route::post('/sync', [RiskTriggerController::class, 'sync'])->name('risk-trigger.sync');
 
         // FASE 2: ASSIGNMENT & SCOPE
-        Route::get('/assignment', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'assignment'])->name('risk-trigger.assignment');
-        Route::get('/assignment/create', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'createAssignment'])->name('risk-trigger.assignment.create');
-        Route::post('/assignment', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'storeAssignment'])->name('risk-trigger.assignment.store');
-        Route::get('/assignment/{id}/edit-dates', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'editActualDates'])->whereNumber('id')->name('risk-trigger.assignment.edit-dates');
-        Route::post('/assignment/{id}/actual-dates', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'updateActualDates'])->whereNumber('id')->name('risk-trigger.assignment.actual-dates');
-        Route::get('/assignment/{id}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'showAssignment'])->whereNumber('id')->name('risk-trigger.assignment.show');
+        Route::get('/assignment', [RiskTriggerController::class, 'assignment'])->name('risk-trigger.assignment');
+        Route::get('/assignment/create', [RiskTriggerController::class, 'createAssignment'])->name('risk-trigger.assignment.create');
+        Route::post('/assignment', [RiskTriggerController::class, 'storeAssignment'])->name('risk-trigger.assignment.store');
+        Route::get('/assignment/{id}/edit-dates', [RiskTriggerController::class, 'editActualDates'])->whereNumber('id')->name('risk-trigger.assignment.edit-dates');
+        Route::post('/assignment/{id}/actual-dates', [RiskTriggerController::class, 'updateActualDates'])->whereNumber('id')->name('risk-trigger.assignment.actual-dates');
+        Route::get('/assignment/{id}', [RiskTriggerController::class, 'showAssignment'])->whereNumber('id')->name('risk-trigger.assignment.show');
 
         // FASE 2: PROGRAM KERJA TERARAH & DAFTAR DATA
-        Route::get('/program-kerja', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'programKerja'])->name('risk-trigger.program-kerja');
-        Route::get('/program-kerja/{id}/edit', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'editProgramKerja'])->whereNumber('id')->name('risk-trigger.program-kerja.edit');
-        Route::post('/program-kerja/{id}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'updateProgramKerja'])->whereNumber('id')->name('risk-trigger.program-kerja.update');
+        Route::get('/program-kerja', [RiskTriggerController::class, 'programKerja'])->name('risk-trigger.program-kerja');
+        Route::get('/program-kerja/{id}/edit', [RiskTriggerController::class, 'editProgramKerja'])->whereNumber('id')->name('risk-trigger.program-kerja.edit');
+        Route::post('/program-kerja/{id}', [RiskTriggerController::class, 'updateProgramKerja'])->whereNumber('id')->name('risk-trigger.program-kerja.update');
 
         // FASE 3: KKA RISK TRIGGER (KKA INDUK - 20 KOLOM EXCEL) & 8 KKA AREA
-        Route::get('/kka', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'kkaIndex'])->name('risk-trigger.kka.index');
-        Route::get('/kka/{id}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'kkaShow'])->whereNumber('id')->name('risk-trigger.kka.show');
-        Route::get('/kka/{id}/edit', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'kkaEdit'])->whereNumber('id')->name('risk-trigger.kka.edit');
-        Route::post('/kka/{id}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'kkaUpdate'])->whereNumber('id')->name('risk-trigger.kka.update');
+        Route::get('/kka', [RiskTriggerController::class, 'kkaIndex'])->name('risk-trigger.kka.index');
+        Route::get('/kka/{id}', [RiskTriggerController::class, 'kkaShow'])->whereNumber('id')->name('risk-trigger.kka.show');
+        Route::get('/kka/{id}/edit', [RiskTriggerController::class, 'kkaEdit'])->whereNumber('id')->name('risk-trigger.kka.edit');
+        Route::post('/kka/{id}', [RiskTriggerController::class, 'kkaUpdate'])->whereNumber('id')->name('risk-trigger.kka.update');
 
         // KKA Area Sample Rows (Multi-Row per Visit ID)
-        Route::post('/kka/{id}/area-row', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'storeAreaRow'])->whereNumber('id')->name('risk-trigger.kka.area-row.store');
-        Route::put('/kka/area-row/{area}/{rowId}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'updateAreaRow'])->whereNumber('rowId')->name('risk-trigger.kka.area-row.update');
-        Route::delete('/kka/area-row/{area}/{rowId}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'destroyAreaRow'])->whereNumber('rowId')->name('risk-trigger.kka.area-row.destroy');
+        Route::post('/kka/{id}/area-row', [RiskTriggerController::class, 'storeAreaRow'])->whereNumber('id')->name('risk-trigger.kka.area-row.store');
+        Route::put('/kka/area-row/{area}/{rowId}', [RiskTriggerController::class, 'updateAreaRow'])->whereNumber('rowId')->name('risk-trigger.kka.area-row.update');
+        Route::delete('/kka/area-row/{area}/{rowId}', [RiskTriggerController::class, 'destroyAreaRow'])->whereNumber('rowId')->name('risk-trigger.kka.area-row.destroy');
 
         // FASE 4: SIMPULAN, TINDAK LANJUT & CLOSURE (Simpulan_TL) & KLARIFIKASI BUKTI
-        Route::get('/simpulan-tl', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'simpulanTlIndex'])->name('risk-trigger.simpulan-tl.index');
-        Route::get('/simpulan-tl/{id}/edit', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'simpulanTlEdit'])->whereNumber('id')->name('risk-trigger.simpulan-tl.edit');
-        Route::post('/simpulan-tl/{id}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'simpulanTlUpdate'])->whereNumber('id')->name('risk-trigger.simpulan-tl.update');
-        Route::post('/simpulan-tl/{id}/klarifikasi', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'storeKlarifikasi'])->whereNumber('id')->name('risk-trigger.simpulan-tl.klarifikasi.store');
-        Route::put('/simpulan-tl/klarifikasi/{id}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'updateKlarifikasi'])->whereNumber('id')->name('risk-trigger.simpulan-tl.klarifikasi.update');
-        Route::delete('/simpulan-tl/klarifikasi/{id}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'destroyKlarifikasi'])->whereNumber('id')->name('risk-trigger.simpulan-tl.klarifikasi.destroy');
-        Route::post('/simpulan-tl/{id}/pull-exceptions', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'pullExceptions'])->whereNumber('id')->name('risk-trigger.simpulan-tl.pull-exceptions');
+        Route::get('/simpulan-tl', [RiskTriggerController::class, 'simpulanTlIndex'])->name('risk-trigger.simpulan-tl.index');
+        Route::get('/simpulan-tl/{id}/edit', [RiskTriggerController::class, 'simpulanTlEdit'])->whereNumber('id')->name('risk-trigger.simpulan-tl.edit');
+        Route::post('/simpulan-tl/{id}', [RiskTriggerController::class, 'simpulanTlUpdate'])->whereNumber('id')->name('risk-trigger.simpulan-tl.update');
+        Route::post('/simpulan-tl/{id}/klarifikasi', [RiskTriggerController::class, 'storeKlarifikasi'])->whereNumber('id')->name('risk-trigger.simpulan-tl.klarifikasi.store');
+        Route::put('/simpulan-tl/klarifikasi/{id}', [RiskTriggerController::class, 'updateKlarifikasi'])->whereNumber('id')->name('risk-trigger.simpulan-tl.klarifikasi.update');
+        Route::delete('/simpulan-tl/klarifikasi/{id}', [RiskTriggerController::class, 'destroyKlarifikasi'])->whereNumber('id')->name('risk-trigger.simpulan-tl.klarifikasi.destroy');
+        Route::post('/simpulan-tl/{id}/pull-exceptions', [RiskTriggerController::class, 'pullExceptions'])->whereNumber('id')->name('risk-trigger.simpulan-tl.pull-exceptions');
 
         // DETAIL & OVERRIDE TRIGGER (Wajib di bawah static route dengan whereNumber)
-        Route::get('/{id}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'show'])->whereNumber('id')->name('risk-trigger.show');
-        Route::get('/{id}/override', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'editOverride'])->whereNumber('id')->name('risk-trigger.edit-override');
-        Route::post('/{id}/override', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'override'])->whereNumber('id')->name('risk-trigger.override');
-        Route::delete('/{id}', [\App\Http\Controllers\RiskTrigger\RiskTriggerController::class, 'destroy'])->whereNumber('id')->name('risk-trigger.destroy');
-    });
+        Route::get('/{id}', [RiskTriggerController::class, 'show'])->whereNumber('id')->name('risk-trigger.show');
+        Route::get('/{id}/override', [RiskTriggerController::class, 'editOverride'])->whereNumber('id')->name('risk-trigger.edit-override');
+        Route::post('/{id}/override', [RiskTriggerController::class, 'override'])->whereNumber('id')->name('risk-trigger.override');
+        Route::delete('/{id}', [RiskTriggerController::class, 'destroy'])->whereNumber('id')->name('risk-trigger.destroy');
+    }); // Akhir Route::prefix('risk-trigger')
 
-});
+}); // Akhir Route::middleware('auth') (dibuka pada baris 60)
