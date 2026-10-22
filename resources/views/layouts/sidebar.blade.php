@@ -152,7 +152,85 @@
                 </a>
             </div>
         </div>
+
+        {{-- ===================== MODUL DAILY REGISTER ===================== --}}
+        @php
+            $canAccessDailyRegister = in_array($role, ['admin', 'kabag_ra', 'kadiv_skai', 'ra']);
+        @endphp
+        
+        @if($canAccessDailyRegister)
+        <div class="nav-group {{ request()->is('daily-register*') ? 'open' : '' }}">
+            <div class="nav-group-toggle">
+                <i class="bi bi-calendar2-day nav-icon"></i> Modul Daily Register
+                <i class="bi bi-chevron-down nav-arrow"></i>
+            </div>
+            <div class="nav-group-children">
+                
+                @if(in_array($role, ['admin', 'kabag_ra', 'kadiv_skai']))
+                <a href="{{ url('/daily-register/rekapitulasi-cabang') }}" class="nav-item {{ request()->is('daily-register/rekapitulasi-cabang') ? 'active' : '' }}">
+                    <i class="bi bi-building-check nav-icon"></i> Rekapitulasi Cabang
+                </a>
+                @endif
+
+                @if($role === 'ra')
+                <a href="{{ url('/daily-register/upload') }}" class="nav-item {{ request()->is('daily-register/upload*') ? 'active' : '' }}">
+                    <i class="bi bi-cloud-upload nav-icon"></i> Upload Data
+                </a>
+                @endif
+
+                <a href="{{ url('/daily-register/register') }}" class="nav-item {{ request()->is('daily-register/register') ? 'active' : '' }}">
+                    <i class="bi bi-journal-text nav-icon"></i> Register Harian
+                </a>
+                
+                <a href="{{ url('/daily-register/kka') }}" class="nav-item {{ request()->is('daily-register/kka') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-check nav-icon"></i> KKA Daily Register
+                </a>
+
+                <a href="{{ url('/daily-register/physical-kka') }}" class="nav-item {{ request()->is('daily-register/physical-kka*') ? 'active' : '' }}">
+                    <i class="bi bi-file-spreadsheet nav-icon"></i> KKA Fisik (5 Tab Pemeriksaan)
+                </a>
+
+                <a href="{{ url('/daily-register/klarifikasi') }}" class="nav-item {{ request()->is('daily-register/klarifikasi') ? 'active' : '' }}">
+                    <i class="bi bi-chat-left-text nav-icon"></i> Register Klarifikasi
+                </a>
+            </div>
+        </div>
+        @endif
         {{-- ================================================================== --}}
+
+        {{-- ===================== RISK TRIGGER VISIT (SOP 06) ===================== --}}
+        @php
+            $canAccessRiskTrigger = in_array($role, ['admin', 'kabag_ra', 'kadiv_skai', 'ra', 'reviewer', 'pimsie']);
+        @endphp
+        @if($canAccessRiskTrigger)
+        <div class="nav-group {{ request()->is('risk-trigger*') ? 'open' : '' }}">
+            <div class="nav-group-toggle">
+                <i class="bi bi-lightning-charge-fill nav-icon text-warning"></i> Risk Trigger Visit (SOP 06)
+                <i class="bi bi-chevron-down nav-arrow"></i>
+            </div>
+            <div class="nav-group-children">
+                <a href="{{ route('risk-trigger.control') }}" class="nav-item {{ request()->routeIs('risk-trigger.control') ? 'active' : '' }}">
+                    <i class="bi bi-speedometer2 nav-icon"></i> Ringkasan Control
+                </a>
+                <a href="{{ route('risk-trigger.register') }}" class="nav-item {{ request()->routeIs('risk-trigger.register') ? 'active' : '' }}">
+                    <i class="bi bi-table nav-icon"></i> Register Trigger
+                </a>
+                <a href="{{ route('risk-trigger.assignment') }}" class="nav-item {{ request()->routeIs('risk-trigger.assignment*') ? 'active' : '' }}">
+                    <i class="bi bi-clipboard-check nav-icon"></i> Assignment & Scope
+                </a>
+                <a href="{{ route('risk-trigger.program-kerja') }}" class="nav-item {{ request()->routeIs('risk-trigger.program-kerja*') ? 'active' : '' }}">
+                    <i class="bi bi-journal-text nav-icon"></i> Program Kerja & Data
+                </a>
+                <a href="{{ route('risk-trigger.kka.index') }}" class="nav-item {{ request()->routeIs('risk-trigger.kka*') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-spreadsheet nav-icon"></i> KKA Risk Trigger
+                </a>
+                <a href="{{ route('risk-trigger.simpulan-tl.index') }}" class="nav-item {{ request()->routeIs('risk-trigger.simpulan-tl*') ? 'active' : '' }}">
+                    <i class="bi bi-check2-circle nav-icon"></i> Klarifikasi & Simpulan TL
+                </a>
+            </div>
+        </div>
+        @endif
+        {{-- ======================================================================= --}}
 
         {{-- ===================== PENGATURAN & ADMIN ===================== --}}
         @if($isAdmin)

@@ -4,19 +4,25 @@ namespace App\Services\Offsite;
 
 use App\Models\Offsite\KkaFinding;
 use App\Models\Offsite\DailyRegister;
+use App\Models\DailyRegister\DailyRegisterFinding;
 use Illuminate\Support\Carbon;
 
 class DumpKreditParser
 {
-    public function parse($filePath, $kodeUnit)
+    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null)
     {
         if (!file_exists($filePath)) throw new \Exception("File CSV Kredit tidak ditemukan.");
+
+        if (!$namaUnit) {
+            $namaUnit = \App\Models\Unit::where('unit_code', $kodeUnit)->value('unit_name');
+        }
 
         $file = fopen($filePath, 'r');
         fgetcsv($file); // Skip header baris pertama
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
+        $dailyRegisterData = [];
 
         while (($row = fgetcsv($file)) !== false) {
             
@@ -39,38 +45,79 @@ class DumpKreditParser
             $isKolTurun = $kolektibilitas >= 2;
             $isPlafonJumbo = $plafon >= 500000000;
 
-            if ($isKolTurun || $isPlafonJumbo) {
-                $moderateHighRiskData[] = [
-                    'tanggal_data'         => $tanggal,
-                    'kode_unit'            => $kodeUnit,
-                    'source_sheet'         => 'KKA_Kredit',
-                    'nominal_terkait'      => $plafon,
-                    'risk_awal'            => $isPlafonJumbo ? 'High' : 'Moderate',
-                    'jenis_exception_awal' => $isKolTurun ? 'Penurunan Kolektibilitas' : 'Pencairan Plafon Jumbo',
-                    'created_at'           => now(),
-                    'updated_at'           => now(),
-                ];
+            if ($isDailyRegister) {
+                if (!($isKolTurun || $isPlafonJumbo)) {
+                    $lowRiskData[] = [
+                        'tanggal_data'    => $tanggal,
+                        'kode_unit'       => $kodeUnit,
+                        'nama_unit'       => $namaUnit,
+                        'source_sheet'    => 'DUMP_03_KREDIT',
+                        'kategori'        => 'Pencairan / Angsuran Wajar',
+                        'nominal_terkait' => $plafon,
+                        'risk_awal'       => 'Low',
+                        'rincian'         => 'Kolektibilitas: ' . $kolektibilitas,
+                    ];
+                } else {
+                    $dailyRegisterData[] = [
+                        'tanggal_data'         => $tanggal,
+                        'periode'              => date('Y-m-01', strtotime($tanggal)),
+                        'kode_unit'            => $kodeUnit,
+                        'nama_unit'            => $namaUnit,
+                        'source_sheet'         => 'KKA_Kredit',
+                        'nominal_terkait'      => $plafon,
+                        'risk_awal'            => $isPlafonJumbo ? 'High' : 'Moderate',
+                        'jenis_exception_awal' => $isKolTurun ? 'Penurunan Kolektibilitas' : 'Pencairan Plafon Jumbo',
+                        'created_at'           => now(),
+                        'updated_at'           => now(),
+                    ];
+                }
             } else {
-                $lowRiskData[] = [
-                    'tanggal_data'    => $tanggal,
-                    'kode_unit'       => $kodeUnit,
-                    'source_sheet'    => 'DUMP_03_KREDIT',
-                    'kategori'        => 'Pencairan / Angsuran Wajar',
-                    'nominal_terkait' => $plafon,
-                    'rincian'         => 'Kolektibilitas: ' . $kolektibilitas,
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
-                ];
+                if ($isKolTurun || $isPlafonJumbo) {
+                    $moderateHighRiskData[] = [
+                        'tanggal_data'         => $tanggal,
+                        'periode'              => date('Y-m-01', strtotime($tanggal)),
+                        'kode_unit'            => $kodeUnit,
+                        'nama_unit'            => $namaUnit,
+                        'source_sheet'         => 'KKA_Kredit',
+                        'nominal_terkait'      => $plafon,
+                        'risk_awal'            => $isPlafonJumbo ? 'High' : 'Moderate',
+                        'jenis_exception_awal' => $isKolTurun ? 'Penurunan Kolektibilitas' : 'Pencairan Plafon Jumbo',
+                        'created_at'           => now(),
+                        'updated_at'           => now(),
+                    ];
+                } else {
+                    $lowRiskData[] = [
+                        'tanggal_data'    => $tanggal,
+                        'kode_unit'       => $kodeUnit,
+                        'nama_unit'       => $namaUnit,
+                        'source_sheet'    => 'DUMP_03_KREDIT',
+                        'kategori'        => 'Pencairan / Angsuran Wajar',
+                        'nominal_terkait' => $plafon,
+                        'risk_awal'       => 'Low',
+                        'rincian'         => 'Kolektibilitas: ' . $kolektibilitas,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ];
+                }
             }
         }
         fclose($file);
 
         // 4. Masukkan ke Database dengan metode Chunking (Cicil per 1000 baris) agar enteng
-        if (!empty($lowRiskData)) {
-            foreach (array_chunk($lowRiskData, 1000) as $chunk) DailyRegister::insert($chunk);
-        }
-        if (!empty($moderateHighRiskData)) {
-            foreach (array_chunk($moderateHighRiskData, 1000) as $chunk) KkaFinding::insert($chunk);
+        if ($isDailyRegister) {
+            if (!empty($dailyRegisterData)) {
+                foreach (array_chunk($dailyRegisterData, 1000) as $chunk) DailyRegisterFinding::insert($chunk);
+            }
+            if (!empty($lowRiskData)) {
+                \App\Services\DailyRegister\DailyRegisterTmpService::storeLowRisk($kodeUnit, $lowRiskData);
+            }
+        } else {
+            if (!empty($lowRiskData)) {
+                foreach (array_chunk($lowRiskData, 1000) as $chunk) DailyRegister::insert($chunk);
+            }
+            if (!empty($moderateHighRiskData)) {
+                foreach (array_chunk($moderateHighRiskData, 1000) as $chunk) KkaFinding::insert($chunk);
+            }
         }
 
         return true;

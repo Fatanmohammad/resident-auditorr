@@ -30,13 +30,21 @@ class DailyRegisterController extends Controller
                 ? $user->cabangIdYangDapatDiakses() 
                 : [$user->cabang_id];
 
-            // Ambil unit_code yang terikat ke cabang_id tersebut
-            $unitCodes = \App\Models\Unit::whereIn('cabang_id', $allowedCabangIds)->pluck('unit_code');
-
+            $unitQuery = \App\Models\Unit::whereIn('cabang_id', $allowedCabangIds);
+            
+            if (str_contains($request->path(), 'daily-register')) {
+                $unitQuery->whereIn('unit_type', ['KC', 'KCU', 'KP']);
+            }
+            
+            $unitCodes = $unitQuery->pluck('unit_code');
             $query->whereIn('kode_unit', $unitCodes);
         } else {
             if ($request->filled('kode_unit')) {
                 $query->where('kode_unit', $request->kode_unit);
+            } elseif (str_contains($request->path(), 'daily-register')) {
+                // Admin di Daily Register secara default hanya melihat KC
+                $kcUnitCodes = \App\Models\Unit::whereIn('unit_type', ['KC', 'KCU', 'KP'])->pluck('unit_code');
+                $query->whereIn('kode_unit', $kcUnitCodes);
             }
         }
 

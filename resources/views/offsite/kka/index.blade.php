@@ -180,25 +180,25 @@
 
     <!-- FOLDER TABS -->
     <div class="kka-tabs" id="kkaTabContainer">
-        <div class="kka-tab-item active" onclick="switchTab(this, 'KKA Teller & Kas')">
+        <div class="kka-tab-item active" onclick="switchTab(this, 'KKA_Teller_Kas', 'KKA Teller & Kas')">
             <i class="bi bi-folder2-open"></i> KKA Teller & Kas <span class="badge-count tab-teller">0</span>
         </div>
-        <div class="kka-tab-item" onclick="switchTab(this, 'KKA Kredit')">
+        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Kredit', 'KKA Kredit')">
             <i class="bi bi-folder2"></i> KKA Kredit <span class="badge-count tab-kredit">0</span>
         </div>
-        <div class="kka-tab-item" onclick="switchTab(this, 'KKA Biaya & Beban')">
+        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Biaya_Beban', 'KKA Biaya & Beban')">
             <i class="bi bi-folder2"></i> KKA Biaya & Beban <span class="badge-count tab-biaya">0</span>
         </div>
-        <div class="kka-tab-item" onclick="switchTab(this, 'KKA Biaya Internal')">
+        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Biaya_Internal', 'KKA Biaya Internal')">
             <i class="bi bi-folder2"></i> KKA Biaya Internal <span class="badge-count tab-internal">0</span>
         </div>
-        <div class="kka-tab-item" onclick="switchTab(this, 'KKA Pengaduan')">
+        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Pengaduan', 'KKA Pengaduan')">
             <i class="bi bi-folder2"></i> KKA Pengaduan <span class="badge-count tab-pengaduan">0</span>
         </div>
-        <div class="kka-tab-item" onclick="switchTab(this, 'KKA Transaksi Umum')">
+        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Transaksi_Umum', 'KKA Transaksi Umum')">
             <i class="bi bi-folder2"></i> KKA Transaksi Umum <span class="badge-count tab-umum">0</span>
         </div>
-        <div class="kka-tab-item" onclick="switchTab(this, 'KKA Transfer & Pasiva')">
+        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Transfer_KU', 'KKA Transfer & Pasiva')">
             <i class="bi bi-arrow-left-right"></i> KKA Transfer / KU <span class="badge-count tab-transfer">0</span>
         </div>
     </div>
@@ -539,6 +539,7 @@
     const csrfToken = '{{ csrf_token() }}';
     
     let globalFindings = [];
+    let currentActiveSheetCode = 'KKA_Teller_Kas';
     let currentActiveSheet = 'KKA Teller & Kas';
     let isShowingRiwayat = false;
 
@@ -547,11 +548,12 @@
     });
 
     // Pindah Tab Data
-    function switchTab(clickedElement, tabName) {
+    function switchTab(clickedElement, sheetCode, tabName) {
         const allTabs = document.querySelectorAll('.kka-tab-item');
         allTabs.forEach(tab => tab.classList.remove('active'));
 
         clickedElement.classList.add('active');
+        currentActiveSheetCode = sheetCode;
         currentActiveSheet = tabName;
         
         if (isShowingRiwayat) {
@@ -568,7 +570,7 @@
         const tbody = document.getElementById('kkaTableBody');
         tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);"><i class="bi bi-hourglass-split" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i><p>Memuat data...</p></div></td></tr>`;
 
-        let url = `${baseUrl}/data?page=${page}&source_sheet=${currentActiveSheet}`;
+        let url = `${baseUrl}/data?page=${page}&source_sheet=${currentActiveSheetCode}`;
         @if(request()->has('kode_unit'))
         url += `&kode_unit={{ request('kode_unit') }}`;
         @endif
@@ -592,8 +594,25 @@
                 let selesaiCount = globalFindings.filter(x => x.status_review === 'Approved').length;
                 document.getElementById('statSelesaiReview').innerText = selesaiCount;
 
-                const activeTabBadge = document.querySelector('.kka-tab-item.active .badge-count');
-                if(activeTabBadge) activeTabBadge.innerText = globalFindings.length;
+                const summary = response.data.summary || {};
+                const tabCounts = summary.tab_counts || {};
+                
+                // Update Badge di masing-masing Tab
+                const tabMapping = {
+                    'KKA_Teller_Kas': '.tab-teller',
+                    'KKA_Kredit': '.tab-kredit',
+                    'KKA_Biaya_Beban': '.tab-biaya',
+                    'KKA_Biaya_Internal': '.tab-internal',
+                    'KKA_Pengaduan': '.tab-pengaduan',
+                    'KKA_Transaksi_Umum': '.tab-transaksi'
+                };
+                
+                for (const [sheet, selector] of Object.entries(tabMapping)) {
+                    const badge = document.querySelector(selector);
+                    if (badge) {
+                        badge.innerText = tabCounts[sheet] || 0;
+                    }
+                }
 
                 processDataDisplay();
             })
@@ -714,7 +733,7 @@
         if(!item) return;
 
         // Ambil data terbaru langsung dari server berdasarkan ID untuk memastikan data Admin ikut termuat
-        axios.get(`${baseUrl}/data?source_sheet=${currentActiveSheet}`)
+        axios.get(`${baseUrl}/data?source_sheet=${currentActiveSheetCode}`)
             .then(response => {
                 const freshData = response.data.data.data;
                 const freshItem = freshData.find(x => x.id == id);

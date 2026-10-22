@@ -14,7 +14,7 @@ class UploadDumpRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'jenis_file' => 'required|string|in:DUMP_01,DUMP_02,DUMP_03,DUMP_04,DUMP_05',
+            'jenis_file' => 'required|string|in:DUMP_01,DUMP_02,DUMP_03,DUMP_04,DUMP_05,DUMP_06',
             'file_csv'   => 'required|file|mimes:csv,txt,xls,xlsx|max:20480', // Maksimal 20MB
         ];
     }

@@ -39,7 +39,7 @@
 <div class="card" style="max-width: 600px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
     <div class="card-body" style="padding: 2rem;">
         
-        <form action="{{ route('offsite.upload.store') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('offsite.upload') }}" method="POST" enctype="multipart/form-data">
             @csrf
             
             <!-- 1. INFORMASI TUJUAN PENGIRIMAN (Visual Saja) -->
@@ -76,6 +76,7 @@
                     <option value="DUMP_03">DUMP 03 - Kredit</option>
                     <option value="DUMP_04">DUMP 04 - Beban Biaya</option>
                     <option value="DUMP_05">DUMP 05 - Pengaduan</option>
+                    <option value="DUMP_06">DUMP 06 - Mutasi Kartu ATM</option>
                 </select>
             </div>
 

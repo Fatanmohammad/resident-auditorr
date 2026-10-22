@@ -11,6 +11,7 @@ use App\Services\Offsite\DumpDpkParser;
 use App\Services\Offsite\DumpKreditParser;
 use App\Services\Offsite\DumpBiayaParser;
 use App\Services\Offsite\DumpPengaduanParser;
+use App\Services\Offsite\DumpKartuAtmParser;
 use App\Services\Offsite\SamplingEngineService;
 use Illuminate\Support\Facades\DB;
 
@@ -163,6 +164,7 @@ class OffsiteController extends Controller
         DumpKreditParser $kreditParser,
         DumpBiayaParser $biayaParser,
         DumpPengaduanParser $pengaduanParser,
+        DumpKartuAtmParser $kartuAtmParser,
         SamplingEngineService $samplingEngine
     ) {
         $user = auth()->user();
@@ -204,7 +206,7 @@ class OffsiteController extends Controller
                 case 'DUMP_03': $parseResult = $kreditParser->parse($fullPath, $kodeUnitDipilih); break;
                 case 'DUMP_04': $parseResult = $biayaParser->parse($fullPath, $kodeUnitDipilih); break;
                 case 'DUMP_05': $parseResult = $pengaduanParser->parse($fullPath, $kodeUnitDipilih); break;
-
+                case 'DUMP_06': $parseResult = $kartuAtmParser->parse($fullPath, $kodeUnitDipilih); break;
             }
 
             $totalLow      = is_array($parseResult) ? ($parseResult['total_low'] ?? 0) : 0;

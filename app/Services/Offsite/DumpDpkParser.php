@@ -4,12 +4,17 @@ namespace App\Services\Offsite;
 
 use App\Models\Offsite\KkaFinding;
 use App\Models\Offsite\DailyRegister;
+use App\Models\DailyRegister\DailyRegisterFinding;
 
 class DumpDpkParser
 {
-    public function parse($filePath, $kodeUnit): array
+    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null): array
     {
         if (!file_exists($filePath)) throw new \Exception("File CSV DPK tidak ditemukan.");
+
+        if (!$namaUnit) {
+            $namaUnit = \App\Models\Unit::where('unit_code', $kodeUnit)->value('unit_name');
+        }
 
         $file = fopen($filePath, 'r');
         
@@ -31,6 +36,7 @@ class DumpDpkParser
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
+        $dailyRegisterData = [];
         $countHigh = 0;
         $countModerate = 0;
 
@@ -53,49 +59,90 @@ class DumpDpkParser
             $isDormantActive = ($statusRekening === 'DORMANT' && $nominal > 0);
             $isNewHighValue = ($statusRekening === 'BARU' && $nominal >= 100000000);
 
-            if ($isDormantActive || $isNewHighValue) {
-                $jenisTemuan = $isDormantActive ? 'Aktivasi Dormant Ireguler' : 'Rekening Baru Nominal Besar';
-                $deskripsiOtomatis = "Terdeteksi anomali pada rekening {$noRekening} atas nama {$namaNasabah} dengan status '{$statusRekening}' dan saldo/nominal Rp " . number_format($nominal, 0, ',', '.') . " di Unit {$kodeUnit}.";
+            $riskLevel = ($isDormantActive || $isNewHighValue) ? ($isDormantActive ? 'High' : 'Moderate') : 'Low';
+            $jenisTemuan = $isDormantActive ? 'Aktivasi Dormant Ireguler' : 'Rekening Baru Nominal Besar';
+            $deskripsiOtomatis = "Terdeteksi anomali pada rekening {$noRekening} atas nama {$namaNasabah} dengan status '{$statusRekening}' dan saldo/nominal Rp " . number_format($nominal, 0, ',', '.') . " di Unit {$kodeUnit}.";
 
-                $riskLevel = $isDormantActive ? 'High' : 'Moderate';
-                if ($riskLevel === 'High') {
-                    $countHigh++;
+            if ($riskLevel === 'High') {
+                $countHigh++;
+            } elseif ($riskLevel === 'Moderate') {
+                $countModerate++;
+            }
+
+            if ($isDailyRegister) {
+                if ($riskLevel === 'Low') {
+                    $lowRiskData[] = [
+                        'tanggal_data'    => $tanggal,
+                        'kode_unit'       => $kodeUnit,
+                        'nama_unit'       => $namaUnit,
+                        'source_sheet'    => 'DUMP_02_DPK',
+                        'kategori'        => 'Pembukaan/Mutasi Wajar',
+                        'nominal_terkait' => $nominal,
+                        'risk_awal'       => 'Low',
+                        'rincian'         => 'Status: ' . $statusRekening,
+                    ];
                 } else {
-                    $countModerate++;
+                    $dailyRegisterData[] = [
+                        'tanggal_data'         => $tanggal,
+                        'periode'              => date('Y-m-01', strtotime($tanggal)),
+                        'kode_unit'            => $kodeUnit,
+                        'nama_unit'            => $namaUnit,
+                        'source_sheet'         => 'KKA_DPK_Layanan',
+                        'nominal_terkait'      => $nominal,
+                        'risk_awal'            => $riskLevel,
+                        'jenis_exception_awal' => $jenisTemuan,
+                        'deskripsi'            => $deskripsiOtomatis,
+                        'created_at'           => now(),
+                        'updated_at'           => now(),
+                    ];
                 }
-
-                $moderateHighRiskData[] = [
-                    'tanggal_data' => $tanggal,
-                    'periode' => date('Y-m-01', strtotime($tanggal)), // awal bulan sebagai penanda periode
-                    'kode_unit' => $kodeUnit,
-                    'source_sheet' => 'KKA Transaksi Umum', 
-                    'nominal_terkait' => $nominal,
-                    'risk_awal' => $riskLevel,
-                    'jenis_exception_awal' => $jenisTemuan,
-                    'deskripsi' => $deskripsiOtomatis,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
             } else {
-                $lowRiskData[] = [
-                    'tanggal_data' => $tanggal,
-                    'kode_unit' => $kodeUnit,
-                    'source_sheet' => 'DUMP_02_DPK',
-                    'kategori' => 'Pembukaan/Mutasi Wajar',
-                    'nominal_terkait' => $nominal,
-                    'rincian' => 'Status: ' . $statusRekening,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                if ($isDormantActive || $isNewHighValue) {
+                    $moderateHighRiskData[] = [
+                        'tanggal_data' => $tanggal,
+                        'periode' => date('Y-m-01', strtotime($tanggal)), // awal bulan sebagai penanda periode
+                        'kode_unit' => $kodeUnit,
+                        'nama_unit' => $namaUnit,
+                        'source_sheet' => 'KKA_DPK_Layanan', 
+                        'nominal_terkait' => $nominal,
+                        'risk_awal' => $riskLevel,
+                        'jenis_exception_awal' => $jenisTemuan,
+                        'deskripsi' => $deskripsiOtomatis,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                } else {
+                    $lowRiskData[] = [
+                        'tanggal_data' => $tanggal,
+                        'kode_unit' => $kodeUnit,
+                        'nama_unit' => $namaUnit,
+                        'source_sheet' => 'DUMP_02_DPK',
+                        'kategori' => 'Pembukaan/Mutasi Wajar',
+                        'nominal_terkait' => $nominal,
+                        'risk_awal' => 'Low',
+                        'rincian' => 'Status: ' . $statusRekening,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
             }
         }
         fclose($file);
 
-        if (!empty($lowRiskData)) {
-            foreach (array_chunk($lowRiskData, 1000) as $chunk) DailyRegister::insert($chunk);
-        }
-        if (!empty($moderateHighRiskData)) {
-            foreach (array_chunk($moderateHighRiskData, 1000) as $chunk) KkaFinding::insert($chunk);
+        if ($isDailyRegister) {
+            if (!empty($dailyRegisterData)) {
+                foreach (array_chunk($dailyRegisterData, 1000) as $chunk) DailyRegisterFinding::insert($chunk);
+            }
+            if (!empty($lowRiskData)) {
+                \App\Services\DailyRegister\DailyRegisterTmpService::storeLowRisk($kodeUnit, $lowRiskData);
+            }
+        } else {
+            if (!empty($lowRiskData)) {
+                foreach (array_chunk($lowRiskData, 1000) as $chunk) DailyRegister::insert($chunk);
+            }
+            if (!empty($moderateHighRiskData)) {
+                foreach (array_chunk($moderateHighRiskData, 1000) as $chunk) KkaFinding::insert($chunk);
+            }
         }
 
         return [

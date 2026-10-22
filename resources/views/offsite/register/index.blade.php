@@ -46,7 +46,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-    const baseUrl = '{{ url("/offsite/register") }}';
+    const baseUrl = '{{ url(request()->segment(1) . "/register") }}';
 
     document.addEventListener("DOMContentLoaded", function() {
         loadData();
