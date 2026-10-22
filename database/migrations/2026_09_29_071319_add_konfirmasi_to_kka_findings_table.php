@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('kka_findings', function (Blueprint $table) {
-            // Hapus ->after('status') agar kolom otomatis ditambahkan di bagian akhir tabel
             $table->enum('status_konfirmasi', ['Menunggu', 'Sesuai', 'Tidak Sesuai'])->default('Menunggu');
             $table->text('komitmen_penyelesaian')->nullable()->after('status_konfirmasi');
             $table->date('target_penyelesaian')->nullable()->after('komitmen_penyelesaian');

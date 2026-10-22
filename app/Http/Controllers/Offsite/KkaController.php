@@ -46,6 +46,9 @@ class KkaController extends Controller
             }
         }
 
+        // CLONE untuk menghitung tab counts sebelum filter spesifik UI
+        $baseQueryForTabs = clone $query;
+
         // 2. Filter Spesifik dari UI (Sheet KKA, Risk, Tanggal)
         if ($request->filled('source_sheet')) {
             $query->where('source_sheet', $request->source_sheet);
@@ -57,11 +60,34 @@ class KkaController extends Controller
             $query->whereDate('tanggal_data', $request->tanggal);
         }
 
+        // Hitung Summary Global (sebelum pagination)
+        $summaryQuery = clone $query;
+        $totalException = $summaryQuery->count();
+        $totalNominal = $summaryQuery->sum('nominal_terkait');
+        $highRiskCount = (clone $summaryQuery)->where('risk_awal', 'High')->count();
+        $selesaiReviewCount = (clone $summaryQuery)->where('status_review', 'Approved')->count();
+
         $findings = $query->latest('tanggal_data')->paginate(15);
+
+        $tabCounts = [
+            'KKA_Teller_Kas' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Teller_Kas')->count(),
+            'KKA_Kredit' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Kredit')->count(),
+            'KKA_Biaya_Beban' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Biaya_Beban')->count(),
+            'KKA_Biaya_Internal' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Biaya_Internal')->count(),
+            'KKA_Pengaduan' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Pengaduan')->count(),
+            'KKA_Transaksi_Umum' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Transaksi_Umum')->count(),
+        ];
 
         return response()->json([
             'status' => 'success',
-            'data'   => $findings
+            'data'   => $findings,
+            'summary' => [
+                'total_exception' => $totalException,
+                'total_nominal'   => (float) $totalNominal,
+                'high_risk'       => $highRiskCount,
+                'selesai_review'  => $selesaiReviewCount,
+                'tab_counts'      => $tabCounts
+            ]
         ]);
     }
 

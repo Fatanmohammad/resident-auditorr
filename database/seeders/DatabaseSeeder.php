@@ -96,6 +96,10 @@ class DatabaseSeeder extends Seeder
             CoverageSeeder::class,
             // Hubungkan unit ke cabang (cabang_id) agar akses RA per cabang berfungsi
             CabangUnitSeeder::class,
+            // Kebijakan ukuran dan metode sampling SOP 02
+            SamplingPolicySeeder::class,
+            // Master Parameter SOP 06 Risk Trigger Visit
+            RiskTriggerMasterParameterSeeder::class,
         ]);
     }
 }
