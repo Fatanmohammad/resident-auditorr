@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Tambah Isu & Tindak Lanjut (WP-RA-08-E) - SOP 08')
+@section('title', 'Tambah Isu & Tindak Lanjut')
 
 @section('content')
 <div class="container-fluid px-3 py-3">
@@ -13,10 +13,10 @@
                 </ol>
             </nav>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-plus-circle me-2"></i>Tambah Baris Isu & Tindak Lanjut (WP-RA-08-E)
+                <i class="bi bi-plus-circle me-2"></i>Tambah Baris Isu & Tindak Lanjut
             </h4>
             <p class="text-muted small mb-0">
-                Pencatatan Temuan, Penentuan Flag Signifikan Otomatis, dan Penentuan Jalur Tindak Lanjut (SOP 07, 09, 10)
+                Pencatatan Temuan, Penentuan Flag Signifikan Otomatis, dan Penentuan Jalur Tindak Lanjut
             </p>
         </div>
         <div class="d-flex gap-2 mt-2 mt-md-0">
@@ -56,7 +56,7 @@
                         </div>
                         <div>
                             <h5 class="fw-bold mb-0">Formulir Isu & Tindak Lanjut</h5>
-                            <small class="text-white-50">Sistem otomatis menghitung Flag Signifikan & Jalur Eskalasi sesuai SOP 08</small>
+                            <small class="text-white-50">Sistem otomatis menghitung Flag Signifikan & Jalur Eskalasi</small>
                         </div>
                     </div>
                 </div>
@@ -68,10 +68,10 @@
                         <div class="alert alert-info border-0 rounded-3 d-flex align-items-start mb-4">
                             <i class="bi bi-info-circle-fill fs-5 text-primary me-3 mt-1"></i>
                             <div class="small">
-                                <strong>Formula Otomatis SOP-RA-08 Sheet Rekap_Isu_TL:</strong>
+                                <strong>Kriteria Otomatis Sheet Rekap Isu & Tindak Lanjut:</strong>
                                 <ul class="mb-0 ps-3 mt-1">
                                     <li><strong>Flag Signifikan (YA):</strong> Otomatis aktif jika Jenis Isu = <em>INDIKASI FRAUD</em>, Risk Level = <em>HIGH</em>, Nilai Dampak &ge; Rp 100.000.000, atau Overdue &ge; 30 hari.</li>
-                                    <li><strong>Jalur Tindak Lanjut:</strong> Dialirkan ke <em>SOP-RA-09/10</em> untuk Fraud, <em>SOP-RA-10</em> untuk Eskalasi Komite Audit, atau <em>SOP-RA-07</em> untuk Pemantauan Rutin.</li>
+                                    <li><strong>Jalur Tindak Lanjut:</strong> Dialirkan ke <em>Pemeriksaan Khusus/Fraud</em>, <em>Eskalasi Komite Audit</em>, atau <em>Pemantauan Rutin</em>.</li>
                                 </ul>
                             </div>
                         </div>
@@ -83,12 +83,12 @@
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-dark">Sumber SOP <span class="text-danger">*</span></label>
                                 <select name="sumber_sop" class="form-select" required>
-                                    <option value="SOP 03">SOP 03 (Daily Register)</option>
-                                    <option value="SOP 04">SOP 04 (Offsite Review)</option>
-                                    <option value="SOP 05">SOP 05 (Onsite Audit)</option>
-                                    <option value="SOP 06">SOP 06 (Risk Trigger Visit)</option>
-                                    <option value="SOP 07">SOP 07 (Monitoring TL)</option>
-                                    <option value="SOP 08" selected>SOP 08 (Pelaporan Bulanan)</option>
+                                    <option value="SOP 03">Daily Register</option>
+                                    <option value="SOP 04">Offsite Review</option>
+                                    <option value="SOP 05">Onsite Audit</option>
+                                    <option value="SOP 06">Risk Trigger Visit</option>
+                                    <option value="SOP 07">Monitoring TL</option>
+                                    <option value="SOP 08" selected>Pelaporan Bulanan</option>
                                 </select>
                             </div>
                             <div class="col-md-4">

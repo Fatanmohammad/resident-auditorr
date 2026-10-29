@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Edit Kegiatan ' . $kegiatan->source_export_id . ' - SOP 08')
+@section('title', 'Edit Kegiatan ' . $kegiatan->source_export_id)
 
 @section('content')
 <div class="container-fluid px-3 py-3">
@@ -138,7 +138,7 @@
                                 <input type="number" name="high_risk" class="form-control" value="{{ $kegiatan->high_risk }}" min="0">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-dark">Referensi Dokumen WP / KKA</label>
+                                <label class="form-label small fw-bold text-dark">Referensi Dokumen KKA</label>
                                 <input type="text" name="referensi_wp_kka" class="form-control" value="{{ $kegiatan->referensi_wp_kka }}">
                             </div>
                             <div class="col-md-6">

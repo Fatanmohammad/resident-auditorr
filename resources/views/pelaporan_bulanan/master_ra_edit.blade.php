@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Edit Resident Auditor - SOP 08')
+@section('title', 'Edit Resident Auditor')
 
 @section('content')
 <div class="container-fluid px-3 py-3">
@@ -9,7 +9,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.master-ra') }}" class="text-decoration-none">Roster RA</a></li>
                     <li class="breadcrumb-item active" aria-current="page">{{ $masterRa->ra_id }}</li>
                 </ol>
@@ -56,11 +56,11 @@
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">RA ID (Kolom A)</label>
+                                <label class="form-label small fw-bold text-muted">RA ID</label>
                                 <input type="text" class="form-control font-monospace fw-bold bg-light" value="{{ $masterRa->ra_id }}" readonly>
                             </div>
                             <div class="col-md-8">
-                                <label class="form-label small fw-bold text-muted">Nama Lengkap Resident Auditor (Kolom B) <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold text-muted">Nama Lengkap Resident Auditor <span class="text-danger">*</span></label>
                                 <input type="text" name="nama_ra" class="form-control @error('nama_ra') is-invalid @enderror" value="{{ old('nama_ra', $masterRa->nama_ra) }}" required>
                                 @error('nama_ra') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
@@ -79,7 +79,7 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">Kantor Cabang Penempatan (Kolom C & D) <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold text-muted">Kantor Cabang Penempatan <span class="text-danger">*</span></label>
                                 <select name="kode_kc_penempatan" id="kc_select" class="form-select @error('kode_kc_penempatan') is-invalid @enderror" required onchange="handleKcChange()">
                                     @foreach($masterUnits as $mu)
                                         <option value="{{ $mu->kode_unit }}" data-nama="{{ $mu->nama_unit }}" data-unitra="{{ $mu->unit_ra }}" {{ old('kode_kc_penempatan', $masterRa->kode_kc_penempatan) == $mu->kode_unit ? 'selected' : '' }}>
@@ -93,18 +93,18 @@
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">Nama KC (Kolom D - Otomatis)</label>
+                                <label class="form-label small fw-bold text-muted">Nama Kantor Cabang (Otomatis)</label>
                                 <input type="text" name="nama_kc" id="nama_kc_display" class="form-control bg-light" value="{{ $masterRa->nama_kc }}" readonly>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">Unit RA (Kolom E)</label>
+                                <label class="form-label small fw-bold text-muted">Unit RA</label>
                                 <input type="text" name="unit_ra" id="unit_ra_display" class="form-control" value="{{ old('unit_ra', $masterRa->unit_ra) }}">
                             </div>
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">Status (Kolom F) <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold text-muted">Status <span class="text-danger">*</span></label>
                                 <select name="status" class="form-select">
                                     @foreach($statusList as $st)
                                         <option value="{{ $st }}" {{ old('status', $masterRa->status) == $st ? 'selected' : '' }}>{{ $st }}</option>
@@ -112,17 +112,17 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">Tanggal Mulai Penugasan (Kolom G)</label>
+                                <label class="form-label small fw-bold text-muted">Tanggal Mulai Penugasan</label>
                                 <input type="date" name="tanggal_mulai" class="form-control" value="{{ old('tanggal_mulai', $masterRa->tanggal_mulai?->format('Y-m-d')) }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">Tanggal Selesai (Kolom H)</label>
+                                <label class="form-label small fw-bold text-muted">Tanggal Selesai</label>
                                 <input type="date" name="tanggal_selesai" class="form-control" value="{{ old('tanggal_selesai', $masterRa->tanggal_selesai?->format('Y-m-d')) }}">
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label small fw-bold text-muted">Catatan (Kolom I)</label>
+                            <label class="form-label small fw-bold text-muted">Catatan</label>
                             <textarea name="catatan" rows="3" class="form-control">{{ old('catatan', $masterRa->catatan) }}</textarea>
                         </div>
 

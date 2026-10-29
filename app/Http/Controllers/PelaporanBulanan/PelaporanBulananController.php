@@ -240,6 +240,7 @@ class PelaporanBulananController extends Controller
     // =========================================================================
     public function checklist(Request $request, $reportId = null)
     {
+        $reportId = $request->get('reportId') ?? $request->get('report_id') ?? $reportId;
         $allowedUnits = $this->getAllowedUnitCodes();
 
         // Jika reportId tidak diberikan, ambil laporan pertama yang relevan
@@ -307,7 +308,7 @@ class PelaporanBulananController extends Controller
 
         // Kunci jika sudah APPROVED/FINAL
         if ($kalender->status_final === 'APPROVED/FINAL' && !$this->isAdmin()) {
-            return redirect()->back()->with('error', 'Laporan telah dikunci (APPROVED/FINAL) dan tidak dapat diubah.');
+            return redirect()->route('pelaporan-bulanan.checklist', $reportId)->with('error', 'Laporan telah dikunci (APPROVED/FINAL) dan tidak dapat diubah.');
         }
 
         $checklist = Sop08ChecklistLaporan::where('report_id', $reportId)->firstOrFail();
@@ -326,7 +327,7 @@ class PelaporanBulananController extends Controller
         $checklist->save();
         $this->service->recalculateChecklist($checklist);
 
-        return redirect()->back()->with('success', "Checklist kelengkapan {$reportId} berhasil disimpan. Status: {$checklist->status_kesiapan} ({$checklist->persen_lengkap}%).");
+        return redirect()->route('pelaporan-bulanan.checklist', $reportId)->with('success', "Checklist kelengkapan {$reportId} berhasil disimpan. Status: {$checklist->status_kesiapan} ({$checklist->persen_lengkap}%).");
     }
 
     // =========================================================================
@@ -334,6 +335,7 @@ class PelaporanBulananController extends Controller
     // =========================================================================
     public function rekapKegiatan(Request $request, $reportId = null)
     {
+        $reportId = $request->get('reportId') ?? $request->get('report_id') ?? $reportId;
         $allowedUnits = $this->getAllowedUnitCodes();
 
         if (!$reportId) {
@@ -341,6 +343,7 @@ class PelaporanBulananController extends Controller
                     $q->whereIn('kode_unit', $allowedUnits);
                 })
                 ->orderBy('periode', 'desc')
+                ->orderBy('kode_unit', 'asc')
                 ->first();
             $reportId = $firstReport?->report_id;
         }
@@ -361,6 +364,7 @@ class PelaporanBulananController extends Controller
                 $q->whereIn('kode_unit', $allowedUnits);
             })
             ->orderBy('periode', 'desc')
+            ->orderBy('kode_unit', 'asc')
             ->get();
 
         $jenisKegiatanList = Sop08RekapKegiatan::jenisKegiatanList();
@@ -382,12 +386,12 @@ class PelaporanBulananController extends Controller
         $this->authorizeUnitAccess($kalender->kode_unit);
 
         if ($kalender->status_final === 'APPROVED/FINAL' && !$this->isAdmin()) {
-            return redirect()->back()->with('error', 'Laporan telah berstatus FINAL dan tidak dapat diubah.');
+            return redirect()->route('pelaporan-bulanan.rekap-kegiatan', $reportId)->with('error', 'Laporan telah berstatus FINAL dan tidak dapat diubah.');
         }
 
         $res = $this->service->syncFromOtherModules($reportId);
 
-        return redirect()->back()->with('success', $res['message']);
+        return redirect()->route('pelaporan-bulanan.rekap-kegiatan', $reportId)->with('success', $res['message']);
     }
 
     public function createKegiatan($reportId)
@@ -396,7 +400,7 @@ class PelaporanBulananController extends Controller
         $this->authorizeUnitAccess($kalender->kode_unit);
 
         if ($kalender->status_final === 'APPROVED/FINAL' && !$this->isAdmin()) {
-            return redirect()->route('pelaporan-bulanan.rekap-kegiatan', ['reportId' => $reportId])
+            return redirect()->route('pelaporan-bulanan.rekap-kegiatan', $reportId)
                 ->with('error', 'Laporan telah FINAL.');
         }
 
@@ -424,7 +428,7 @@ class PelaporanBulananController extends Controller
         $this->authorizeUnitAccess($kalender->kode_unit);
 
         if ($kalender->status_final === 'APPROVED/FINAL' && !$this->isAdmin()) {
-            return redirect()->back()->with('error', 'Laporan telah FINAL.');
+            return redirect()->route('pelaporan-bulanan.rekap-kegiatan', $reportId)->with('error', 'Laporan telah FINAL.');
         }
 
         $request->validate([
@@ -459,7 +463,7 @@ class PelaporanBulananController extends Controller
             'catatan' => $request->catatan,
         ]);
 
-        return redirect()->route('pelaporan-bulanan.rekap-kegiatan', ['reportId' => $reportId])->with('success', 'Baris Rekap Kegiatan berhasil ditambahkan.');
+        return redirect()->route('pelaporan-bulanan.rekap-kegiatan', $reportId)->with('success', 'Baris Rekap Kegiatan berhasil ditambahkan.');
     }
 
     public function updateKegiatan(Request $request, $id)
@@ -484,16 +488,17 @@ class PelaporanBulananController extends Controller
             'catatan',
         ]));
 
-        return redirect()->route('pelaporan-bulanan.rekap-kegiatan', ['reportId' => $kegiatan->report_id])->with('success', 'Data kegiatan berhasil diperbarui.');
+        return redirect()->route('pelaporan-bulanan.rekap-kegiatan', $kegiatan->report_id)->with('success', 'Data kegiatan berhasil diperbarui.');
     }
 
     public function destroyKegiatan($id)
     {
         $kegiatan = Sop08RekapKegiatan::findOrFail($id);
         $this->authorizeUnitAccess($kegiatan->kode_unit);
+        $reportId = $kegiatan->report_id;
         $kegiatan->delete();
 
-        return redirect()->back()->with('success', 'Baris kegiatan berhasil dihapus.');
+        return redirect()->route('pelaporan-bulanan.rekap-kegiatan', $reportId)->with('success', 'Baris kegiatan berhasil dihapus.');
     }
 
     // =========================================================================
@@ -501,6 +506,7 @@ class PelaporanBulananController extends Controller
     // =========================================================================
     public function rekapIsu(Request $request, $reportId = null)
     {
+        $reportId = $request->get('reportId') ?? $request->get('report_id') ?? $reportId;
         $allowedUnits = $this->getAllowedUnitCodes();
 
         if (!$reportId) {
@@ -508,6 +514,7 @@ class PelaporanBulananController extends Controller
                     $q->whereIn('kode_unit', $allowedUnits);
                 })
                 ->orderBy('periode', 'desc')
+                ->orderBy('kode_unit', 'asc')
                 ->first();
             $reportId = $firstReport?->report_id;
         }
@@ -533,6 +540,7 @@ class PelaporanBulananController extends Controller
                 $q->whereIn('kode_unit', $allowedUnits);
             })
             ->orderBy('periode', 'desc')
+            ->orderBy('kode_unit', 'asc')
             ->get();
 
         $areaList = Sop08RekapIsuTl::areaList();
@@ -552,7 +560,7 @@ class PelaporanBulananController extends Controller
         $this->authorizeUnitAccess($kalender->kode_unit);
 
         if ($kalender->status_final === 'APPROVED/FINAL' && !$this->isAdmin()) {
-            return redirect()->route('pelaporan-bulanan.rekap-isu-tl', ['reportId' => $reportId])
+            return redirect()->route('pelaporan-bulanan.rekap-isu-tl', $reportId)
                 ->with('error', 'Laporan telah FINAL.');
         }
 
@@ -578,7 +586,7 @@ class PelaporanBulananController extends Controller
         $this->authorizeUnitAccess($kalender->kode_unit);
 
         if ($kalender->status_final === 'APPROVED/FINAL' && !$this->isAdmin()) {
-            return redirect()->back()->with('error', 'Laporan telah FINAL.');
+            return redirect()->route('pelaporan-bulanan.rekap-isu-tl', $reportId)->with('error', 'Laporan telah FINAL.');
         }
 
         $request->validate([
@@ -617,7 +625,7 @@ class PelaporanBulananController extends Controller
 
         $this->service->recalculateRekapIsu($isu);
 
-        return redirect()->route('pelaporan-bulanan.rekap-isu-tl', ['reportId' => $reportId])->with('success', "Isu {$issueId} berhasil ditambahkan [Flag Signifikan: {$isu->flag_signifikan}, Jalur: {$isu->jalur_tindak_lanjut}].");
+        return redirect()->route('pelaporan-bulanan.rekap-isu-tl', $reportId)->with('success', "Isu {$issueId} berhasil ditambahkan [Flag Signifikan: {$isu->flag_signifikan}, Jalur: {$isu->jalur_tindak_lanjut}].");
     }
 
     public function updateIsu(Request $request, $id)
@@ -645,16 +653,17 @@ class PelaporanBulananController extends Controller
 
         $this->service->recalculateRekapIsu($isu);
 
-        return redirect()->route('pelaporan-bulanan.rekap-isu-tl', ['reportId' => $isu->report_id])->with('success', "Data Isu {$isu->issue_id} berhasil diperbarui.");
+        return redirect()->route('pelaporan-bulanan.rekap-isu-tl', $isu->report_id)->with('success', "Data Isu {$isu->issue_id} berhasil diperbarui.");
     }
 
     public function destroyIsu($id)
     {
         $isu = Sop08RekapIsuTl::findOrFail($id);
         $this->authorizeUnitAccess($isu->kode_unit);
+        $reportId = $isu->report_id;
         $isu->delete();
 
-        return redirect()->back()->with('success', 'Baris isu berhasil dihapus.');
+        return redirect()->route('pelaporan-bulanan.rekap-isu-tl', $reportId)->with('success', 'Baris isu berhasil dihapus.');
     }
 
     // =========================================================================
@@ -662,6 +671,7 @@ class PelaporanBulananController extends Controller
     // =========================================================================
     public function narasi(Request $request, $reportId = null)
     {
+        $reportId = $request->get('reportId') ?? $request->get('report_id') ?? $reportId;
         $allowedUnits = $this->getAllowedUnitCodes();
 
         if (!$reportId) {
@@ -669,6 +679,7 @@ class PelaporanBulananController extends Controller
                     $q->whereIn('kode_unit', $allowedUnits);
                 })
                 ->orderBy('periode', 'desc')
+                ->orderBy('kode_unit', 'asc')
                 ->first();
             $reportId = $firstReport?->report_id;
         }
@@ -692,6 +703,7 @@ class PelaporanBulananController extends Controller
                 $q->whereIn('kode_unit', $allowedUnits);
             })
             ->orderBy('periode', 'desc')
+            ->orderBy('kode_unit', 'asc')
             ->get();
 
         return view('pelaporan_bulanan.narasi', compact(
@@ -708,7 +720,7 @@ class PelaporanBulananController extends Controller
         $this->authorizeUnitAccess($kalender->kode_unit);
 
         if ($kalender->status_final === 'APPROVED/FINAL' && !$this->isAdmin()) {
-            return redirect()->back()->with('error', 'Laporan telah FINAL.');
+            return redirect()->route('pelaporan-bulanan.narasi', $reportId)->with('error', 'Laporan telah FINAL.');
         }
 
         $narasi = Sop08NarasiLaporan::firstOrCreate(['report_id' => $reportId]);
@@ -721,7 +733,7 @@ class PelaporanBulananController extends Controller
             'arahan_diperlukan',
         ]));
 
-        return redirect()->back()->with('success', "Narasi laporan {$reportId} berhasil disimpan.");
+        return redirect()->route('pelaporan-bulanan.narasi', $reportId)->with('success', "Narasi laporan {$reportId} berhasil disimpan.");
     }
 
     // =========================================================================
@@ -729,6 +741,7 @@ class PelaporanBulananController extends Controller
     // =========================================================================
     public function laporanBulanan(Request $request, $reportId = null)
     {
+        $reportId = $request->get('reportId') ?? $request->get('report_id') ?? $reportId;
         $allowedUnits = $this->getAllowedUnitCodes();
 
         if (!$reportId) {
@@ -736,6 +749,7 @@ class PelaporanBulananController extends Controller
                     $q->whereIn('kode_unit', $allowedUnits);
                 })
                 ->orderBy('periode', 'desc')
+                ->orderBy('kode_unit', 'asc')
                 ->first();
             $reportId = $firstReport?->report_id;
         }
@@ -797,6 +811,7 @@ class PelaporanBulananController extends Controller
                 $q->whereIn('kode_unit', $allowedUnits);
             })
             ->orderBy('periode', 'desc')
+            ->orderBy('kode_unit', 'asc')
             ->get();
 
         return view('pelaporan_bulanan.laporan_bulanan', compact(
@@ -917,6 +932,8 @@ class PelaporanBulananController extends Controller
         foreach ($kalenderList as $kal) {
             if (!$kal->review) {
                 $this->service->initFase2Records($kal->report_id);
+            } else {
+                $this->service->recalculateReviewLaporan($kal->review);
             }
         }
 

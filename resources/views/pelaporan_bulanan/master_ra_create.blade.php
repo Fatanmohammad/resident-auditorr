@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Tambah Resident Auditor - SOP 08')
+@section('title', 'Tambah Resident Auditor')
 
 @section('content')
 <div class="container-fluid px-3 py-3">
@@ -9,14 +9,13 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.master-ra') }}" class="text-decoration-none">Roster RA</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Tambah RA</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                 <i class="bi bi-person-plus-fill text-primary"></i> Pendaftaran Resident Auditor Baru
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 fw-semibold">WP-RA-08-N</span>
             </h4>
             <p class="text-muted small mb-0 mt-1">
                 Tambahkan profil penugasan Resident Auditor ke dalam Roster RA terpusat.
@@ -45,7 +44,7 @@
             <div class="card border-0 shadow-sm rounded-3">
                 <div class="card-header bg-primary text-white py-3 px-4">
                     <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-card-checklist me-2"></i> Formulir Penempatan Resident Auditor (Master_RA)
+                        <i class="bi bi-card-checklist me-2"></i> Formulir Penempatan Resident Auditor
                     </h5>
                 </div>
                 <div class="card-body p-4">
@@ -54,12 +53,12 @@
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">RA ID (Kolom A) <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold text-muted">RA ID <span class="text-danger">*</span></label>
                                 <input type="text" name="ra_id" class="form-control font-monospace fw-bold @error('ra_id') is-invalid @enderror" value="{{ old('ra_id', $autoRaId) }}" required>
                                 @error('ra_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-8">
-                                <label class="form-label small fw-bold text-muted">Nama Lengkap Resident Auditor (Kolom B) <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold text-muted">Nama Lengkap Resident Auditor <span class="text-danger">*</span></label>
                                 <input type="text" name="nama_ra" class="form-control @error('nama_ra') is-invalid @enderror" value="{{ old('nama_ra') }}" placeholder="Contoh: Jilly Keshia Lambeto" required>
                                 @error('nama_ra') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
@@ -78,7 +77,7 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">Kantor Cabang Penempatan (Kolom C & D) <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold text-muted">Kantor Cabang Penempatan <span class="text-danger">*</span></label>
                                 <select name="kode_kc_penempatan" id="kc_select" class="form-select @error('kode_kc_penempatan') is-invalid @enderror" required onchange="handleKcChange()">
                                     <option value="">-- Pilih Kantor Cabang Penempatan --</option>
                                     @foreach($masterUnits as $mu)
@@ -93,18 +92,18 @@
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">Nama KC (Kolom D - Otomatis)</label>
+                                <label class="form-label small fw-bold text-muted">Nama Kantor Cabang (Otomatis)</label>
                                 <input type="text" name="nama_kc" id="nama_kc_display" class="form-control bg-light" readonly placeholder="Otomatis dari Master Unit">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">Unit RA (Kolom E)</label>
+                                <label class="form-label small fw-bold text-muted">Unit RA</label>
                                 <input type="text" name="unit_ra" id="unit_ra_display" class="form-control" value="{{ old('unit_ra', 'Bagian Resident Auditor') }}">
                             </div>
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">Status (Kolom F) <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold text-muted">Status <span class="text-danger">*</span></label>
                                 <select name="status" class="form-select">
                                     @foreach($statusList as $st)
                                         <option value="{{ $st }}" {{ old('status') == $st ? 'selected' : '' }}>{{ $st }}</option>
@@ -112,17 +111,17 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">Tanggal Mulai Penugasan (Kolom G)</label>
+                                <label class="form-label small fw-bold text-muted">Tanggal Mulai Penugasan</label>
                                 <input type="date" name="tanggal_mulai" class="form-control" value="{{ old('tanggal_mulai', now()->format('Y-01-01')) }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">Tanggal Selesai (Kolom H)</label>
+                                <label class="form-label small fw-bold text-muted">Tanggal Selesai</label>
                                 <input type="date" name="tanggal_selesai" class="form-control" value="{{ old('tanggal_selesai') }}">
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label small fw-bold text-muted">Catatan (Kolom I)</label>
+                            <label class="form-label small fw-bold text-muted">Catatan</label>
                             <textarea name="catatan" rows="3" class="form-control" placeholder="Catatan SK penugasan, riwayat mutasi cabang, dll...">{{ old('catatan') }}</textarea>
                         </div>
 

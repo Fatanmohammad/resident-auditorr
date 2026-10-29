@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Cetak Laporan Bulanan (WP-RA-08-C) - SOP 08')
+@section('title', 'Cetak Laporan Bulanan')
 
 @section('content')
 <style>
@@ -114,7 +114,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 no-print">
         <div>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-printer me-2"></i>Laporan Bulanan Resident Auditor (WP-RA-08-C)
+                <i class="bi bi-printer me-2"></i>Laporan Bulanan Resident Auditor
             </h4>
             <p class="text-muted small mb-0">
                 Lembar Eksekutif Laporan Bulanan Resmi Bank Sulteng (Tampilan Standar Sheet Laporan_Bulanan)
@@ -142,7 +142,7 @@
         <form method="GET" action="{{ route('pelaporan-bulanan.laporan-bulanan') }}" class="row g-2 align-items-center">
             <div class="col-md-7">
                 <label class="form-label small fw-bold text-muted mb-1">Pilih Laporan Bulanan (Report ID)</label>
-                <select name="reportId" class="form-select form-select-sm fw-bold" onchange="this.form.submit()">
+                <select name="reportId" class="form-select form-select-sm fw-bold" onchange="if(this.value) { window.location.href = '{{ url('/pelaporan-bulanan/laporan-bulanan') }}/' + this.value; } else { this.form.submit(); }">
                     @forelse($availableReports as $rep)
                         <option value="{{ $rep->report_id }}" {{ ($reportId == $rep->report_id) ? 'selected' : '' }}>
                             {{ $rep->report_id }} - [{{ $rep->kode_unit }}] {{ $rep->nama_unit }} ({{ \Carbon\Carbon::parse($rep->periode)->translatedFormat('F Y') }})
@@ -168,7 +168,7 @@
             Silakan pilih atau inisiasi kalender laporan terlebih dahulu pada menu <a href="{{ route('pelaporan-bulanan.kalender') }}" class="fw-bold">Kalender Laporan</a>.
         </div>
     @else
-        {{-- LEMBAR FORMAL CETAK LAPORAN BULANAN (WP-RA-08-C) --}}
+        {{-- LEMBAR FORMAL CETAK LAPORAN BULANAN --}}
         <div class="sheet-container">
             {{-- Header Perusahaan & Judul Dokumen --}}
             <div class="d-flex justify-content-between align-items-center sheet-header-title">
@@ -180,7 +180,7 @@
                     </div>
                 </div>
                 <div class="text-end">
-                    <span class="wp-code-badge">WP-RA-08-C</span>
+                    <span class="wp-code-badge">LAPORAN RESMI</span>
                     <div class="small fw-bold text-dark mt-1">LAPORAN BULANAN RESIDENT AUDITOR</div>
                 </div>
             </div>
@@ -446,7 +446,7 @@
                 </div>
 
                 <div class="small text-muted mt-1 fst-italic">
-                    * Catatan: Metrik kinerja bulanan terhitung otomatis dari Roster RA, Log Aktivitas Harian, &amp; Kalender Kinerja RA (SOP 08 Fase 4).
+                    * Catatan: Metrik kinerja bulanan terhitung otomatis dari Roster RA, Log Aktivitas Harian, &amp; Kalender Kinerja RA.
                 </div>
             </div>
 

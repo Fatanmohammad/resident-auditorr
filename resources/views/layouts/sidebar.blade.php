@@ -248,7 +248,7 @@
             </div>
         </div>
 
-        {{-- ===================== MODUL PEMERIKSAAN AWAL FRAUD (SOP 09) ===================== --}}
+        {{-- ===================== MODUL PEMERIKSAAN AWAL FRAUD ===================== --}}
         <div class="nav-group {{ request()->is('pemeriksaan-awal*') ? 'open' : '' }}">
             <div class="nav-group-toggle">
                 <i class="bi bi-shield-exclamation nav-icon"></i> Pemeriksaan Awal Fraud
@@ -276,14 +276,14 @@
             </div>
         </div>
 
-        {{-- ===================== RISK TRIGGER VISIT (SOP 06) ===================== --}}
+        {{-- ===================== RISK TRIGGER VISIT ===================== --}}
         @php
             $canAccessRiskTrigger = in_array($role, ['admin', 'kabag_ra', 'kadiv_skai', 'ra', 'reviewer', 'pimsie']);
         @endphp
         @if($canAccessRiskTrigger)
         <div class="nav-group {{ request()->is('risk-trigger*') ? 'open' : '' }}">
             <div class="nav-group-toggle">
-                <i class="bi bi-lightning-charge-fill nav-icon text-warning"></i> Risk Trigger Visit (SOP 06)
+                <i class="bi bi-shield-exclamation nav-icon"></i> Risk Trigger Visit
                 <i class="bi bi-chevron-down nav-arrow"></i>
             </div>
             <div class="nav-group-children">
@@ -307,19 +307,19 @@
         @endif
         {{-- ======================================================================= --}}
 
-        {{-- ===================== PELAPORAN BULANAN & KONSOLIDASI (SOP 08) ===================== --}}
+        {{-- ===================== PELAPORAN BULANAN & KONSOLIDASI ===================== --}}
         @php
             $canAccessSop08 = in_array($role, ['admin', 'kabag_ra', 'kadiv_skai', 'ra', 'reviewer', 'pimsie', 'korwas']);
         @endphp
         @if($canAccessSop08)
         <div class="nav-group {{ request()->is('pelaporan-bulanan*') ? 'open' : '' }}">
             <div class="nav-group-toggle">
-                <i class="bi bi-file-earmark-bar-graph-fill nav-icon text-primary"></i> Pelaporan Bulanan (SOP 08)
+                <i class="bi bi-file-earmark-bar-graph nav-icon"></i> Pelaporan Bulanan
                 <i class="bi bi-chevron-down nav-arrow"></i>
             </div>
             <div class="nav-group-children">
                 <a href="{{ route('pelaporan-bulanan.dashboard') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.dashboard*') ? 'active' : '' }}">
-                    <i class="bi bi-speedometer2 nav-icon text-info"></i> Dashboard SOP 08
+                    <i class="bi bi-speedometer2 nav-icon"></i> Dashboard Pelaporan
                 </a>
                 <a href="{{ route('pelaporan-bulanan.kalender') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.kalender*') ? 'active' : '' }}">
                     <i class="bi bi-calendar3-range nav-icon"></i> Kalender Laporan
@@ -334,7 +334,7 @@
                     <i class="bi bi-exclamation-diamond nav-icon"></i> Rekap Isu & TL
                 </a>
                 <a href="{{ route('pelaporan-bulanan.review-laporan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.review-laporan*') ? 'active' : '' }}">
-                    <i class="bi bi-clipboard-check nav-icon"></i> Review Laporan (WP-RA-08-F)
+                    <i class="bi bi-clipboard-check nav-icon"></i> Review Laporan
                 </a>
                 <a href="{{ route('pelaporan-bulanan.koreksi-approval') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.koreksi-approval*') ? 'active' : '' }}">
                     <i class="bi bi-check2-circle nav-icon"></i> Koreksi & Approval
@@ -346,28 +346,28 @@
                     <i class="bi bi-award nav-icon"></i> Distribusi & Quality
                 </a>
                 <a href="{{ route('pelaporan-bulanan.konsolidasi') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.konsolidasi*') ? 'active' : '' }}">
-                    <i class="bi bi-diagram-3 nav-icon"></i> Konsolidasi (WP-RA-08-J)
+                    <i class="bi bi-diagram-3 nav-icon"></i> Konsolidasi
                 </a>
                 <a href="{{ route('pelaporan-bulanan.tren-isu') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.tren-isu*') ? 'active' : '' }}">
-                    <i class="bi bi-graph-up-arrow nav-icon"></i> Tren Isu (WP-RA-08-K)
+                    <i class="bi bi-graph-up-arrow nav-icon"></i> Tren Isu
                 </a>
                 <a href="{{ route('pelaporan-bulanan.feedback') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.feedback*') ? 'active' : '' }}">
-                    <i class="bi bi-chat-square-quote nav-icon"></i> Feedback (WP-RA-08-M)
+                    <i class="bi bi-chat-square-quote nav-icon"></i> Feedback
                 </a>
                 <a href="{{ route('pelaporan-bulanan.master-ra') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.master-ra*') ? 'active' : '' }}">
-                    <i class="bi bi-people nav-icon"></i> Roster RA (WP-RA-08-N)
+                    <i class="bi bi-people nav-icon"></i> Roster RA
                 </a>
                 <a href="{{ route('pelaporan-bulanan.log-harian') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.log-harian*') ? 'active' : '' }}">
-                    <i class="bi bi-journal-check nav-icon"></i> Log Harian (WP-RA-08-O)
+                    <i class="bi bi-journal-check nav-icon"></i> Log Harian
                 </a>
                 <a href="{{ route('pelaporan-bulanan.kalender-kinerja') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.kalender-kinerja*') ? 'active' : '' }}">
-                    <i class="bi bi-calendar2-check nav-icon"></i> Kinerja RA (WP-RA-08-P)
+                    <i class="bi bi-calendar2-check nav-icon"></i> Kinerja RA
                 </a>
                 <a href="{{ route('pelaporan-bulanan.narasi') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.narasi*') ? 'active' : '' }}">
                     <i class="bi bi-journal-text nav-icon"></i> Narasi Laporan
                 </a>
                 <a href="{{ route('pelaporan-bulanan.laporan-bulanan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.laporan-bulanan*') ? 'active' : '' }}">
-                    <i class="bi bi-printer-fill nav-icon text-success"></i> Cetak Laporan Bulanan
+                    <i class="bi bi-printer nav-icon"></i> Cetak Laporan Bulanan
                 </a>
                 @if($isAdmin)
                 <a href="{{ route('pelaporan-bulanan.master-parameter') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.master-parameter*') ? 'active' : '' }}">

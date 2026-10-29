@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Keputusan Eskalasi Isu Signifikan (WP-RA-08-H) - SOP 08')
+@section('title', 'Keputusan Eskalasi Isu Signifikan')
 
 @section('content')
 <style>
@@ -31,7 +31,7 @@
         <div>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 small">
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.isu-signifikan', ['reportId' => $isu->report_id, 'periode' => \Carbon\Carbon::parse($isu->periode)->format('Y-m')]) }}" class="text-decoration-none">Isu Signifikan</a></li>
                     <li class="breadcrumb-item active" aria-current="page">{{ $isRa ? 'Input Bukti' : 'Penetapan Eskalasi' }}</li>
                 </ol>
@@ -40,7 +40,7 @@
                 <i class="bi bi-shield-slash-fill me-2 text-danger"></i>{{ $isRa ? 'Input Bukti Referensi Isu Signifikan' : 'Penetapan Keputusan & Eskalasi Isu Signifikan' }}
             </h4>
             <p class="text-muted small mb-0">
-                WP-RA-08-H: Matriks Isu Signifikan & Rekomendasi Eskalasi untuk Issue ID: <strong class="text-danger">{{ $isu->issue_id }}</strong>
+                Matriks Isu Signifikan & Rekomendasi Eskalasi untuk Issue ID: <strong class="text-danger">{{ $isu->issue_id }}</strong>
             </p>
         </div>
         <div>
@@ -103,17 +103,17 @@
                     </div>
                 </div>
 
-                {{-- Form Keputusan Eskalasi (Kolom M s.d. Q) --}}
+                {{-- Form Keputusan Eskalasi --}}
                 <div class="glass-card">
                     <h6 class="fw-bold text-dark mb-3">
-                        <i class="bi bi-sliders me-2 text-primary"></i>5 Kolom Keputusan Eskalasi (Kolom M s.d. Q)
+                        <i class="bi bi-sliders me-2 text-primary"></i>Keputusan Eskalasi
                     </h6>
 
                     @if(!$isRa)
                         {{-- Admin / Reviewer Form --}}
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label for="keputusan_reviewer" class="form-label">Keputusan Reviewer (Kolom M)</label>
+                                <label for="keputusan_reviewer" class="form-label">Keputusan Reviewer</label>
                                 <select name="keputusan_reviewer" id="keputusan_reviewer" class="form-select">
                                     <option value="">-- Pilih Keputusan --</option>
                                     @foreach($opsiKeputusan as $opt)
@@ -124,7 +124,7 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="tujuan_eskalasi" class="form-label">Tujuan Eskalasi (Kolom N)</label>
+                                <label for="tujuan_eskalasi" class="form-label">Tujuan Eskalasi</label>
                                 <select name="tujuan_eskalasi" id="tujuan_eskalasi" class="form-select">
                                     <option value="">-- Pilih Tujuan Eskalasi --</option>
                                     @foreach($opsiTujuan as $opt)
@@ -137,39 +137,39 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="tanggal_eskalasi" class="form-label">Tanggal Eskalasi (Kolom O)</label>
+                            <label for="tanggal_eskalasi" class="form-label">Tanggal Eskalasi</label>
                             <input type="date" name="tanggal_eskalasi" id="tanggal_eskalasi" class="form-control"
                                    value="{{ old('tanggal_eskalasi', $isu->tanggal_eskalasi ? \Carbon\Carbon::parse($isu->tanggal_eskalasi)->format('Y-m-d') : '') }}">
                         </div>
 
                         <div class="mb-3">
-                            <label for="referensi_bukti" class="form-label">Referensi Bukti / Lampiran (Kolom P)</label>
+                            <label for="referensi_bukti" class="form-label">Referensi Bukti / Lampiran</label>
                             <textarea name="referensi_bukti" id="referensi_bukti" rows="3" class="form-control"
                                       placeholder="Contoh: Lampiran KKA 05.D No. 12, Rekon Kas ATM Tgl 15/10/2026...">{{ old('referensi_bukti', $isu->referensi_bukti) }}</textarea>
                             <small class="text-muted" style="font-size:0.75rem;">Dapat diisi oleh Reviewer maupun Resident Auditor.</small>
                         </div>
 
                         <div class="mb-4">
-                            <label for="arahan_tindak_lanjut" class="form-label">Arahan / Tindak Lanjut Komite (Kolom Q)</label>
+                            <label for="arahan_tindak_lanjut" class="form-label">Arahan / Tindak Lanjut Komite</label>
                             <textarea name="arahan_tindak_lanjut" id="arahan_tindak_lanjut" rows="4" class="form-control"
                                       placeholder="Instruksi tindak lanjut khusus, arahan koordinasi atau audit investigasi...">{{ old('arahan_tindak_lanjut', $isu->arahan_tindak_lanjut) }}</textarea>
                         </div>
                     @else
-                        {{-- Resident Auditor Mode: Read Only untuk Keputusan Reviewer, Hanya Boleh Input Referensi Bukti (P) --}}
+                        {{-- Resident Auditor Mode --}}
                         <div class="alert alert-warning border-0 small mb-3">
                             <i class="bi bi-info-circle me-1"></i>
-                            Role Resident Auditor: Anda hanya berwenang melengkapi <strong>Referensi Bukti (Kolom P)</strong> untuk verifikasi oleh Reviewer SKAI. Keputusan eskalasi ditetapkan oleh SKAI.
+                            Role Resident Auditor: Anda hanya berwenang melengkapi <strong>Referensi Bukti</strong> untuk verifikasi oleh Reviewer SKAI. Keputusan eskalasi ditetapkan oleh SKAI.
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label text-muted small mb-1">Keputusan Reviewer (Kolom M)</label>
+                                <label class="form-label text-muted small mb-1">Keputusan Reviewer</label>
                                 <div class="p-2 bg-light border rounded fw-bold text-dark">
                                     {{ $isu->keputusan_reviewer ?: 'Belum Ditetapkan SKAI' }}
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label text-muted small mb-1">Tujuan Eskalasi (Kolom N)</label>
+                                <label class="form-label text-muted small mb-1">Tujuan Eskalasi</label>
                                 <div class="p-2 bg-light border rounded fw-bold text-dark">
                                     {{ $isu->tujuan_eskalasi ?: 'Belum Ditetapkan SKAI' }}
                                 </div>
@@ -178,7 +178,7 @@
 
                         <div class="mb-3">
                             <label for="referensi_bukti" class="form-label">
-                                Referensi Bukti / Lampiran (Kolom P) <span class="text-danger">*</span>
+                                Referensi Bukti / Lampiran <span class="text-danger">*</span>
                             </label>
                             <textarea name="referensi_bukti" id="referensi_bukti" rows="4" class="form-control"
                                       placeholder="Tuliskan nomor referensi bukti audit, lampiran KKA, nomor memo atau screenshot transaksi..." required>{{ old('referensi_bukti', $isu->referensi_bukti) }}</textarea>
@@ -186,7 +186,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted small mb-1">Arahan / Tindak Lanjut (Kolom Q)</label>
+                            <label class="form-label text-muted small mb-1">Arahan / Tindak Lanjut</label>
                             <div class="p-2 bg-light border rounded text-secondary small" style="min-height: 50px;">
                                 {{ $isu->arahan_tindak_lanjut ?: 'Belum ada arahan tindak lanjut dari SKAI.' }}
                             </div>
@@ -204,23 +204,23 @@
                 </div>
             </div>
 
-            {{-- Kolom Kanan: Panduan Regulasi Eskalasi SOP 08 --}}
+            {{-- Kolom Kanan: Panduan Regulasi Eskalasi --}}
             <div class="col-lg-4">
                 <div class="glass-card mb-3">
                     <h6 class="fw-bold text-dark mb-3">
-                        <i class="bi bi-journal-bookmark me-2 text-danger"></i>Kriteria Jalur Sistem (SOP 08)
+                        <i class="bi bi-journal-bookmark me-2 text-danger"></i>Kriteria Jalur Sistem
                     </h6>
                     <ul class="list-group list-group-flush small">
                         <li class="list-group-item px-0 py-2">
-                            <strong class="text-dark">SOP-RA-09/10 (Indikasi Fraud):</strong>
+                            <strong class="text-dark">Pemeriksaan Fraud / Investigasi:</strong>
                             <p class="text-muted mb-0 small">Isu bertipe Indikasi Fraud atau berlevel High Risk dengan nilai kerugian finansial material.</p>
                         </li>
                         <li class="list-group-item px-0 py-2">
-                            <strong class="text-danger">SOP-RA-10 (Pemeriksaan Khusus):</strong>
+                            <strong class="text-danger">Pemeriksaan Khusus:</strong>
                             <p class="text-muted mb-0 small">Temuan berulang (YA), status overdue berkepanjangan, atau kendala integritas unit.</p>
                         </li>
                         <li class="list-group-item px-0 py-2">
-                            <strong class="text-warning">SOP-RA-07 (Monitoring Ketat):</strong>
+                            <strong class="text-warning">Monitoring Rutin / Ketat:</strong>
                             <p class="text-muted mb-0 small">Finding operasional dengan status Overdue atau risiko medium yang belum terselesaikan.</p>
                         </li>
                         <li class="list-group-item px-0 py-2">

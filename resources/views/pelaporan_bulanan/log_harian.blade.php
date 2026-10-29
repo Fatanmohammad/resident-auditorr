@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Log Aktivitas Harian RA (WP-RA-08-O) - SOP 08')
+@section('title', 'Log Aktivitas Harian RA')
 
 @section('content')
 <style>
@@ -36,27 +36,24 @@
         margin-bottom: 1.25rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
-    .table-responsive {
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-    }
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         text-align: center;
         vertical-align: middle;
+        padding: 0.75rem 0.85rem;
     }
     .table tbody td {
-        font-size: 0.82rem;
+        font-size: 0.875rem;
         vertical-align: middle;
         white-space: nowrap;
+        padding: 0.75rem 0.85rem;
+        color: #334155;
     }
     .table-section-ra { background: #f8fafc !important; }
     .table-section-activity { background: #f0fdf4 !important; }
@@ -70,16 +67,15 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Log Harian (WP-RA-08-O)</li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Log Harian</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                 <i class="bi bi-journal-check text-success"></i> Log Aktivitas Harian Resident Auditor
-                <span class="badge bg-success-subtle text-success border border-success-subtle fs-6 fw-semibold">WP-RA-08-O</span>
             </h4>
             <p class="text-muted small mb-0 mt-1">
-                Pencatatan aktivitas pengujian harian, kehadiran (Kerja/Cuti/Sakit/Dinas), dan hasil review mutu oleh Reviewer/Bagian RA (17 Kolom A s.d. Q).
+                Pencatatan aktivitas pengujian harian, kehadiran (Kerja/Cuti/Sakit/Dinas), dan hasil review mutu oleh Reviewer/Bagian RA.
             </p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
@@ -284,35 +280,35 @@
                     </th>
                     @endif
                     <th colspan="6" class="table-section-ra text-primary">
-                        <i class="bi bi-person-lines-fill me-1"></i> IDENTITAS LOG & RA (Kolom A s.d. F)
+                        <i class="bi bi-person-lines-fill me-1"></i> IDENTITAS LOG &amp; RA
                     </th>
                     <th colspan="6" class="table-section-activity text-success">
-                        <i class="bi bi-clipboard-pulse me-1"></i> AKTIVITAS KERJA / STATUS KEHADIRAN (Kolom G s.d. L, P, Q)
+                        <i class="bi bi-clipboard-pulse me-1"></i> AKTIVITAS KERJA / STATUS KEHADIRAN
                     </th>
                     <th colspan="3" class="table-section-review text-info">
-                        <i class="bi bi-shield-check me-1"></i> REVIEW MUTU REVIEWER (Kolom M s.d. O)
+                        <i class="bi bi-shield-check me-1"></i> REVIEW MUTU REVIEWER
                     </th>
                     <th rowspan="2" class="bg-light text-center" style="width: 70px;">Aksi</th>
                 </tr>
-                {{-- 17 Sub-Column Headers A s.d. Q --}}
+                {{-- Column Headers --}}
                 <tr>
-                    <th title="Kolom A - Log ID">Log ID (A)</th>
-                    <th title="Kolom B - Tanggal">Tanggal (B)</th>
-                    <th title="Kolom C - RA ID">RA ID (C)</th>
-                    <th title="Kolom D - Nama RA">Nama RA (D)</th>
-                    <th title="Kolom E - Kode Unit">Kode (E)</th>
-                    <th title="Kolom F - Nama Unit">Nama Unit (F)</th>
+                    <th>Log ID</th>
+                    <th>Tanggal</th>
+                    <th>RA ID</th>
+                    <th>Nama RA</th>
+                    <th>Kode</th>
+                    <th>Nama Unit</th>
 
-                    <th title="Kolom G - Status Hari">Status Hari (G)</th>
-                    <th title="Kolom H - Sumber SOP">Sumber SOP (H)</th>
-                    <th title="Kolom I - Jenis Aktivitas" style="min-width: 180px;">Jenis Aktivitas (I)</th>
-                    <th title="Kolom J - Area">Area (J)</th>
-                    <th title="Kolom K - Output / Referensi WP">Referensi WP (K)</th>
-                    <th title="Kolom L - Status Penyelesaian">Status (L)</th>
+                    <th>Status Hari</th>
+                    <th>Sumber Modul</th>
+                    <th style="min-width: 180px;">Jenis Aktivitas</th>
+                    <th>Area</th>
+                    <th>Referensi WP</th>
+                    <th>Status</th>
 
-                    <th title="Kolom M - Hasil Review">Hasil Review (M)</th>
-                    <th title="Kolom N - Reviewer">Reviewer (N)</th>
-                    <th title="Kolom O - Tanggal Review">Tgl Review (O)</th>
+                    <th>Hasil Review</th>
+                    <th>Reviewer</th>
+                    <th>Tgl Review</th>
                 </tr>
             </thead>
             <tbody>
@@ -442,9 +438,9 @@
             <div class="d-flex align-items-center gap-2 small text-muted">
                 <i class="bi bi-shield-lock-fill text-primary fs-6"></i>
                 <div>
-                    <strong>Aturan Hak Akses & Pembagian Tanggung Jawab Log Harian RA (WP-RA-08-O):</strong>
-                    <strong>Resident Auditor (RA):</strong> Berhak menginput aktivitas harian atau izin (Cuti/Sakit/Dinas/Pelatihan) untuk cabangnya, tetapi dilarang mengisi atau mengubah kolom Hasil Review (M).
-                    <strong>Reviewer / Bagian RA:</strong> Berhak menilai Hasil Review (M) secara individual maupun menggunakan fitur <em>Review Massal</em> untuk mendukung formula Kualitas dan Skor Kinerja RA.
+                    <strong>Aturan Hak Akses Log Harian RA:</strong>
+                    <strong>Resident Auditor (RA):</strong> Berhak menginput aktivitas harian atau izin (Cuti/Sakit/Dinas/Pelatihan) untuk cabangnya, tetapi dilarang mengisi atau mengubah kolom Hasil Review.
+                    <strong>Reviewer / Bagian RA:</strong> Berhak menilai Hasil Review secara individual maupun menggunakan fitur <em>Review Massal</em> untuk mendukung formula Kualitas dan Skor Kinerja RA.
                 </div>
             </div>
         </div>

@@ -27,7 +27,7 @@
         <div class="d-flex align-items-center text-primary">
             <i class="bi bi-info-circle-fill fs-4 me-3"></i>
             <div class="small text-dark">
-                <strong>Prinsip Chain of Custody (SOP 09):</strong> Seluruh bukti fisik (dokumen asli, slip, warkat) dan bukti elektronik (file dump, log CCTV) wajib dicatat tanggal pengamanan, lokasi penyimpanan brankas, dan riwayat perpindahan penguasaan bukti.
+                <strong>Prinsip Chain of Custody:</strong> Seluruh bukti fisik (dokumen asli, slip, warkat) dan bukti elektronik (file dump, log CCTV) wajib dicatat tanggal pengamanan, lokasi penyimpanan brankas, dan riwayat perpindahan penguasaan bukti.
             </div>
         </div>
     </div>
@@ -63,7 +63,7 @@
     <!-- Tabel Register Chain of Custody -->
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-journal-text me-2"></i> Register Barang Bukti Terdaftar (SOP 09)</h6>
+            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-journal-text me-2"></i> Register Barang Bukti Terdaftar</h6>
             <span class="badge bg-primary rounded-pill px-3">{{ count($buktis ?? []) }} Bukti Terdata</span>
         </div>
         <div class="card-body p-0">

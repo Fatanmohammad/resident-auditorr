@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Edit & Review Log Harian RA - SOP 08')
+@section('title', 'Edit & Review Log Harian RA')
 
 @section('content')
 <div class="container-fluid px-3 py-3">
@@ -9,7 +9,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.log-harian') }}" class="text-decoration-none">Log Harian RA</a></li>
                     <li class="breadcrumb-item active" aria-current="page">{{ $log->log_id }}</li>
                 </ol>
@@ -69,15 +69,15 @@
                             </h6>
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted">Tanggal Pelaksanaan (Kolom B) <span class="text-danger">*</span></label>
+                                    <label class="form-label small fw-bold text-muted">Tanggal Pelaksanaan <span class="text-danger">*</span></label>
                                     <input type="date" name="tanggal" class="form-control" value="{{ old('tanggal', $log->tanggal->format('Y-m-d')) }}" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted">Resident Auditor (Kolom C & D)</label>
+                                    <label class="form-label small fw-bold text-muted">Resident Auditor</label>
                                     <input type="text" class="form-control bg-light" value="{{ $log->ra_id }} - {{ $log->nama_ra }}" readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted">Kantor Cabang (Kolom E & F)</label>
+                                    <label class="form-label small fw-bold text-muted">Kantor Cabang</label>
                                     <input type="text" class="form-control bg-light" value="{{ $log->kode_unit }} - {{ $log->nama_unit }}" readonly>
                                 </div>
                             </div>
@@ -90,7 +90,7 @@
                             </h6>
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted">Status Hari (Kolom G) <span class="text-danger">*</span></label>
+                                    <label class="form-label small fw-bold text-muted">Status Hari <span class="text-danger">*</span></label>
                                     <select name="status_hari" class="form-select fw-bold" required>
                                         @foreach($statusHariList as $sh)
                                             <option value="{{ $sh }}" {{ old('status_hari', $log->status_hari) == $sh ? 'selected' : '' }}>{{ $sh }}</option>
@@ -98,7 +98,7 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted">Sumber SOP (Kolom H)</label>
+                                    <label class="form-label small fw-bold text-muted">Sumber SOP</label>
                                     <select name="sumber_sop" class="form-select">
                                         <option value="">-- Tanpa SOP --</option>
                                         @foreach($sumberSopList as $ss)
@@ -107,7 +107,7 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted">Area Risiko (Kolom J)</label>
+                                    <label class="form-label small fw-bold text-muted">Area Risiko</label>
                                     <select name="area" class="form-select">
                                         @foreach($areaList as $ar)
                                             <option value="{{ $ar }}" {{ old('area', $log->area) == $ar ? 'selected' : '' }}>{{ $ar }}</option>
@@ -115,15 +115,15 @@
                                     </select>
                                 </div>
                                 <div class="col-md-12">
-                                    <label class="form-label small fw-bold text-muted">Jenis Aktivitas (Kolom I) <span class="text-danger">*</span></label>
+                                    <label class="form-label small fw-bold text-muted">Jenis Aktivitas <span class="text-danger">*</span></label>
                                     <textarea name="jenis_aktivitas" rows="3" class="form-control" required>{{ old('jenis_aktivitas', $log->jenis_aktivitas) }}</textarea>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small fw-bold text-muted">Output / Referensi WP (Kolom K)</label>
+                                    <label class="form-label small fw-bold text-muted">Output / Referensi KKA</label>
                                     <input type="text" name="output_referensi_wp" class="form-control" value="{{ old('output_referensi_wp', $log->output_referensi_wp) }}">
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-muted">Status Penyelesaian (Kolom L)</label>
+                                    <label class="form-label small fw-bold text-muted">Status Penyelesaian</label>
                                     <select name="status_penyelesaian" class="form-select fw-bold">
                                         <option value="">-</option>
                                         @foreach($statusPenyelesaianList as $sp)
@@ -132,20 +132,20 @@
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-muted">Jumlah Item / Sampel (Kolom P)</label>
+                                    <label class="form-label small fw-bold text-muted">Jumlah Item / Sampel</label>
                                     <input type="number" name="jumlah_item" class="form-control" value="{{ old('jumlah_item', $log->jumlah_item) }}" min="0">
                                 </div>
                                 <div class="col-md-12">
-                                    <label class="form-label small fw-bold text-muted">Catatan Tambahan (Kolom Q)</label>
+                                    <label class="form-label small fw-bold text-muted">Catatan Tambahan</label>
                                     <input type="text" name="catatan" class="form-control" value="{{ old('catatan', $log->catatan) }}">
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Section 3: Review Mutu oleh Reviewer (Kolom M s.d. O) --}}
+                        {{-- Section 3: Review Mutu oleh Reviewer --}}
                         <div class="bg-light p-3 rounded-3 mb-4 border">
                             <h6 class="fw-bold text-primary mb-3 d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-shield-check me-1"></i> 3. Penilaian Mutu oleh Reviewer (Kolom M s.d. O)</span>
+                                <span><i class="bi bi-shield-check me-1"></i> 3. Penilaian Mutu oleh Reviewer</span>
                                 @if(!$isRa)
                                     <span class="badge bg-primary">Khusus Reviewer</span>
                                 @endif
@@ -155,7 +155,7 @@
                             {{-- Tampilan Read-Only untuk RA --}}
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="small text-muted fw-bold d-block">Hasil Review (Kolom M)</label>
+                                    <label class="small text-muted fw-bold d-block">Hasil Review</label>
                                     @if($log->hasil_review === 'MEMADAI')
                                         <span class="badge bg-success fs-6"><i class="bi bi-check-circle-fill me-1"></i>MEMADAI</span>
                                     @elseif($log->hasil_review === 'PERLU PERBAIKAN')
@@ -167,11 +167,11 @@
                                     @endif
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="small text-muted fw-bold d-block">Reviewer (Kolom N)</label>
+                                    <label class="small text-muted fw-bold d-block">Reviewer</label>
                                     <span class="text-dark">{{ $log->reviewer ?: 'Belum dinilai' }}</span>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="small text-muted fw-bold d-block">Tanggal Review (Kolom O)</label>
+                                    <label class="small text-muted fw-bold d-block">Tanggal Review</label>
                                     <span class="text-dark">{{ $log->tanggal_review ? $log->tanggal_review->format('d/m/Y') : '-' }}</span>
                                 </div>
                             </div>
@@ -179,7 +179,7 @@
                             {{-- Form Interaktif untuk Reviewer / Admin --}}
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-dark">Hasil Review (Kolom M) <span class="text-danger">*</span></label>
+                                    <label class="form-label small fw-bold text-dark">Hasil Review <span class="text-danger">*</span></label>
                                     <select name="hasil_review" class="form-select fw-bold">
                                         @foreach($hasilReviewList as $hr)
                                             <option value="{{ $hr }}" {{ old('hasil_review', $log->hasil_review) == $hr ? 'selected' : '' }}>{{ $hr }}</option>
@@ -187,11 +187,11 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-dark">Nama Reviewer (Kolom N)</label>
+                                    <label class="form-label small fw-bold text-dark">Nama Reviewer</label>
                                     <input type="text" name="reviewer" class="form-control" value="{{ old('reviewer', $log->reviewer ?: (auth()->user()->name ?? 'Reviewer SKAI')) }}">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-dark">Tanggal Review (Kolom O)</label>
+                                    <label class="form-label small fw-bold text-dark">Tanggal Review</label>
                                     <input type="date" name="tanggal_review" class="form-control" value="{{ old('tanggal_review', $log->tanggal_review?->format('Y-m-d') ?: now()->format('Y-m-d')) }}">
                                 </div>
                             </div>

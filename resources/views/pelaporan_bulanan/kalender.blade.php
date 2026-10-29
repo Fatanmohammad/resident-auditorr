@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Kalender Laporan Bulanan (WP-RA-08-A) - SOP 08')
+@section('title', 'Kalender Laporan Bulanan')
 
 @section('content')
 <style>
@@ -44,28 +44,23 @@
     .badge-konsolidasi-ya { background-color: #059669; color: #fff; font-weight: 700; }
     .badge-konsolidasi-belum { background-color: #94a3b8; color: #fff; }
 
-    .table-responsive {
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-    }
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.76rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         vertical-align: middle;
-        padding: 0.65rem 0.5rem;
+        padding: 0.75rem 0.85rem;
     }
     .table tbody td {
-        font-size: 0.82rem;
+        font-size: 0.875rem;
         vertical-align: middle;
-        padding: 0.55rem 0.5rem;
+        padding: 0.75rem 0.85rem;
         border-color: #f1f5f9;
+        color: #334155;
     }
 </style>
 
@@ -74,17 +69,15 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-calendar3-range me-2"></i>Kalender Laporan Bulanan (WP-RA-08-A)
+                <i class="bi bi-calendar3-range me-2"></i>Kalender Laporan Bulanan
             </h4>
             <p class="text-muted small mb-0">
                 Monitoring Kepatuhan, Jadwal Jatuh Tempo Hari Kerja ke-5, dan Rekapitulasi Pelaporan Bulanan Resident Auditor
             </p>
         </div>
-            <a href="{{ route('pelaporan-bulanan.kalender.create', ['periode' => $periode]) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <a href="{{ route('pelaporan-bulanan.kalender.create', ['periode' => $periode]) }}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
                 <i class="bi bi-plus-circle me-1"></i> Inisiasi Kalender Periode
-            </a>
-            <a href="{{ route('pelaporan-bulanan.laporan-bulanan') }}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
-                <i class="bi bi-printer me-1"></i> Cetak Laporan (WP-RA-08-C)
             </a>
         </div>
     </div>
@@ -187,30 +180,31 @@
         </form>
     </div>
 
-    {{-- Tabel Kalender Laporan (17 Kolom Excel WP-RA-08-A) --}}
-    <div class="table-responsive shadow-sm">
-        <table class="table table-hover align-middle mb-0">
-            <thead>
-                <tr>
-                    <th class="text-center" style="width: 40px;">No</th>
-                    <th>Report ID (A)</th>
-                    <th>Periode (B)</th>
-                    <th>Kode (C)</th>
-                    <th>Nama Unit (D)</th>
-                    <th>Resident Auditor (E)</th>
-                    <th>Wajib Lapor (G)</th>
-                    <th>Jatuh Tempo (H)</th>
-                    <th>Tgl Submit (I)</th>
-                    <th class="text-center">Hari Terlambat (J)</th>
-                    <th>Ketepatan (K)</th>
-                    <th class="text-center">Kelengkapan (L)</th>
-                    <th>Status Review (M)</th>
-                    <th>Status Final (N)</th>
-                    <th class="text-center">Quality Score (O)</th>
-                    <th class="text-center">Konsolidasi (P)</th>
-                    <th class="text-center" style="width: 140px;">Aksi</th>
-                </tr>
-            </thead>
+    {{-- Tabel Kalender Laporan --}}
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 45px;">No</th>
+                        <th>Report ID</th>
+                        <th>Periode</th>
+                        <th>Kode</th>
+                        <th>Nama Unit</th>
+                        <th>Resident Auditor</th>
+                        <th>Wajib Lapor</th>
+                        <th>Jatuh Tempo</th>
+                        <th>Tgl Submit</th>
+                        <th class="text-center">Hari Terlambat</th>
+                        <th>Ketepatan</th>
+                        <th class="text-center">Kelengkapan</th>
+                        <th>Status Review</th>
+                        <th>Status Final</th>
+                        <th class="text-center">Quality Score</th>
+                        <th class="text-center">Konsolidasi</th>
+                        <th class="text-center" style="width: 140px;">Aksi</th>
+                    </tr>
+                </thead>
             <tbody>
                 @forelse($kalenderList as $idx => $row)
                 @php
@@ -299,13 +293,13 @@
                             @endif
 
                             {{-- Menu Cepat --}}
-                            <a href="{{ route('pelaporan-bulanan.checklist', $row->report_id) }}" class="btn btn-outline-primary" title="Checklist Kelengkapan (WP-RA-08-B)">
+                            <a href="{{ route('pelaporan-bulanan.checklist', $row->report_id) }}" class="btn btn-outline-primary" title="Checklist Kelengkapan">
                                 <i class="bi bi-ui-checks"></i>
                             </a>
-                            <a href="{{ route('pelaporan-bulanan.rekap-kegiatan', $row->report_id) }}" class="btn btn-outline-info" title="Rekap Kegiatan (WP-RA-08-D)">
+                            <a href="{{ route('pelaporan-bulanan.rekap-kegiatan', $row->report_id) }}" class="btn btn-outline-info" title="Rekap Kegiatan">
                                 <i class="bi bi-list-task"></i>
                             </a>
-                            <a href="{{ route('pelaporan-bulanan.laporan-bulanan', $row->report_id) }}" class="btn btn-outline-success" title="Cetak Dokumen Resmi (WP-RA-08-C)">
+                            <a href="{{ route('pelaporan-bulanan.laporan-bulanan', $row->report_id) }}" class="btn btn-outline-success" title="Cetak Dokumen Resmi">
                                 <i class="bi bi-printer"></i>
                             </a>
                             <a href="{{ route('pelaporan-bulanan.kalender.edit', $row->id) }}" class="btn btn-outline-dark" title="Edit Info / Catatan">
@@ -326,5 +320,6 @@
             </tbody>
         </table>
     </div>
+</div>
 </div>
 @endsection

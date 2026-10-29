@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Checklist Kelengkapan Laporan (WP-RA-08-B) - SOP 08')
+@section('title', 'Checklist Kelengkapan Laporan')
 
 @section('content')
 <style>
@@ -13,9 +13,11 @@
     }
     .status-banner {
         border-radius: 12px;
-        padding: 1.25rem;
+        padding: 1.25rem 1.5rem;
         margin-bottom: 1.25rem;
-        color: #fff;
+        color: #ffffff;
+        position: relative;
+        overflow: hidden;
     }
     .status-banner.siap {
         background: linear-gradient(135deg, #059669 0%, #10b981 100%);
@@ -26,14 +28,14 @@
     .checklist-row {
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 0.85rem 1rem;
-        margin-bottom: 0.65rem;
-        transition: all 0.2s;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
     }
     .checklist-row:hover {
+        background: #f8fafc;
         border-color: #cbd5e1;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     }
 </style>
 
@@ -42,21 +44,11 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-ui-checks me-2"></i>Checklist Kelengkapan Dokumen (WP-RA-08-B)
+                <i class="bi bi-ui-checks me-2"></i>Checklist Kelengkapan Laporan
             </h4>
             <p class="text-muted small mb-0">
-                Verifikasi 12 Komponen Kelengkapan Laporan Bulanan Sebelum Disubmit untuk Review Unit RA / Korwas
+                Pemeriksaan Mandiri Kesiapan Dokumen Pelaporan Bulanan Resident Auditor
             </p>
-        </div>
-        <div class="d-flex gap-2 mt-2 mt-md-0">
-            <a href="{{ route('pelaporan-bulanan.kalender') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="bi bi-arrow-left me-1"></i> Kembali ke Kalender
-            </a>
-            @if($kalender)
-            <a href="{{ route('pelaporan-bulanan.laporan-bulanan', $kalender->report_id) }}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
-                <i class="bi bi-printer me-1"></i> Cetak Laporan (WP-RA-08-C)
-            </a>
-            @endif
         </div>
     </div>
 
@@ -82,7 +74,7 @@
         <form method="GET" action="{{ route('pelaporan-bulanan.checklist') }}" class="row g-2 align-items-center">
             <div class="col-md-7">
                 <label class="form-label small fw-bold text-muted mb-1">Pilih Laporan Bulanan (Report ID)</label>
-                <select name="reportId" class="form-select form-select-sm fw-bold" onchange="this.form.submit()">
+                <select name="reportId" class="form-select form-select-sm fw-bold" onchange="if(this.value) { window.location.href = '{{ url('/pelaporan-bulanan/checklist') }}/' + this.value; } else { this.form.submit(); }">
                     @forelse($availableReports as $rep)
                         <option value="{{ $rep->report_id }}" {{ ($reportId == $rep->report_id) ? 'selected' : '' }}>
                             {{ $rep->report_id }} - [{{ $rep->kode_unit }}] {{ $rep->nama_unit }} (Periode: {{ \Carbon\Carbon::parse($rep->periode)->translatedFormat('F Y') }})
@@ -108,7 +100,7 @@
     @if(!$kalender || !$checklist)
         <div class="alert alert-warning text-center py-4">
             <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
-            Silakan inisiasi kalender laporan terlebih dahulu pada menu <a href="{{ route('pelaporan-bulanan.kalender') }}" class="fw-bold">Kalender Laporan (WP-RA-08-A)</a>.
+            Silakan inisiasi kalender laporan terlebih dahulu pada menu <a href="{{ route('pelaporan-bulanan.kalender') }}" class="fw-bold">Kalender Laporan</a>.
         </div>
     @else
         @php
@@ -125,36 +117,36 @@
             </div>
         @endif
 
-        {{-- Banner Status Kesiapan (Kolom N, O, P) --}}
+        {{-- Banner Status Kesiapan --}}
         <div class="status-banner {{ $checklist->status_kesiapan === 'SIAP REVIEW' ? 'siap' : 'belum' }} shadow-sm">
             <div class="row align-items-center">
                 <div class="col-md-7">
                     <div class="d-flex align-items-center gap-3">
                         <i class="bi {{ $checklist->status_kesiapan === 'SIAP REVIEW' ? 'bi-patch-check-fill' : 'bi-hourglass-split' }} fs-1"></i>
                         <div>
-                            <div class="text-uppercase small fw-bold text-white-50">Status Kesiapan (Kolom P)</div>
+                            <div class="text-uppercase small fw-bold text-white-50">Status Kesiapan</div>
                             <h3 class="fw-bold mb-0">{{ $checklist->status_kesiapan }}</h3>
                             <div class="small mt-1 text-white-50">
                                 @if($checklist->status_kesiapan === 'SIAP REVIEW')
                                     Seluruh 12 komponen kelengkapan terpenuhi (0 Gap). Dokumen siap disubmit untuk direview oleh Unit RA / Korwas.
                                 @else
-                                    Terdapat {{ $checklist->jumlah_gap }} komponen belum lengkap atau masih kosong. Lengkapi checklist sebelum men-submit.
+                                    Terdapat {{ $checklist->jumlah_gap }} komponen yang belum lengkap. Lengkapi seluruh item agar laporan dapat dilanjutkan.
                                 @endif
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-5 mt-3 mt-md-0">
-                    <div class="row g-2 text-center text-md-end">
+                <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                    <div class="row g-2 text-center">
                         <div class="col-6">
                             <div class="bg-white bg-opacity-25 rounded-3 p-2">
-                                <div class="small text-uppercase text-white-50 fw-bold">% Lengkap (N)</div>
+                                <div class="small text-uppercase text-white-50 fw-bold">% Kelengkapan</div>
                                 <div class="fs-4 fw-bold">{{ number_format($checklist->persen_lengkap, 0) }}%</div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="bg-white bg-opacity-25 rounded-3 p-2">
-                                <div class="small text-uppercase text-white-50 fw-bold">Jumlah Gap (O)</div>
+                                <div class="small text-uppercase text-white-50 fw-bold">Jumlah Gap</div>
                                 <div class="fs-4 fw-bold">{{ $checklist->jumlah_gap }}</div>
                             </div>
                         </div>
@@ -167,38 +159,34 @@
             </div>
         </div>
 
-        {{-- Form Checklist 12 Komponen (Kolom B s.d. M) --}}
+        {{-- Form Checklist 12 Komponen --}}
         <form method="POST" action="{{ route('pelaporan-bulanan.checklist.update', $checklist->report_id) }}">
             @csrf
             <div class="card shadow-sm border-0 rounded-3 mb-4">
                 <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold mb-0 text-dark">
-                        <i class="bi bi-card-checklist me-2 text-primary"></i>Evaluasi 12 Komponen Kelengkapan (Kolom B s.d. M)
+                        <i class="bi bi-card-checklist me-2 text-primary"></i>Evaluasi 12 Komponen Kelengkapan
                     </h6>
                     <small class="text-muted">Pilih status kelengkapan untuk masing-masing item</small>
                 </div>
                 <div class="card-body p-3">
                     <div class="row g-2">
-                        @php
-                            $hurufKolom = ['B','C','D','E','F','G','H','I','J','K','L','M'];
-                            $i = 0;
-                        @endphp
+                        @php $counter = 1; @endphp
                         @foreach($komponenList as $key => $label)
                         @php
                             $val = $checklist->$key;
-                            $kolom = $hurufKolom[$i++];
                         @endphp
                         <div class="col-md-6">
                             <div class="checklist-row d-flex align-items-center justify-content-between">
                                 <div class="me-2">
-                                    <span class="badge bg-light text-dark border me-1">{{ $kolom }}</span>
+                                    <span class="badge bg-light text-dark border me-1">{{ $counter++ }}</span>
                                     <span class="fw-bold text-dark small">{{ $label }}</span>
                                 </div>
                                 <div style="min-width: 170px;">
                                     <select name="{{ $key }}" class="form-select form-select-sm fw-semibold {{ $val === 'LENGKAP' ? 'text-success border-success' : ($val === 'TIDAK RELEVAN' ? 'text-muted' : 'text-danger border-danger') }}" {{ $isLocked ? 'disabled' : '' }}>
-                                        <option value="LENGKAP" {{ $val === 'LENGKAP' ? 'selected' : '' }}>✅ LENGKAP</option>
-                                        <option value="BELUM LENGKAP" {{ $val === 'BELUM LENGKAP' ? 'selected' : '' }}>❌ BELUM LENGKAP</option>
-                                        <option value="TIDAK RELEVAN" {{ $val === 'TIDAK RELEVAN' ? 'selected' : '' }}>⚪ TIDAK RELEVAN</option>
+                                        <option value="LENGKAP" {{ $val === 'LENGKAP' ? 'selected' : '' }}>LENGKAP</option>
+                                        <option value="BELUM LENGKAP" {{ $val === 'BELUM LENGKAP' ? 'selected' : '' }}>BELUM LENGKAP</option>
+                                        <option value="TIDAK RELEVAN" {{ $val === 'TIDAK RELEVAN' ? 'selected' : '' }}>TIDAK RELEVAN</option>
                                     </select>
                                 </div>
                             </div>
@@ -206,24 +194,25 @@
                         @endforeach
                     </div>
 
-                    {{-- Kolom Q: Catatan Checklist --}}
+                    {{-- Catatan Checklist --}}
                     <div class="mt-3 pt-3 border-top">
                         <label class="form-label small fw-bold text-muted">
-                            Catatan Checklist (Kolom Q) <span class="text-danger">* Wajib diisi jika terdapat komponen yang berstatus "TIDAK RELEVAN"</span>
+                            Catatan Checklist <span class="text-danger">* Wajib diisi jika terdapat komponen yang berstatus "TIDAK RELEVAN"</span>
                         </label>
                         <textarea name="catatan" rows="3" class="form-control form-control-sm" placeholder="Berikan keterangan atau justifikasi kelengkapan / komponen tidak relevan..." {{ $isLocked ? 'disabled' : '' }}>{{ $checklist->catatan }}</textarea>
                     </div>
-                </div>
-                <div class="card-footer bg-light py-3 d-flex justify-content-between align-items-center">
-                    <span class="small text-muted">
-                        Terakhir diperbarui: {{ $checklist->updated_at ? $checklist->updated_at->diffForHumans() : '-' }}
-                    </span>
-                    <button type="submit" class="btn btn-primary btn-sm px-4 shadow-sm" {{ $isLocked ? 'disabled' : '' }}>
-                        <i class="bi bi-save me-1"></i> Simpan & Hitung Ulang Kesiapan
-                    </button>
+
+                    @if(!$isLocked)
+                    <div class="mt-3 text-end">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm">
+                            <i class="bi bi-save me-1"></i> Simpan Hasil Evaluasi Checklist
+                        </button>
+                    </div>
+                    @endif
                 </div>
             </div>
         </form>
     @endif
 </div>
+
 @endsection

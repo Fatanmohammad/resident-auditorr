@@ -23,12 +23,21 @@ class PemeriksaanAwalController extends Controller
         $totalKka = Sop09KkaPemeriksaanAwal::count();
         $totalEskalasi = Sop09KeputusanEskalasi::count();
 
+        $totalIndikasi = $totalRegister;
+        $urgentCount = Sop09Triase::where('urgent', 'YA')->count();
+        $buktiCount = $totalCustody;
+        $eskalasiCount = $totalEskalasi;
+
         return view('pemeriksaan_awal.index', compact(
             'totalRegister', 
             'totalTriase', 
             'totalCustody', 
             'totalKka', 
-            'totalEskalasi'
+            'totalEskalasi',
+            'totalIndikasi',
+            'urgentCount',
+            'buktiCount',
+            'eskalasiCount'
         ));
     }
 

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Register Koreksi & Approval (WP-RA-08-G) - SOP 08')
+@section('title', 'Koreksi & Approval Laporan')
 
 @section('content')
 <style>
@@ -33,22 +33,22 @@
         margin-top: 0.35rem;
     }
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         vertical-align: middle;
-        padding: 0.6rem 0.45rem;
+        padding: 0.75rem 0.85rem;
     }
     .table tbody td {
-        font-size: 0.8rem;
+        font-size: 0.875rem;
         vertical-align: middle;
-        padding: 0.55rem 0.45rem;
+        padding: 0.75rem 0.85rem;
         border-color: #f1f5f9;
+        color: #334155;
     }
     .badge-approved { background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 700; }
     .badge-revision { background: #fef9c3; color: #a16207; border: 1px solid #fde047; font-weight: 700; }
@@ -62,19 +62,11 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-patch-check me-2"></i>Register Koreksi & Approval Laporan Bulanan (WP-RA-08-G)
+                <i class="bi bi-patch-check me-2"></i>Koreksi &amp; Approval Laporan Bulanan
             </h4>
             <p class="text-muted small mb-0">
-                Siklus Manajemen Koreksi, Resubmit Perbaikan RA, Perhitungan Batas Hari Kerja (WORKDAY), dan Penetapan Approval Final Laporan
+                Siklus Manajemen Koreksi, Resubmit Perbaikan RA, Perhitungan Batas Hari Kerja, dan Penetapan Approval Final Laporan
             </p>
-        </div>
-        <div class="d-flex gap-2 mt-2 mt-md-0">
-            <a href="{{ route('pelaporan-bulanan.review-laporan', ['periode' => $periode]) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="bi bi-arrow-left me-1"></i> Review Laporan
-            </a>
-            <a href="{{ route('pelaporan-bulanan.isu-signifikan', ['periode' => $periode]) }}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
-                Lanjut ke Isu Signifikan <i class="bi bi-arrow-right ms-1"></i>
-            </a>
         </div>
     </div>
 
@@ -198,21 +190,21 @@
                 <thead>
                     <tr>
                         <th class="text-center" style="width: 45px;">No</th>
-                        <th>Report ID (A)</th>
-                        <th>Hasil Review (B)</th>
-                        <th>Jenis Koreksi (C)</th>
-                        <th>Catatan Reviewer (D)</th>
-                        <th>Tgl Minta (E)</th>
-                        <th>Batas Koreksi (F)</th>
-                        <th>Tgl Resubmit (G)</th>
-                        <th>Perbaikan RA (H)</th>
-                        <th>Review Ulang (I)</th>
-                        <th>Keputusan (J)</th>
-                        <th>Approved By (K)</th>
-                        <th>Tgl Appr (L)</th>
-                        <th>Versi (M)</th>
-                        <th class="text-center">Status Final (N)</th>
-                        <th class="text-center">Terlambat (O)</th>
+                        <th>Report ID</th>
+                        <th>Hasil Review</th>
+                        <th>Jenis Koreksi</th>
+                        <th>Catatan Reviewer</th>
+                        <th>Tgl Permintaan</th>
+                        <th>Batas Koreksi</th>
+                        <th>Tgl Resubmit</th>
+                        <th>Perbaikan RA</th>
+                        <th>Review Ulang</th>
+                        <th>Keputusan</th>
+                        <th>Approved By</th>
+                        <th>Tgl Approval</th>
+                        <th>Versi</th>
+                        <th class="text-center">Status Final</th>
+                        <th class="text-center">Hari Terlambat</th>
                         <th class="text-center" style="width: 100px;">Aksi</th>
                     </tr>
                 </thead>

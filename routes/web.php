@@ -496,23 +496,21 @@ Route::middleware('auth')->group(function () {
         Route::post('/checklist/{reportId}', [PelaporanBulananController::class, 'updateChecklist'])->name('pelaporan-bulanan.checklist.update');
 
         // Rekap Kegiatan (WP-RA-08-D)
-        Route::get('/rekap-kegiatan', [PelaporanBulananController::class, 'rekapKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan');
+        Route::get('/rekap-kegiatan/{reportId?}', [PelaporanBulananController::class, 'rekapKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan');
         Route::get('/rekap-kegiatan/{reportId}/create', [PelaporanBulananController::class, 'createKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.create');
         Route::post('/rekap-kegiatan/{reportId}/store', [PelaporanBulananController::class, 'storeKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.store');
         Route::get('/rekap-kegiatan/{id}/edit', [PelaporanBulananController::class, 'editKegiatan'])->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.edit');
         Route::put('/rekap-kegiatan/{id}', [PelaporanBulananController::class, 'updateKegiatan'])->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.update');
         Route::delete('/rekap-kegiatan/{id}', [PelaporanBulananController::class, 'destroyKegiatan'])->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.destroy');
         Route::post('/rekap-kegiatan/{reportId}/sync', [PelaporanBulananController::class, 'syncKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.sync');
-        Route::get('/rekap-kegiatan/{reportId}', [PelaporanBulananController::class, 'rekapKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.show');
 
         // Rekap Isu & TL (WP-RA-08-E)
-        Route::get('/rekap-isu-tl', [PelaporanBulananController::class, 'rekapIsu'])->name('pelaporan-bulanan.rekap-isu-tl');
+        Route::get('/rekap-isu-tl/{reportId?}', [PelaporanBulananController::class, 'rekapIsu'])->name('pelaporan-bulanan.rekap-isu-tl');
         Route::get('/rekap-isu-tl/{reportId}/create', [PelaporanBulananController::class, 'createIsu'])->name('pelaporan-bulanan.rekap-isu-tl.create');
         Route::post('/rekap-isu-tl/{reportId}/store', [PelaporanBulananController::class, 'storeIsu'])->name('pelaporan-bulanan.rekap-isu-tl.store');
         Route::get('/rekap-isu-tl/{id}/edit', [PelaporanBulananController::class, 'editIsu'])->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.edit');
         Route::put('/rekap-isu-tl/{id}', [PelaporanBulananController::class, 'updateIsu'])->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.update');
         Route::delete('/rekap-isu-tl/{id}', [PelaporanBulananController::class, 'destroyIsu'])->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.destroy');
-        Route::get('/rekap-isu-tl/{reportId}', [PelaporanBulananController::class, 'rekapIsu'])->name('pelaporan-bulanan.rekap-isu-tl.show');
 
         // FASE 2: Review Laporan (WP-RA-08-F)
         Route::get('/review-laporan', [PelaporanBulananController::class, 'reviewLaporan'])->name('pelaporan-bulanan.review-laporan');

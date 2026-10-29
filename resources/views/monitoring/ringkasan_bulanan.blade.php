@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold mb-0 text-primary">WP-RA-07-I | RINGKASAN TL BULANAN DAN KONSOLIDASI</h4>
-            <small class="text-muted">Bahan otomatis untuk SOP 08; periode laporan dipilih pada sel B4[cite: 7]</small>
+            <small class="text-muted">Bahan otomatis untuk Pelaporan Bulanan</small>
         </div>
         <div>
             <span class="badge bg-dark p-2 fs-6">Periode Laporan: October 2026</span>

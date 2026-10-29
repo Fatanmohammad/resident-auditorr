@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Distribusi, Arsip & Quality Score (WP-RA-08-I) - SOP 08')
+@section('title', 'Distribusi, Arsip & Quality Score')
 
 @section('content')
 <style>
@@ -33,22 +33,22 @@
         margin-top: 0.35rem;
     }
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         vertical-align: middle;
-        padding: 0.6rem 0.4rem;
+        padding: 0.75rem 0.85rem;
     }
     .table tbody td {
-        font-size: 0.8rem;
+        font-size: 0.875rem;
         vertical-align: middle;
-        padding: 0.55rem 0.4rem;
+        padding: 0.75rem 0.85rem;
         border-color: #f1f5f9;
+        color: #334155;
     }
     .badge-sangat-baik { background: #14532d; color: #ffffff; font-weight: 700; }
     .badge-baik { background: #22c55e; color: #ffffff; font-weight: 700; }
@@ -61,19 +61,11 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-trophy me-2 text-warning"></i>Distribusi, Arsip & Quality Score (WP-RA-08-I)
+                <i class="bi bi-award me-2 text-primary"></i>Distribusi, Arsip &amp; Quality Score
             </h4>
             <p class="text-muted small mb-0">
-                Kalkulasi 7 Komponen Skor Mutu Laporan (Skala 0–100), Target KPI Kualitas, Penyesuaian Reviewer, serta Pencatatan Arsip & Distribusi
+                Kalkulasi 7 Komponen Skor Mutu Laporan (Skala 0–100), Target KPI Kualitas, Penyesuaian Reviewer, serta Pencatatan Arsip &amp; Distribusi
             </p>
-        </div>
-        <div class="d-flex gap-2 mt-2 mt-md-0">
-            <a href="{{ route('pelaporan-bulanan.isu-signifikan', ['periode' => $periode]) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="bi bi-arrow-left me-1"></i> Isu Signifikan
-            </a>
-            <a href="{{ route('pelaporan-bulanan.laporan-bulanan') }}" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm">
-                Lihat & Cetak Laporan <i class="bi bi-printer ms-1"></i>
-            </a>
         </div>
     </div>
 
@@ -198,27 +190,27 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 40px;">No</th>
-                        <th>Report ID (A)</th>
-                        <th>Tgl Distribusi (B)</th>
-                        <th>Penerima (C)</th>
-                        <th>Media Arsip (D)</th>
-                        <th>Versi (E)</th>
-                        {{-- 7 Komponen Skor Dasar (F s.d. L) --}}
-                        <th class="text-center bg-light">Tepat Waktu (F) [20]</th>
-                        <th class="text-center bg-light">Lengkap (G) [20]</th>
-                        <th class="text-center bg-light">Akurasi (H) [15]</th>
-                        <th class="text-center bg-light">Analisis (I) [15]</th>
-                        <th class="text-center bg-light">Bukti (J) [10]</th>
-                        <th class="text-center bg-light">TL (K) [10]</th>
-                        <th class="text-center bg-light">Eskalasi (L) [10]</th>
-                        {{-- Skor & Kategori (M s.d. P) --}}
-                        <th class="text-center">Skor Dasar (M)</th>
-                        <th class="text-center">Adj (N)</th>
-                        <th class="text-center text-primary">Quality Score (O)</th>
-                        <th class="text-center">Kategori (P)</th>
-                        <th>Catatan KPI (Q)</th>
-                        <th class="text-center">Status Arsip (R)</th>
+                        <th class="text-center" style="width: 45px;">No</th>
+                        <th>Report ID</th>
+                        <th>Tgl Distribusi</th>
+                        <th>Penerima</th>
+                        <th>Media Arsip</th>
+                        <th>Versi</th>
+                        {{-- 7 Komponen Skor Dasar --}}
+                        <th class="text-center bg-light">Tepat Waktu [20]</th>
+                        <th class="text-center bg-light">Lengkap [20]</th>
+                        <th class="text-center bg-light">Akurasi [15]</th>
+                        <th class="text-center bg-light">Analisis [15]</th>
+                        <th class="text-center bg-light">Bukti [10]</th>
+                        <th class="text-center bg-light">TL [10]</th>
+                        <th class="text-center bg-light">Eskalasi [10]</th>
+                        {{-- Skor & Kategori --}}
+                        <th class="text-center">Skor Dasar</th>
+                        <th class="text-center">Adjustment</th>
+                        <th class="text-center text-primary">Quality Score</th>
+                        <th class="text-center">Kategori</th>
+                        <th>Catatan KPI</th>
+                        <th class="text-center">Status Arsip</th>
                         @if(!$isRa)
                             <th class="text-center" style="width: 70px;">Aksi</th>
                         @endif

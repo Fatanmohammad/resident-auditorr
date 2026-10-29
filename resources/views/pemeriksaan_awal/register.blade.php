@@ -30,7 +30,7 @@
                 <div class="card-body py-3">
                     <span class="text-muted small fw-bold text-uppercase">Total Kasus Masuk</span>
                     <h3 class="fw-bold text-primary mb-0">{{ count($indikasis ?? []) }}</h3>
-                    <small class="text-muted">Register Indikasi SOP 09</small>
+                    <small class="text-muted">Register Indikasi Kasus</small>
                 </div>
             </div>
         </div>

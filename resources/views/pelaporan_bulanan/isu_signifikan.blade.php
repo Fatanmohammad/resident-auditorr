@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Matriks Isu Signifikan & Rekomendasi Eskalasi (WP-RA-08-H) - SOP 08')
+@section('title', 'Matriks Isu Signifikan & Rekomendasi Eskalasi')
 
 @section('content')
 <style>
@@ -33,22 +33,22 @@
         margin-top: 0.35rem;
     }
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         vertical-align: middle;
-        padding: 0.6rem 0.45rem;
+        padding: 0.75rem 0.85rem;
     }
     .table tbody td {
-        font-size: 0.8rem;
+        font-size: 0.875rem;
         vertical-align: middle;
-        padding: 0.55rem 0.45rem;
+        padding: 0.75rem 0.85rem;
         border-color: #f1f5f9;
+        color: #334155;
     }
 </style>
 
@@ -57,19 +57,11 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-shield-fill-exclamation me-2 text-danger"></i>Matriks Isu Signifikan & Rekomendasi Eskalasi (WP-RA-08-H)
+                <i class="bi bi-shield-fill-exclamation me-2 text-danger"></i>Matriks Isu Signifikan &amp; Rekomendasi Eskalasi
             </h4>
             <p class="text-muted small mb-0">
-                Inventarisasi Isu Bertingkat Signifikansi Tinggi, Rekomendasi Jalur Sistem (SOP 07, 09, 10), dan Penetapan Tujuan Eskalasi SKAI
+                Inventarisasi Isu Bertingkat Signifikansi Tinggi, Rekomendasi Jalur Sistem, dan Penetapan Tujuan Eskalasi SKAI
             </p>
-        </div>
-        <div class="d-flex gap-2 mt-2 mt-md-0">
-            <a href="{{ route('pelaporan-bulanan.koreksi-approval', ['periode' => $periode]) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="bi bi-arrow-left me-1"></i> Koreksi & Approval
-            </a>
-            <a href="{{ route('pelaporan-bulanan.distribusi-quality', ['periode' => $periode]) }}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
-                Lanjut ke Distribusi & Quality <i class="bi bi-arrow-right ms-1"></i>
-            </a>
         </div>
     </div>
 
@@ -108,14 +100,14 @@
         </div>
         <div class="col-6 col-md-3 col-xl">
             <div class="kpi-card border-start border-4 border-dark">
-                <div class="kpi-title">Indikasi Fraud (SOP 09)</div>
+                <div class="kpi-title">Indikasi Fraud</div>
                 <div class="kpi-val text-dark">{{ $fraudCount }}</div>
                 <small class="text-muted" style="font-size: 0.72rem;">Triase Investigasi</small>
             </div>
         </div>
         <div class="col-6 col-md-3 col-xl">
             <div class="kpi-card border-start border-4 border-warning">
-                <div class="kpi-title">Pemeriksaan Khusus (SOP 10)</div>
+                <div class="kpi-title">Pemeriksaan Khusus</div>
                 <div class="kpi-val text-warning">{{ $eskalasiSop10Count }}</div>
                 <small class="text-muted" style="font-size: 0.72rem;">Eskalasi Kadiv / Direksi</small>
             </div>
@@ -174,38 +166,38 @@
         </div>
     </div>
 
-    {{-- Main Table 17 Kolom (A s.d. Q Sesuai Sheet Isu_Signifikan) --}}
+    {{-- Main Table --}}
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <div class="card-header bg-white py-3 px-3 border-bottom d-flex justify-content-between align-items-center">
             <h6 class="fw-bold mb-0 text-dark">
-                <i class="bi bi-table me-2 text-danger"></i>Matriks Isu Signifikan (17 Kolom A s.d. Q)
+                <i class="bi bi-table me-2 text-danger"></i>Matriks Isu Signifikan
             </h6>
             <span class="badge bg-light text-secondary border">
-                Terhubung dengan Rekap_Isu_TL (WP-RA-08-E)
+                Terhubung dengan Rekap Isu & TL
             </span>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 40px;">No</th>
-                        <th>Issue ID (A)</th>
-                        <th>Report ID (B)</th>
-                        <th>Periode (C)</th>
-                        <th>Unit (D)</th>
-                        <th>Area (E)</th>
-                        <th>Jenis Isu (F)</th>
-                        <th>Risk Level (G)</th>
-                        <th>Uraian Isu (H)</th>
-                        <th>Status TL (I)</th>
-                        <th>Aging (J)</th>
-                        <th>Berulang (K)</th>
-                        <th>Jalur Sistem (L)</th>
-                        <th>Keputusan Reviewer (M)</th>
-                        <th>Tujuan Eskalasi (N)</th>
-                        <th>Tgl Eskalasi (O)</th>
-                        <th>Ref Bukti (P)</th>
-                        <th>Arahan TL (Q)</th>
+                        <th class="text-center" style="width: 45px;">No</th>
+                        <th>Issue ID</th>
+                        <th>Report ID</th>
+                        <th>Periode</th>
+                        <th>Unit</th>
+                        <th>Area</th>
+                        <th>Jenis Isu</th>
+                        <th>Risk Level</th>
+                        <th>Uraian Isu</th>
+                        <th>Status TL</th>
+                        <th>Aging</th>
+                        <th>Berulang</th>
+                        <th>Jalur Sistem</th>
+                        <th>Keputusan Reviewer</th>
+                        <th>Tujuan Eskalasi</th>
+                        <th>Tgl Eskalasi</th>
+                        <th>Ref Bukti</th>
+                        <th>Arahan TL</th>
                         <th class="text-center" style="width: 80px;">Aksi</th>
                     </tr>
                 </thead>

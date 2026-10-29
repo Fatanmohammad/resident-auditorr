@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Edit Kalender Laporan ' . $kalender->report_id . ' - SOP 08')
+@section('title', 'Edit Kalender Laporan ' . $kalender->report_id)
 
 @section('content')
 <div class="container-fluid px-3 py-3">

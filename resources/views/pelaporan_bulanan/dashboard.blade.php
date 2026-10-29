@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Dashboard Pelaporan & Konsolidasi RA (WP-RA-08-L) - SOP 08')
+@section('title', 'Dashboard Pelaporan & Konsolidasi RA')
 
 @section('content')
 <style>
@@ -7,7 +7,7 @@
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 12px;
-        padding: 1rem 1.15rem;
+        padding: 1.1rem 1.25rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         transition: transform 0.2s, box-shadow 0.2s;
         height: 100%;
@@ -19,22 +19,16 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06);
     }
-    .kpi-cell-code {
-        font-size: 0.68rem;
-        font-weight: 700;
-        color: #94a3b8;
-        font-family: monospace;
-    }
     .kpi-card-title {
-        font-size: 0.74rem;
+        font-size: 0.76rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: #64748b;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.25rem;
     }
     .kpi-card-val {
-        font-size: 1.65rem;
+        font-size: 1.75rem;
         font-weight: 800;
         line-height: 1.1;
     }
@@ -72,6 +66,17 @@
         height: 100%;
         border-radius: 4px;
     }
+    .monitoring-table thead th {
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #334155;
+        padding: 0.75rem 0.85rem;
+    }
+    .monitoring-table tbody td {
+        font-size: 0.875rem;
+        padding: 0.75rem 0.85rem;
+    }
 </style>
 
 <div class="container-fluid px-3 py-3">
@@ -81,13 +86,12 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Dashboard SOP 08 (WP-RA-08-L)</li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Dashboard Pelaporan</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                 <i class="bi bi-speedometer2 text-info"></i> Dashboard Pelaporan & Konsolidasi RA
-                <span class="badge bg-info-subtle text-info border border-info-subtle fs-6 fw-semibold">WP-RA-08-L</span>
             </h4>
             <p class="text-muted small mb-0 mt-1">
                 Visualisasi terpusat 12 Indikator Utama, Ringkasan Status, Skor Perhatian 13 Area, dan Monitoring Perhatian Unit Kerja.
@@ -97,9 +101,6 @@
             <button onclick="window.print()" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
                 <i class="bi bi-printer me-1"></i> Cetak Dashboard
             </button>
-            <a href="{{ route('pelaporan-bulanan.konsolidasi', ['periode' => $periode]) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
-                <i class="bi bi-diagram-3 me-1"></i> Buka Konsolidasi (WP-RA-08-J)
-            </a>
         </div>
     </div>
 
@@ -150,50 +151,38 @@
     @endphp
 
     {{-- ========================================================================= --}}
-    {{-- A. 12 KARTU INDIKATOR UTAMA (KPI CARDS - Baris 6 s.d. 15 Sheet Dashboard) --}}
+    {{-- A. 12 KARTU INDIKATOR UTAMA (KPI CARDS) --}}
     {{-- ========================================================================= --}}
     <h6 class="fw-bold text-uppercase text-muted mb-2 small d-flex align-items-center gap-2">
-        <i class="bi bi-grid-fill text-primary"></i> 12 Indikator Kinerja Utama (Baris 6 s.d. 15 Sheet Dashboard)
+        <i class="bi bi-grid-fill text-primary"></i> 12 Indikator Kinerja Utama
     </h6>
 
-    {{-- Baris 1 KPI: Baris 6-7 Excel (Laporan Wajib, Sudah Submit, Tepat Waktu, Terlambat/Belum) --}}
+    {{-- Baris 1 KPI: (Laporan Wajib, Sudah Submit, Tepat Waktu, Terlambat/Belum) --}}
     <div class="row g-2 mb-2">
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Laporan Wajib</div>
-                    <span class="kpi-cell-code">Sel A7</span>
-                </div>
+                <div class="kpi-card-title">Laporan Wajib</div>
                 <div class="kpi-card-val text-primary">{{ $kpi['laporan_wajib'] }}</div>
                 <div class="text-muted small" style="font-size: 0.72rem;">Unit wajib lapor periode aktif</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Sudah Submit</div>
-                    <span class="kpi-cell-code">Sel D7</span>
-                </div>
+                <div class="kpi-card-title">Sudah Submit</div>
                 <div class="kpi-card-val text-info">{{ $kpi['sudah_submit'] }}</div>
                 <div class="text-muted small" style="font-size: 0.72rem;">Laporan telah dikirimkan RA</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Tepat Waktu</div>
-                    <span class="kpi-cell-code">Sel G7</span>
-                </div>
+                <div class="kpi-card-title">Tepat Waktu</div>
                 <div class="kpi-card-val text-success">{{ $kpi['tepat_waktu'] }}</div>
                 <div class="text-muted small" style="font-size: 0.72rem;">Submit sebelum/pada batas waktu</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Terlambat / Belum</div>
-                    <span class="kpi-cell-code">Sel J7</span>
-                </div>
+                <div class="kpi-card-title">Terlambat / Belum</div>
                 <div class="kpi-card-val {{ $kpi['terlambat_belum'] > 0 ? 'text-danger' : 'text-success' }}">
                     {{ $kpi['terlambat_belum'] }}
                 </div>
@@ -202,90 +191,66 @@
         </div>
     </div>
 
-    {{-- Baris 2 KPI: Baris 10-11 Excel (Approved/Final, Rata-rata Quality, Exception, Finding) --}}
+    {{-- Baris 2 KPI: (Approved/Final, Rata-rata Quality, Exception, Finding) --}}
     <div class="row g-2 mb-2">
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Approved / Final</div>
-                    <span class="kpi-cell-code">Sel A11</span>
-                </div>
+                <div class="kpi-card-title">Approved / Final</div>
                 <div class="kpi-card-val text-success">{{ $kpi['approved_final'] }}</div>
                 <div class="text-muted small" style="font-size: 0.72rem;">Laporan telah disetujui penuh</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Rata-rata Quality</div>
-                    <span class="kpi-cell-code">Sel D11</span>
-                </div>
+                <div class="kpi-card-title">Rata-rata Quality</div>
                 <div class="kpi-card-val {{ $kpi['rata_rata_quality'] >= ($params->target_quality_score ?? 80) ? 'text-success' : 'text-warning' }}">
                     {{ number_format($kpi['rata_rata_quality'], 1) }}
                 </div>
-                <div class="text-muted small" style="font-size: 0.72rem;">Target: &ge; {{ $params->target_quality_score ?? 80 }} (WP-RA-08-I)</div>
+                <div class="text-muted small" style="font-size: 0.72rem;">Target: &ge; {{ $params->target_quality_score ?? 80 }}</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Exception</div>
-                    <span class="kpi-cell-code">Sel G11</span>
-                </div>
+                <div class="kpi-card-title">Exception</div>
                 <div class="kpi-card-val text-secondary">{{ $kpi['exception'] }}</div>
                 <div class="text-muted small" style="font-size: 0.72rem;">Penyimpangan Rekap Isu & TL</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Finding</div>
-                    <span class="kpi-cell-code">Sel J11</span>
-                </div>
+                <div class="kpi-card-title">Finding</div>
                 <div class="kpi-card-val text-primary">{{ $kpi['finding'] }}</div>
                 <div class="text-muted small" style="font-size: 0.72rem;">Temuan formal Rekap Isu & TL</div>
             </div>
         </div>
     </div>
 
-    {{-- Baris 3 KPI: Baris 14-15 Excel (High Risk, TL Overdue, Isu Signifikan, Unit High Attention) --}}
+    {{-- Baris 3 KPI: (High Risk, TL Overdue, Isu Signifikan, Unit High Attention) --}}
     <div class="row g-2 mb-4">
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">High Risk</div>
-                    <span class="kpi-cell-code">Sel A15</span>
-                </div>
+                <div class="kpi-card-title">High Risk</div>
                 <div class="kpi-card-val text-danger">{{ $kpi['high_risk'] }}</div>
                 <div class="text-muted small" style="font-size: 0.72rem;">Isu berlevel risiko TINGGI</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">TL Overdue</div>
-                    <span class="kpi-cell-code">Sel D15</span>
-                </div>
+                <div class="kpi-card-title">TL Overdue</div>
                 <div class="kpi-card-val text-danger">{{ $kpi['tl_overdue'] }}</div>
                 <div class="text-muted small" style="font-size: 0.72rem;">Tindak lanjut melewati target</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Isu Signifikan</div>
-                    <span class="kpi-cell-code">Sel G15</span>
-                </div>
+                <div class="kpi-card-title">Isu Signifikan</div>
                 <div class="kpi-card-val text-warning">{{ $kpi['isu_signifikan'] }}</div>
-                <div class="text-muted small" style="font-size: 0.72rem;">Flag Ya (WP-RA-08-H)</div>
+                <div class="text-muted small" style="font-size: 0.72rem;">Flag Ya</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="kpi-card-dashboard">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="kpi-card-title">Unit / Area Perhatian</div>
-                    <span class="kpi-cell-code">Sel J15</span>
-                </div>
+                <div class="kpi-card-title">Unit / Area Perhatian</div>
                 <div class="kpi-card-val text-danger">
                     {{ $kpi['unit_perlu_perhatian_count'] }} <span class="fs-6 text-muted">unit</span>
                     <span class="fs-6 text-secondary">({{ $kpi['unit_high_attention'] }} area)</span>
@@ -296,17 +261,16 @@
     </div>
 
     {{-- ========================================================================= --}}
-    {{-- B & C. RINGKASAN STATUS LAPORAN (A19:B24) & SKOR PERHATIAN 13 AREA (J19:K32) --}}
+    {{-- B & C. RINGKASAN STATUS LAPORAN & SKOR PERHATIAN 13 AREA --}}
     {{-- ========================================================================= --}}
     <div class="row g-3 mb-4">
-        {{-- B. Tabel Ringkasan Status Laporan (Sel A19:B24) --}}
+        {{-- B. Tabel Ringkasan Status Laporan --}}
         <div class="col-md-5">
             <div class="section-card">
                 <div class="section-card-header d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-dark small text-uppercase">
-                        <i class="bi bi-pie-chart-fill text-primary me-1"></i> Ringkasan Status Laporan (A19:B24)
+                        <i class="bi bi-pie-chart-fill text-primary me-1"></i> Ringkasan Status Laporan
                     </span>
-                    <span class="kpi-cell-code">Kalender_Laporan</span>
                 </div>
                 <div class="p-3">
                     <table class="table table-sm table-bordered mb-0">
@@ -382,12 +346,12 @@
             </div>
         </div>
 
-        {{-- C. Panel Skor Perhatian 13 Area (Sel J19:K32) --}}
+        {{-- C. Panel Skor Perhatian 13 Area --}}
         <div class="col-md-7">
             <div class="section-card">
                 <div class="section-card-header d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-dark small text-uppercase">
-                        <i class="bi bi-bar-chart-line-fill text-danger me-1"></i> Skor Perhatian 13 Area Risiko (J19:K32)
+                        <i class="bi bi-bar-chart-line-fill text-danger me-1"></i> Skor Perhatian 13 Area Risiko
                     </span>
                     <a href="{{ route('pelaporan-bulanan.tren-isu', ['periode' => $periode]) }}" class="small text-decoration-none text-primary">
                         Detail Tren Isu <i class="bi bi-arrow-right"></i>
@@ -426,30 +390,30 @@
     </div>
 
     {{-- ========================================================================= --}}
-    {{-- D. TABEL MONITORING PERHATIAN PER UNIT / CABANG (Sel A27:H51 Sheet Dashboard) --}}
+    {{-- D. TABEL MONITORING PERHATIAN PER UNIT / CABANG --}}
     {{-- ========================================================================= --}}
     <div class="section-card mb-4">
         <div class="section-card-header d-flex justify-content-between align-items-center">
             <span class="fw-bold text-dark small text-uppercase">
-                <i class="bi bi-building-exclamation text-warning me-1"></i> Monitoring Perhatian Unit Kerja / Cabang (A27:H51)
+                <i class="bi bi-building-exclamation text-warning me-1"></i> Monitoring Perhatian Unit Kerja / Cabang
             </span>
             <span class="text-muted small">
                 Target Quality Score: <strong>&ge; {{ $params->target_quality_score ?? 80 }}</strong> | Rumus: High Risk &gt; 0 &or; Overdue &gt; 0 &or; Signifikan &gt; 0 &or; Quality &lt; Target
             </span>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover table-bordered mb-0 align-middle">
-                <thead class="table-light">
+            <table class="table table-hover table-bordered monitoring-table mb-0 align-middle">
+                <thead>
                     <tr>
                         <th class="text-center" style="width: 50px;">No</th>
-                        <th>Unit (A)</th>
-                        <th>RA (B)</th>
-                        <th class="text-center">Status Final (C)</th>
-                        <th class="text-center">Quality (D)</th>
-                        <th class="text-center">High Risk (E)</th>
-                        <th class="text-center">Overdue (F)</th>
-                        <th class="text-center">Signifikan (G)</th>
-                        <th class="text-center">Perhatian (H)</th>
+                        <th>Unit</th>
+                        <th>RA</th>
+                        <th class="text-center">Status Final</th>
+                        <th class="text-center">Quality</th>
+                        <th class="text-center">High Risk</th>
+                        <th class="text-center">Overdue</th>
+                        <th class="text-center">Signifikan</th>
+                        <th class="text-center">Perhatian</th>
                     </tr>
                 </thead>
                 <tbody>

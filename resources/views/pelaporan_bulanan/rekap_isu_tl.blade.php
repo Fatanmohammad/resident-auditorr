@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Rekap Isu & Tindak Lanjut (WP-RA-08-E) - SOP 08')
+@section('title', 'Rekap Isu & Tindak Lanjut')
 
 @section('content')
 <style>
@@ -19,22 +19,22 @@
     .badge-signifikan-tidak { background-color: #94a3b8; color: #fff; }
 
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.74rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         vertical-align: middle;
-        padding: 0.6rem 0.45rem;
+        padding: 0.75rem 0.85rem;
     }
     .table tbody td {
-        font-size: 0.81rem;
+        font-size: 0.875rem;
         vertical-align: middle;
-        padding: 0.5rem 0.45rem;
+        padding: 0.75rem 0.85rem;
         border-color: #f1f5f9;
+        color: #334155;
     }
 </style>
 
@@ -43,10 +43,10 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-exclamation-diamond me-2"></i>Rekap Isu & Tindak Lanjut (WP-RA-08-E)
+                <i class="bi bi-exclamation-diamond me-2"></i>Rekap Isu &amp; Tindak Lanjut
             </h4>
             <p class="text-muted small mb-0">
-                Pencatatan Isu Exception, Finding, Indikasi Fraud, Penentuan Otomatis Flag Signifikan & Jalur Tindak Lanjut
+                Pencatatan Isu Exception, Finding, Indikasi Fraud, Penentuan Otomatis Flag Signifikan &amp; Jalur Tindak Lanjut
             </p>
         </div>
         <div class="d-flex gap-2 mt-2 mt-md-0">
@@ -89,7 +89,7 @@
         <form method="GET" action="{{ route('pelaporan-bulanan.rekap-isu-tl') }}" class="row g-2 align-items-center">
             <div class="col-md-7">
                 <label class="form-label small fw-bold text-muted mb-1">Pilih Laporan Bulanan (Report ID)</label>
-                <select name="reportId" class="form-select form-select-sm fw-bold" onchange="this.form.submit()">
+                <select name="reportId" class="form-select form-select-sm fw-bold" onchange="if(this.value) { window.location.href = '{{ url('/pelaporan-bulanan/rekap-isu-tl') }}/' + this.value; } else { this.form.submit(); }">
                     @forelse($availableReports as $rep)
                         <option value="{{ $rep->report_id }}" {{ ($reportId == $rep->report_id) ? 'selected' : '' }}>
                             {{ $rep->report_id }} - [{{ $rep->kode_unit }}] {{ $rep->nama_unit }} ({{ \Carbon\Carbon::parse($rep->periode)->translatedFormat('F Y') }})
@@ -125,128 +125,129 @@
             </div>
         @endif
 
-        {{-- Tabel Rekap Isu & TL (23 Kolom WP-RA-08-E) --}}
-        <div class="table-responsive shadow-sm">
-            <table class="table table-hover align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th class="text-center" style="width: 35px;">No</th>
-                        <th>Issue ID (A)</th>
-                        <th>Sumber (G)</th>
-                        <th>Referensi (H)</th>
-                        <th>Area (I)</th>
-                        <th>Jenis Isu (J)</th>
-                        <th>Risk Level (K)</th>
-                        <th style="min-width: 180px;">Uraian Isu (L)</th>
-                        <th>PIC (P)</th>
-                        <th>Target TL (Q)</th>
-                        <th>Status TL (R)</th>
-                        <th class="text-center">Aging (S)</th>
-                        <th class="text-center">Berulang (T)</th>
-                        <th class="text-end">Dampak (U)</th>
-                        <th class="text-center">Signifikan (V)</th>
-                        <th>Jalur TL (W)</th>
-                        <th class="text-center" style="width: 80px;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($isuList as $idx => $isu)
-                    <tr>
-                        <td class="text-center text-muted fw-semibold">{{ $idx + 1 }}</td>
-                        <td class="font-monospace small text-primary fw-bold">{{ $isu->issue_id }}</td>
-                        <td><span class="badge bg-secondary">{{ $isu->sumber_sop }}</span></td>
-                        <td class="small font-monospace">{{ $isu->referensi_sumber ?: '-' }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ $isu->area }}</span></td>
-                        <td>
-                            @if($isu->jenis_isu === 'INDIKASI FRAUD')
-                                <span class="badge badge-fraud"><i class="bi bi-shield-slash-fill me-1"></i>FRAUD</span>
-                            @elseif($isu->jenis_isu === 'FINDING')
-                                <span class="badge bg-danger">FINDING</span>
-                            @else
-                                <span class="badge bg-warning text-dark">EXCEPTION</span>
-                            @endif
-                        </td>
-                        <td>
-                            <span class="badge {{ $isu->risk_level === 'HIGH' ? 'badge-high' : ($isu->risk_level === 'MEDIUM' ? 'badge-medium' : 'badge-low') }}">
-                                {{ $isu->risk_level }}
-                            </span>
-                        </td>
-                        <td class="small" title="{{ $isu->uraian_isu }}">
-                            <div class="fw-semibold text-dark">{{ Str::limit($isu->uraian_isu, 60) }}</div>
-                            @if($isu->rekomendasi)
-                                <small class="text-muted fst-italic d-block">Rek: {{ Str::limit($isu->rekomendasi, 40) }}</small>
-                            @endif
-                        </td>
-                        <td class="small text-muted">{{ $isu->pic ?: '-' }}</td>
-                        <td class="small font-monospace text-nowrap">
-                            {{ $isu->target_tl ? \Carbon\Carbon::parse($isu->target_tl)->format('d/m/Y') : '-' }}
-                        </td>
-                        <td>
-                            @if($isu->status_tl === 'CLOSED')
-                                <span class="badge bg-success">CLOSED</span>
-                            @elseif($isu->status_tl === 'OVERDUE')
-                                <span class="badge bg-danger">OVERDUE</span>
-                            @elseif($isu->status_tl === 'IN PROGRESS')
-                                <span class="badge bg-info text-dark">IN PROGRESS</span>
-                            @else
-                                <span class="badge bg-warning text-dark">OPEN</span>
-                            @endif
-                        </td>
-                        <td class="text-center font-monospace fw-bold {{ $isu->aging_overdue > 0 ? 'text-danger' : 'text-muted' }}">
-                            {{ $isu->aging_overdue > 0 ? $isu->aging_overdue . ' hr' : '0' }}
-                        </td>
-                        <td class="text-center">
-                            <span class="badge {{ $isu->berulang === 'YA' ? 'bg-danger' : 'bg-light text-muted border' }}">
-                                {{ $isu->berulang }}
-                            </span>
-                        </td>
-                        <td class="text-end font-monospace small">
-                            {{ $isu->nilai_dampak > 0 ? 'Rp ' . number_format($isu->nilai_dampak, 0, ',', '.') : '-' }}
-                        </td>
-                        <td class="text-center">
-                            <span class="badge {{ $isu->flag_signifikan === 'YA' ? 'badge-signifikan-ya' : 'badge-signifikan-tidak' }} px-2 py-1">
-                                {{ $isu->flag_signifikan }}
-                            </span>
-                        </td>
-                        <td class="font-monospace small fw-bold">
-                            @if($isu->jalur_tindak_lanjut === 'SOP-RA-09/10')
-                                <span class="text-danger"><i class="bi bi-shield-exclamation me-1"></i>SOP 09/10</span>
-                            @elseif($isu->jalur_tindak_lanjut === 'SOP-RA-10')
-                                <span class="text-warning"><i class="bi bi-arrow-up-circle-fill me-1"></i>SOP 10</span>
-                            @elseif($isu->jalur_tindak_lanjut === 'SOP-RA-07')
-                                <span class="text-primary"><i class="bi bi-arrow-repeat me-1"></i>SOP 07</span>
-                            @else
-                                <span class="text-muted"><i class="bi bi-check2 me-1"></i>MONITOR</span>
-                            @endif
-                        </td>
-                        <td class="text-center text-nowrap">
-                            @if(!$isLocked)
-                                <a href="{{ route('pelaporan-bulanan.rekap-isu-tl.edit', $isu->id) }}" class="btn btn-outline-primary btn-sm p-1" title="Edit">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
-                                <form method="POST" action="{{ route('pelaporan-bulanan.rekap-isu-tl.destroy', $isu->id) }}" class="d-inline" onsubmit="return confirm('Hapus baris isu ini?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-outline-danger btn-sm p-1" title="Hapus">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            @else
-                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-lock-fill me-1"></i>Final</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="17" class="text-center py-4 text-muted">
-                            <i class="bi bi-shield-check fs-2 d-block mb-2"></i>
-                            Belum ada baris isu & tindak lanjut untuk <strong>{{ $kalender->report_id }}</strong>.<br>
-                            Klik <strong>"+ Tambah Isu Manual"</strong> di atas.
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+        {{-- Tabel Rekap Isu & TL --}}
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 45px;">No</th>
+                            <th>Issue ID</th>
+                            <th>Sumber</th>
+                            <th>Referensi</th>
+                            <th>Area</th>
+                            <th>Jenis Isu</th>
+                            <th>Risk Level</th>
+                            <th style="min-width: 220px;">Uraian Isu</th>
+                            <th>PIC</th>
+                            <th>Target TL</th>
+                            <th>Status TL</th>
+                            <th class="text-center">Aging</th>
+                            <th class="text-center">Berulang</th>
+                            <th class="text-end">Dampak</th>
+                            <th class="text-center">Signifikan</th>
+                            <th>Jalur TL</th>
+                            <th class="text-center" style="width: 90px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($isuList as $idx => $isu)
+                        <tr>
+                            <td class="text-center text-muted fw-semibold">{{ $idx + 1 }}</td>
+                            <td class="font-monospace small text-primary fw-bold">{{ $isu->issue_id }}</td>
+                            <td><span class="badge bg-secondary">{{ $isu->sumber_sop }}</span></td>
+                            <td class="small font-monospace">{{ $isu->referensi_sumber ?: '-' }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ $isu->area }}</span></td>
+                            <td>
+                                @if($isu->jenis_isu === 'INDIKASI FRAUD')
+                                    <span class="badge badge-fraud"><i class="bi bi-shield-slash-fill me-1"></i>FRAUD</span>
+                                @elseif($isu->jenis_isu === 'FINDING')
+                                    <span class="badge bg-danger">FINDING</span>
+                                @else
+                                    <span class="badge bg-warning text-dark">EXCEPTION</span>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge {{ $isu->risk_level === 'HIGH' ? 'badge-high' : ($isu->risk_level === 'MEDIUM' ? 'badge-medium' : 'badge-low') }}">
+                                    {{ $isu->risk_level }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ Str::limit($isu->uraian_isu, 70) }}</div>
+                                @if($isu->rekomendasi)
+                                    <small class="text-muted fst-italic d-block">Rek: {{ Str::limit($isu->rekomendasi, 50) }}</small>
+                                @endif
+                            </td>
+                            <td class="text-muted">{{ $isu->pic ?: '-' }}</td>
+                            <td class="font-monospace text-nowrap">
+                                {{ $isu->target_tl ? \Carbon\Carbon::parse($isu->target_tl)->format('d/m/Y') : '-' }}
+                            </td>
+                            <td>
+                                @if($isu->status_tl === 'CLOSED')
+                                    <span class="badge bg-success">CLOSED</span>
+                                @elseif($isu->status_tl === 'OVERDUE')
+                                    <span class="badge bg-danger">OVERDUE</span>
+                                @elseif($isu->status_tl === 'IN PROGRESS')
+                                    <span class="badge bg-info text-dark">IN PROGRESS</span>
+                                @else
+                                    <span class="badge bg-warning text-dark">OPEN</span>
+                                @endif
+                            </td>
+                            <td class="text-center font-monospace fw-bold {{ $isu->aging_overdue > 0 ? 'text-danger' : 'text-muted' }}">
+                                {{ $isu->aging_overdue > 0 ? $isu->aging_overdue . ' hr' : '0' }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge {{ $isu->berulang === 'YA' ? 'bg-danger' : 'bg-light text-muted border' }}">
+                                    {{ $isu->berulang }}
+                                </span>
+                            </td>
+                            <td class="text-end font-monospace">
+                                {{ $isu->nilai_dampak > 0 ? 'Rp ' . number_format($isu->nilai_dampak, 0, ',', '.') : '-' }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge {{ $isu->flag_signifikan === 'YA' ? 'badge-signifikan-ya' : 'badge-signifikan-tidak' }} px-2 py-1">
+                                    {{ $isu->flag_signifikan }}
+                                </span>
+                            </td>
+                            <td class="font-monospace small fw-bold">
+                                @if($isu->jalur_tindak_lanjut === 'SOP-RA-09/10')
+                                    <span class="text-danger"><i class="bi bi-shield-exclamation me-1"></i>Investigasi Khusus</span>
+                                @elseif($isu->jalur_tindak_lanjut === 'SOP-RA-10')
+                                    <span class="text-warning"><i class="bi bi-arrow-up-circle-fill me-1"></i>Eskalasi Manajemen</span>
+                                @elseif($isu->jalur_tindak_lanjut === 'SOP-RA-07')
+                                    <span class="text-primary"><i class="bi bi-arrow-repeat me-1"></i>Monitoring TL</span>
+                                @else
+                                    <span class="text-muted"><i class="bi bi-check2 me-1"></i>MONITOR</span>
+                                @endif
+                            </td>
+                            <td class="text-center text-nowrap">
+                                @if(!$isLocked)
+                                    <a href="{{ route('pelaporan-bulanan.rekap-isu-tl.edit', $isu->id) }}" class="btn btn-outline-primary btn-sm p-1" title="Edit">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <form method="POST" action="{{ route('pelaporan-bulanan.rekap-isu-tl.destroy', $isu->id) }}" class="d-inline" onsubmit="return confirm('Hapus baris isu ini?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-outline-danger btn-sm p-1" title="Hapus">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="badge bg-light text-muted border" style="font-size:0.75rem;"><i class="bi bi-lock-fill me-1"></i>Final</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="17" class="text-center py-4 text-muted">
+                                <i class="bi bi-shield-check fs-2 d-block mb-2"></i>
+                                Belum ada baris isu &amp; tindak lanjut untuk <strong>{{ $kalender->report_id }}</strong>.
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     @endif
 </div>

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Roster Resident Auditor (WP-RA-08-N) - SOP 08')
+@section('title', 'Roster Resident Auditor')
 
 @section('content')
 <style>
@@ -36,27 +36,24 @@
         margin-bottom: 1.25rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
-    .table-responsive {
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-    }
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.73rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         text-align: center;
         vertical-align: middle;
+        padding: 0.75rem 0.85rem;
     }
     .table tbody td {
-        font-size: 0.83rem;
+        font-size: 0.875rem;
         vertical-align: middle;
         white-space: nowrap;
+        padding: 0.75rem 0.85rem;
+        color: #334155;
     }
 </style>
 
@@ -67,16 +64,15 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Master RA (WP-RA-08-N)</li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Roster RA</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                 <i class="bi bi-people text-primary"></i> Roster Resident Auditor
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 fw-semibold">WP-RA-08-N</span>
             </h4>
             <p class="text-muted small mb-0 mt-1">
-                Data induk stabil Resident Auditor (RA ID), riwayat penempatan kantor cabang, dan masa tugas pengawasan (9 Kolom A s.d. I).
+                Data induk stabil Resident Auditor (RA ID), riwayat penempatan kantor cabang, dan masa tugas pengawasan.
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -180,15 +176,15 @@
         <table class="table table-hover table-bordered mb-0">
             <thead>
                 <tr>
-                    <th title="Kolom A - Kode unik RA">RA ID (A)</th>
-                    <th title="Kolom B - Nama lengkap RA">Nama Resident Auditor (B)</th>
-                    <th title="Kolom C - Kode KC Penempatan">Kode KC (C)</th>
-                    <th title="Kolom D - Nama KC otomatis dari Master Unit">Nama KC (D)</th>
-                    <th title="Kolom E - Unit RA">Unit RA (E)</th>
-                    <th title="Kolom F - Status">Status (F)</th>
-                    <th title="Kolom G - Tanggal Mulai Penugasan">Tgl Mulai (G)</th>
-                    <th title="Kolom H - Tanggal Selesai Penugasan">Tgl Selesai (H)</th>
-                    <th title="Kolom I - Catatan">Catatan (I)</th>
+                    <th>RA ID</th>
+                    <th>Nama Resident Auditor</th>
+                    <th>Kode KC</th>
+                    <th>Nama KC</th>
+                    <th>Unit RA</th>
+                    <th>Status</th>
+                    <th>Tgl Mulai</th>
+                    <th>Tgl Selesai</th>
+                    <th>Catatan</th>
                     @if(!$isRa)
                     <th style="width: 80px;">Aksi</th>
                     @endif
@@ -270,9 +266,9 @@
             <div class="d-flex align-items-center gap-2 small text-muted">
                 <i class="bi bi-shield-check text-primary fs-6"></i>
                 <div>
-                    <strong>Aturan Master Roster RA (WP-RA-08-N):</strong>
+                    <strong>Aturan Master Roster RA:</strong>
                     Master RA digunakan untuk mempertahankan histori kinerja bulanan meskipun ada mutasi cabang.
-                    Nama KC (Kolom D) dan Unit RA (Kolom E) terhubung otomatis dengan referensi <code>Master_Unit</code>.
+                    Nama KC dan Unit RA terhubung otomatis dengan referensi <code>Master_Unit</code>.
                     <strong>Resident Auditor (RA)</strong> berstatus <em>Read-Only</em> dan hanya dapat melihat profil penempatan dirinya sendiri.
                 </div>
             </div>

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Kalender Kinerja RA (WP-RA-08-P) - SOP 08')
+@section('title', 'Kalender Pelaksanaan Tugas & Kinerja Bulanan RA')
 
 @section('content')
 <style>
@@ -16,7 +16,7 @@
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06);
     }
     .kpi-title {
-        font-size: 0.73rem;
+        font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -42,8 +42,8 @@
         background: #fff;
     }
     .table-matrix thead th {
-        background: #f1f5f9;
-        font-size: 0.68rem;
+        background: #f8fafc;
+        font-size: 0.76rem;
         font-weight: 700;
         text-transform: uppercase;
         color: #334155;
@@ -51,23 +51,23 @@
         white-space: nowrap;
         text-align: center;
         vertical-align: middle;
-        padding: 0.4rem 0.35rem;
+        padding: 0.6rem 0.5rem;
     }
     .table-matrix tbody td {
-        font-size: 0.74rem;
+        font-size: 0.82rem;
         vertical-align: middle;
         white-space: nowrap;
-        padding: 0.35rem 0.3rem;
+        padding: 0.55rem 0.5rem;
     }
     .day-cell {
-        width: 24px;
-        min-width: 24px;
-        max-width: 24px;
-        height: 24px;
+        width: 26px;
+        min-width: 26px;
+        max-width: 26px;
+        height: 26px;
         text-align: center;
         font-weight: 700;
-        font-size: 0.65rem;
-        line-height: 24px;
+        font-size: 0.72rem;
+        line-height: 26px;
         padding: 0 !important;
     }
     /* Status Badge Colors */
@@ -94,16 +94,15 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Kinerja RA (WP-RA-08-P)</li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Kinerja RA</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                 <i class="bi bi-calendar2-check text-primary"></i> Kalender Pelaksanaan Tugas & Kinerja Bulanan RA
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 fw-semibold">WP-RA-08-P</span>
             </h4>
             <p class="text-muted small mb-0 mt-1">
-                Matriks kehadiran 31 hari, 3 Pilar Kinerja (Konsistensi 40%, Penyelesaian 30%, Kualitas 30%), Skor Akhir, dan Status Bulanan (47 Kolom A s.d. AU).
+                Matriks pemantauan kehadiran harian, 3 pilar evaluasi kinerja (Konsistensi 40%, Penyelesaian 30%, Kualitas 30%), skor kumulatif, serta status pencapaian bulanan.
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -195,14 +194,14 @@
             <div class="kpi-card text-center">
                 <div class="kpi-title">Rata2 Konsistensi</div>
                 <div class="kpi-value text-success">{{ $avgKonsistensi }}%</div>
-                <div class="text-muted small" style="font-size: 0.72rem;">Bobot: 40% (Kolom H)</div>
+                <div class="text-muted small" style="font-size: 0.72rem;">Bobot: 40%</div>
             </div>
         </div>
         <div class="col-6 col-md-2">
             <div class="kpi-card text-center">
                 <div class="kpi-title">Rata2 Penyelesaian</div>
                 <div class="kpi-value text-info">{{ $avgPenyelesaian }}%</div>
-                <div class="text-muted small" style="font-size: 0.72rem;">Bobot: 30% (Kolom K)</div>
+                <div class="text-muted small" style="font-size: 0.72rem;">Bobot: 30%</div>
             </div>
         </div>
         <div class="col-6 col-md-2">
@@ -211,7 +210,7 @@
                 <div class="kpi-value {{ $avgKualitas !== null ? 'text-primary' : 'text-muted' }}">
                     {{ $avgKualitas !== null ? $avgKualitas . '%' : '-' }}
                 </div>
-                <div class="text-muted small" style="font-size: 0.72rem;">Bobot: 30% (Kolom N)</div>
+                <div class="text-muted small" style="font-size: 0.72rem;">Bobot: 30%</div>
             </div>
         </div>
         <div class="col-6 col-md-2">
@@ -220,7 +219,7 @@
                 <div class="kpi-value {{ $avgSkor !== null ? ($avgSkor >= 80 ? 'text-success' : 'text-danger') : 'text-muted' }}">
                     {{ $avgSkor !== null ? $avgSkor : '-' }}
                 </div>
-                <div class="text-muted small" style="font-size: 0.72rem;">Skala 0–100 (Kolom O)</div>
+                <div class="text-muted small" style="font-size: 0.72rem;">Skala 0–100</div>
             </div>
         </div>
         <div class="col-6 col-md-2">
@@ -232,43 +231,43 @@
         </div>
     </div>
 
-    {{-- Main 47-Column Table --}}
+    {{-- Main Table --}}
     <div class="table-responsive shadow-sm">
         <table class="table table-hover table-bordered table-matrix mb-0">
             <thead>
                 {{-- Super Headers --}}
                 <tr>
                     <th colspan="7" class="table-section-id text-primary">
-                        <i class="bi bi-person-bounding-box me-1"></i> IDENTITAS & HARI KERJA (A s.d. G)
+                        <i class="bi bi-person-bounding-box me-1"></i> IDENTITAS & HARI KERJA
                     </th>
                     <th colspan="9" class="table-section-kpi text-success">
-                        <i class="bi bi-award me-1"></i> METRIK KINERJA & SKOR (H s.d. P)
+                        <i class="bi bi-award me-1"></i> METRIK KINERJA & SKOR
                     </th>
                     <th colspan="31" class="table-section-cal text-dark">
-                        <i class="bi bi-calendar3 me-1"></i> MATRIKS KEHADIRAN & TUGAS HARIAN (Kolom Q s.d. AU: Tanggal 1 s.d. 31)
+                        <i class="bi bi-calendar3 me-1"></i> MATRIKS KEHADIRAN & TUGAS HARIAN (TANGGAL 1 - 31)
                     </th>
                 </tr>
                 {{-- Column Headers --}}
                 <tr>
-                    <th title="Kolom A - RA ID">RA ID (A)</th>
-                    <th title="Kolom B - Nama Resident Auditor">Nama RA (B)</th>
-                    <th title="Kolom C - Kode KC Penempatan">KC (C)</th>
-                    <th title="Kolom D - Hari Kerja NETWORKDAYS">Kerja (D)</th>
-                    <th title="Kolom E - Cuti/Sakit">Cuti/Skt (E)</th>
-                    <th title="Kolom F - Hari Tugas Dipenuhi">Dipenuhi (F)</th>
-                    <th title="Kolom G - Tanpa Aktivitas">Kosong (G)</th>
+                    <th>RA ID</th>
+                    <th>Nama RA</th>
+                    <th>KC</th>
+                    <th>Kerja</th>
+                    <th>Cuti/Skt</th>
+                    <th>Dipenuhi</th>
+                    <th>Kosong</th>
 
-                    <th title="Kolom H - Konsistensi %">Konsistensi (H)</th>
-                    <th title="Kolom I - Aktivitas Kerja">Aktivitas (I)</th>
-                    <th title="Kolom J - Selesai">Selesai (J)</th>
-                    <th title="Kolom K - Penyelesaian %">Penyelesaian (K)</th>
-                    <th title="Kolom L - Direview">Direview (L)</th>
-                    <th title="Kolom M - Memadai">Memadai (M)</th>
-                    <th title="Kolom N - Kualitas %">Kualitas (N)</th>
-                    <th title="Kolom O - Skor Kinerja (0-100)">Skor (O)</th>
-                    <th title="Kolom P - Status Bulanan">Status Bulanan (P)</th>
+                    <th>Konsistensi</th>
+                    <th>Aktivitas</th>
+                    <th>Selesai</th>
+                    <th>Penyelesaian</th>
+                    <th>Direview</th>
+                    <th>Memadai</th>
+                    <th>Kualitas</th>
+                    <th>Skor</th>
+                    <th>Status Bulanan</th>
 
-                    {{-- 31 Kolom Tanggal (Q s.d. AU) --}}
+                    {{-- 31 Kolom Tanggal --}}
                     @for($t = 1; $t <= 31; $t++)
                         <th class="day-cell {{ $t > $daysInMonth ? 'bg-secondary-subtle' : '' }}" title="Tanggal {{ $t }}">
                             {{ $t }}
@@ -380,7 +379,7 @@
     <div class="card mt-3 bg-light border-0 shadow-sm">
         <div class="card-body py-2 px-3">
             <h6 class="fw-bold small text-dark mb-2">
-                <i class="bi bi-info-circle text-primary me-1"></i> Panduan Singkatan &amp; Hierarki Status Harian (Kolom Q s.d. AU):
+                <i class="bi bi-info-circle text-primary me-1"></i> Panduan Singkatan &amp; Hierarki Status Harian:
             </h6>
             <div class="d-flex flex-wrap gap-2 small">
                 <span class="badge st-baik border px-2 py-1">OK: BAIK (Completed & Memadai)</span>
@@ -395,7 +394,7 @@
                 <span class="badge st-libur border px-2 py-1">L: LIBUR (Akhir Pekan / Libur Nasional)</span>
             </div>
             <div class="small text-muted mt-2 border-top pt-2">
-                <strong>Formula Skor Kinerja Bulanan (Kolom O):</strong>
+                <strong>Formula Skor Kinerja Bulanan:</strong>
                 <code>=ROUND((Konsistensi &times; 40) + (Penyelesaian &times; 30) + (Kualitas Review &times; 30), 0)</code>
                 &nbsp;|&nbsp; Ambang Status: &ge;90 (Baik &amp; Konsisten), &ge;80 (Memadai), &ge;60 (Perlu Peningkatan), &lt;60 (Perlu Tindak Lanjut).
             </div>

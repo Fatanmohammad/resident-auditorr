@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Register Feedback Konsolidasi & Perbaikan (WP-RA-08-M) - SOP 08')
+@section('title', 'Register Feedback Konsolidasi & Perbaikan')
 
 @section('content')
 <style>
@@ -36,27 +36,24 @@
         margin-bottom: 1.25rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
-    .table-responsive {
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-    }
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.73rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         text-align: center;
         vertical-align: middle;
+        padding: 0.75rem 0.85rem;
     }
     .table tbody td {
-        font-size: 0.83rem;
+        font-size: 0.875rem;
         vertical-align: middle;
         white-space: nowrap;
+        padding: 0.75rem 0.85rem;
+        color: #334155;
     }
     .table-section-head { background: #f8fafc !important; }
     .table-section-ra { background: #f0fdf4 !important; }
@@ -70,16 +67,15 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Feedback (WP-RA-08-M)</li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Feedback</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
-                <i class="bi bi-chat-square-quote text-primary"></i> Register Feedback Konsolidasi & Perbaikan
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 fw-semibold">WP-RA-08-M</span>
+                <i class="bi bi-chat-square-quote text-primary"></i> Register Feedback Konsolidasi &amp; Perbaikan
             </h4>
             <p class="text-muted small mb-0 mt-1">
-                Umpan balik kualitas pelaporan bulanan dari Manajemen/Reviewer kepada RA dan tindak lanjut perbaikan (14 Kolom A s.d. N).
+                Umpan balik kualitas pelaporan bulanan dari Manajemen/Reviewer kepada RA dan tindak lanjut perbaikan.
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -223,34 +219,34 @@
                 {{-- Super Headers --}}
                 <tr>
                     <th colspan="6" class="table-section-head text-primary">
-                        <i class="bi bi-chat-left-dots me-1"></i> PEMBERIAN FEEDBACK OLEH REVIEWER (Kolom A s.d. F)
+                        <i class="bi bi-chat-left-dots me-1"></i> PEMBERIAN FEEDBACK OLEH REVIEWER
                     </th>
                     <th colspan="6" class="table-section-ra text-success">
-                        <i class="bi bi-tools me-1"></i> TINDAK LANJUT & PENYELESAIAN OLEH RA (Kolom G s.d. L)
+                        <i class="bi bi-tools me-1"></i> TINDAK LANJUT &amp; PENYELESAIAN OLEH RA
                     </th>
                     <th colspan="2" class="table-section-verif text-info">
-                        <i class="bi bi-shield-check me-1"></i> VERIFIKASI AKHIR (Kolom M s.d. N)
+                        <i class="bi bi-shield-check me-1"></i> VERIFIKASI AKHIR
                     </th>
                     <th rowspan="2" class="bg-light text-center" style="width: 100px;">Aksi</th>
                 </tr>
-                {{-- Column Headers A s.d. N --}}
+                {{-- Column Headers --}}
                 <tr>
-                    <th title="Kolom A - Feedback ID">Feedback ID (A)</th>
-                    <th title="Kolom B - Report ID">Report ID (B)</th>
-                    <th title="Kolom C - Tanggal">Tanggal (C)</th>
-                    <th title="Kolom D - Diberikan Kepada">Diberikan Kepada (D)</th>
-                    <th title="Kolom E - Jenis Feedback">Jenis (E)</th>
-                    <th title="Kolom F - Uraian Feedback" style="min-width: 200px;">Uraian Feedback (F)</th>
+                    <th>Feedback ID</th>
+                    <th>Report ID</th>
+                    <th>Tanggal</th>
+                    <th>Diberikan Kepada</th>
+                    <th>Jenis Feedback</th>
+                    <th style="min-width: 200px;">Uraian Feedback</th>
 
-                    <th title="Kolom G - Tindakan Perbaikan" style="min-width: 200px;">Tindakan Perbaikan (G)</th>
-                    <th title="Kolom H - PIC">PIC (H)</th>
-                    <th title="Kolom I - Target">Target (I)</th>
-                    <th title="Kolom J - Status">Status (J)</th>
-                    <th title="Kolom K - Bukti">Bukti (K)</th>
-                    <th title="Kolom L - Tanggal Selesai">Tgl Selesai (L)</th>
+                    <th style="min-width: 200px;">Tindakan Perbaikan</th>
+                    <th>PIC</th>
+                    <th>Target</th>
+                    <th>Status</th>
+                    <th>Bukti</th>
+                    <th>Tgl Selesai</th>
 
-                    <th title="Kolom M - Verifikasi Reviewer">Verifikasi Reviewer (M)</th>
-                    <th title="Kolom N - Catatan Reviewer">Catatan (N)</th>
+                    <th>Verifikasi Reviewer</th>
+                    <th>Catatan</th>
                 </tr>
             </thead>
             <tbody>
@@ -381,9 +377,9 @@
             <div class="d-flex align-items-center gap-2 small text-muted">
                 <i class="bi bi-shield-lock-fill text-primary fs-6"></i>
                 <div>
-                    <strong>Aturan Hak Akses & Pembagian Tanggung Jawab (WP-RA-08-M):</strong>
+                    <strong>Aturan Hak Akses & Pembagian Tanggung Jawab:</strong>
                     <strong>Admin / Reviewer:</strong> Berhak membuat feedback baru, menentukan arahan, melakukan Verifikasi Reviewer, dan mengunci status <code>CLOSED</code>.
-                    <strong>Resident Auditor (RA):</strong> Hanya melihat feedback yang ditujukan ke cabangnya dan berhak menginput Tindakan Perbaikan (G), Bukti (K), Tanggal Selesai (L), serta mengubah status ke <code>IN PROGRESS / MENUNGGU VERIFIKASI</code>.
+                    <strong>Resident Auditor (RA):</strong> Hanya melihat feedback yang ditujukan ke cabangnya dan berhak menginput Tindakan Perbaikan, Bukti, Tanggal Selesai, serta mengubah status ke <code>IN PROGRESS / MENUNGGU VERIFIKASI</code>.
                 </div>
             </div>
         </div>

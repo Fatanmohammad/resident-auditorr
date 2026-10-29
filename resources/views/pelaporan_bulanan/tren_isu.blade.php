@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Matriks Tren Temuan & Isu (WP-RA-08-K) - SOP 08')
+@section('title', 'Matriks Tren Temuan & Isu')
 
 @section('content')
 <style>
@@ -39,35 +39,33 @@
     .badge-high-att { background-color: #ef4444; color: #fff; font-weight: 700; }
     .badge-pantau { background-color: #f59e0b; color: #fff; font-weight: 600; }
     .badge-normal { background-color: #10b981; color: #fff; font-weight: 600; }
-    .table-responsive {
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-    }
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.74rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         text-align: center;
         vertical-align: middle;
+        padding: 0.75rem 0.85rem;
     }
     .table tbody td {
-        font-size: 0.84rem;
+        font-size: 0.875rem;
         vertical-align: middle;
         white-space: nowrap;
+        padding: 0.75rem 0.85rem;
+        color: #334155;
     }
     .table tfoot th {
         background: #e2e8f0;
-        font-size: 0.8rem;
+        font-size: 0.82rem;
         font-weight: 800;
         color: #1e293b;
         vertical-align: middle;
         white-space: nowrap;
+        padding: 0.75rem 0.85rem;
     }
     .score-bar-bg {
         width: 100%;
@@ -89,13 +87,12 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Tren Isu (WP-RA-08-K)</li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Tren Isu</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
-                <i class="bi bi-graph-up-arrow text-danger"></i> Matriks Tren Temuan, TL & Isu Berulang
-                <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-6 fw-semibold">WP-RA-08-K</span>
+                <i class="bi bi-graph-up-arrow text-danger"></i> Matriks Tren Temuan, TL &amp; Isu Berulang
             </h4>
             <p class="text-muted small mb-0 mt-1">
                 Analisis perbandingan tren isu 13 Area Standar antara Bulan Ini vs Bulan Lalu, skor perhatian risiko, dan status perhatian audit.
@@ -105,9 +102,6 @@
             <button onclick="window.print()" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
                 <i class="bi bi-printer me-1"></i> Cetak / Export
             </button>
-            <a href="{{ route('pelaporan-bulanan.dashboard', ['periode' => $periode]) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
-                <i class="bi bi-speedometer2 me-1"></i> Dashboard Eksekutif
-            </a>
         </div>
     </div>
 
@@ -220,21 +214,21 @@
         <table class="table table-hover table-bordered mb-0">
             <thead>
                 <tr>
-                    <th rowspan="2" style="width: 200px;">Area Risiko (A)</th>
-                    <th colspan="3" class="bg-primary-subtle text-primary border-bottom-0">Tren Jumlah Isu (B s.d. D)</th>
-                    <th colspan="4" class="bg-danger-subtle text-danger border-bottom-0">Komponen Risiko Bulan Ini (E s.d. H)</th>
-                    <th colspan="2" class="bg-warning-subtle text-dark border-bottom-0">Evaluasi Perhatian (I s.d. J)</th>
+                    <th rowspan="2" style="width: 200px;">Area Risiko</th>
+                    <th colspan="3" class="bg-primary-subtle text-primary border-bottom-0">Tren Jumlah Isu</th>
+                    <th colspan="4" class="bg-danger-subtle text-danger border-bottom-0">Komponen Risiko Bulan Ini</th>
+                    <th colspan="2" class="bg-warning-subtle text-dark border-bottom-0">Evaluasi Perhatian</th>
                 </tr>
                 <tr>
-                    <th title="Kolom B - Isu Bulan Ini">Bulan Ini (B)<br><small class="text-muted fw-normal">({{ $namaBulanIni }})</small></th>
-                    <th title="Kolom C - Isu Bulan Lalu">Bulan Lalu (C)<br><small class="text-muted fw-normal">({{ $namaBulanLalu }})</small></th>
-                    <th title="Kolom D - B - C">Perubahan (D)</th>
-                    <th title="Kolom E - High Risk">High Risk (E)</th>
-                    <th title="Kolom F - TL Overdue">TL Overdue (F)</th>
-                    <th title="Kolom G - Berulang">Berulang (G)</th>
-                    <th title="Kolom H - Isu Signifikan">Signifikan (H)</th>
-                    <th title="Kolom I - Skor Perhatian (0-100)" style="width: 170px;">Skor Perhatian (I)</th>
-                    <th title="Kolom J - Status Perhatian">Status (J)</th>
+                    <th>Bulan Ini<br><small class="text-muted fw-normal">({{ $namaBulanIni }})</small></th>
+                    <th>Bulan Lalu<br><small class="text-muted fw-normal">({{ $namaBulanLalu }})</small></th>
+                    <th>Perubahan</th>
+                    <th>High Risk</th>
+                    <th>TL Overdue</th>
+                    <th>Berulang</th>
+                    <th>Signifikan</th>
+                    <th style="width: 170px;">Skor Perhatian</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>

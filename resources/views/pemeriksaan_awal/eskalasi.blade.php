@@ -54,7 +54,7 @@
     <!-- Tabel Lembar Keputusan -->
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-file-earmark-lock me-2"></i> Lembar Keputusan Final Fact-Finding (SOP 09)</h6>
+            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-file-earmark-lock me-2"></i> Lembar Keputusan Final Fact-Finding</h6>
             <span class="badge bg-primary rounded-pill px-3">{{ count($eskalasis ?? []) }} Data</span>
         </div>
         <div class="card-body p-0">

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Master Parameter & Hari Libur - SOP 08')
+@section('title', 'Master Parameter & Hari Libur')
 
 @section('content')
 <style>
@@ -24,16 +24,11 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-sliders me-2"></i>Konfigurasi Master Parameter & Hari Libur (SOP 08)
+                <i class="bi bi-sliders me-2"></i>Konfigurasi Master Parameter & Hari Libur
             </h4>
             <p class="text-muted small mb-0">
                 Pengaturan Standar Acuan Sistem, Bobot Quality Score, Ambang Kinerja RA, dan Kalender Libur Nasional (WORKDAY)
             </p>
-        </div>
-        <div class="d-flex gap-2 mt-2 mt-md-0">
-            <a href="{{ route('pelaporan-bulanan.kalender') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="bi bi-arrow-left me-1"></i> Kembali ke Kalender
-            </a>
         </div>
     </div>
 
@@ -61,12 +56,11 @@
                 @csrf
                 <div class="param-card">
                     <div class="param-header d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-dark small"><i class="bi bi-gear-fill me-1 text-primary"></i> 1. Parameter Utama SOP 08 (B8 s.d. B13)</span>
-                        <span class="badge bg-primary">SOP-RA-08</span>
+                        <span class="fw-bold text-dark small"><i class="bi bi-gear-fill me-1 text-primary"></i> 1. Parameter Utama</span>
                     </div>
                     <div class="p-3 row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Tanggal Cut-off Perhitungan (B8)</label>
+                            <label class="form-label small fw-bold">Tanggal Cut-off Perhitungan</label>
                             <input type="date" name="tanggal_cutoff" class="form-control form-control-sm" value="{{ \Carbon\Carbon::parse($params->tanggal_cutoff)->format('Y-m-d') }}" required>
                             <div class="form-text small">Kunci tanggal tetap penutupan perhitungan periode agar aging & keterlambatan tidak berubah.</div>
                         </div>
@@ -76,7 +70,7 @@
                             <div class="form-text small">Tanggal pertama bulan yang dianalisis (YYYY-MM-01).</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold">Hari Kerja Jatuh Tempo (B10)</label>
+                            <label class="form-label small fw-bold">Hari Kerja Jatuh Tempo</label>
                             <div class="input-group input-group-sm">
                                 <input type="number" name="hari_kerja_jatuh_tempo" class="form-control" value="{{ $params->hari_kerja_jatuh_tempo }}" required>
                                 <span class="input-group-text">Hari</span>
@@ -84,22 +78,22 @@
                             <div class="form-text small">Default: Hari kerja ke-5 bulan berikutnya.</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold">Reviewer Default (B11)</label>
+                            <label class="form-label small fw-bold">Reviewer Default</label>
                             <input type="text" name="reviewer_default" class="form-control form-control-sm" value="{{ $params->reviewer_default }}">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold">Unit RA Default (B12)</label>
+                            <label class="form-label small fw-bold">Unit RA Default</label>
                             <input type="text" name="unit_ra_default" class="form-control form-control-sm" value="{{ $params->unit_ra_default }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Target Quality Score (B13)</label>
+                            <label class="form-label small fw-bold">Target Quality Score</label>
                             <div class="input-group input-group-sm">
                                 <input type="number" step="0.1" name="target_quality_score" class="form-control" value="{{ $params->target_quality_score }}">
                                 <span class="input-group-text">Skala 0-100</span>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Ambang High Attention (B21)</label>
+                            <label class="form-label small fw-bold">Ambang High Attention</label>
                             <div class="input-group input-group-sm">
                                 <input type="number" step="0.1" name="ambang_high_attention" class="form-control" value="{{ $params->ambang_high_attention }}">
                                 <span class="input-group-text">Skor</span>
@@ -108,7 +102,7 @@
                     </div>
                 </div>
 
-                {{-- Bobot Quality Score (B14:B20) --}}
+                {{-- Bobot Quality Score --}}
                 <div class="param-card">
                     <div class="param-header d-flex justify-content-between align-items-center">
                         <span class="fw-bold text-dark small"><i class="bi bi-award-fill me-1 text-primary"></i> 2. Bobot Quality Score (Total 100)</span>
@@ -145,10 +139,10 @@
                     </div>
                 </div>
 
-                {{-- Parameter Kinerja RA (F25:F30) --}}
+                {{-- Parameter Kinerja RA --}}
                 <div class="param-card">
                     <div class="param-header d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-dark small"><i class="bi bi-person-badge-fill me-1 text-primary"></i> 3. Parameter Kinerja RA (F25:F30)</span>
+                        <span class="fw-bold text-dark small"><i class="bi bi-person-badge-fill me-1 text-primary"></i> 3. Parameter Kinerja RA</span>
                     </div>
                     <div class="p-3 row g-2">
                         <div class="col-4">
@@ -178,7 +172,7 @@
                     </div>
                     <div class="card-footer bg-light p-3 text-end border-top">
                         <button type="submit" class="btn btn-primary btn-sm px-4 shadow-sm">
-                            <i class="bi bi-save me-1"></i> Simpan Parameter SOP 08
+                            <i class="bi bi-save me-1"></i> Simpan Parameter
                         </button>
                     </div>
                 </div>
@@ -187,7 +181,7 @@
 
         {{-- Kolom Kanan: Daftar Hari Libur Nasional & Master Unit --}}
         <div class="col-lg-5">
-            {{-- Daftar Hari Libur (Kolom N:P) --}}
+            {{-- Daftar Hari Libur --}}
             <div class="param-card">
                 <div class="param-header d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-dark small"><i class="bi bi-calendar-event-fill me-1 text-danger"></i> Daftar Hari Libur Nasional (WORKDAY)</span>
@@ -213,7 +207,7 @@
                     </form>
                 </div>
                 <div class="p-2 table-responsive" style="max-height: 280px; overflow-y: auto;">
-                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
                         <thead>
                             <tr class="table-light">
                                 <th>Tanggal</th>
@@ -247,11 +241,11 @@
             {{-- Master Unit Bank Sulteng (40 Unit Kerja) --}}
             <div class="param-card">
                 <div class="param-header d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark small"><i class="bi bi-building me-1 text-primary"></i> 40 Unit Kerja Bank Sulteng (SOP 08)</span>
+                    <span class="fw-bold text-dark small"><i class="bi bi-building me-1 text-primary"></i> 40 Unit Kerja Bank Sulteng</span>
                     <span class="badge bg-success">{{ count($masterUnits) }} Unit Aktif</span>
                 </div>
                 <div class="p-2 table-responsive" style="max-height: 380px; overflow-y: auto;">
-                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.78rem;">
+                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
                         <thead>
                             <tr class="table-light">
                                 <th>Kode</th>

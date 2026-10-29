@@ -420,10 +420,10 @@
             </div>
             <div class="col-md-4">
                 <div class="param-box">
-                    <div class="param-label">18. Indikasi Fraud (SOP 09)</div>
+                    <div class="param-label">18. Indikasi Fraud</div>
                     <div class="param-value fs-5">
                         @if(strtoupper((string)$trigger->indikasi_fraud) === 'YA')
-                            <span class="badge badge-danger">YA - RUJUKAN SOP 09</span>
+                            <span class="badge badge-danger">YA - RUJUKAN FRAUD</span>
                         @else
                             <span class="badge badge-gray">Tidak</span>
                         @endif
@@ -432,7 +432,7 @@
             </div>
             <div class="col-md-4">
                 <div class="param-box">
-                    <div class="param-label">19. Objek Surprise / Fisik (SOP 05)</div>
+                    <div class="param-label">19. Objek Surprise / Fisik</div>
                     <div class="param-value fs-5">
                         @if(strtoupper((string)$trigger->objek_surprise_fisik) === 'YA')
                             <span class="badge badge-purple">YA - SURPRISE AUDIT</span>

@@ -255,6 +255,12 @@ class Sop08Service
         if ($kalender) {
             $this->recalculateKalenderRow($kalender);
         }
+
+        // Sinkronisasi otomatis ke Review Laporan jika sudah ada
+        $review = Sop08ReviewLaporan::where('report_id', $checklist->report_id)->first();
+        if ($review) {
+            $this->recalculateReviewLaporan($review);
+        }
     }
 
     /**

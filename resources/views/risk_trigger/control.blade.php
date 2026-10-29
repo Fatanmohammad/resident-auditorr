@@ -287,7 +287,7 @@
                 <i class="bi bi-shield-slash text-danger fs-6"></i>
             </div>
             <div class="rtv-kpi-val text-danger">{{ number_format($kpi['indikasi_fraud']) }}</div>
-            <div class="rtv-kpi-sub">Rujukan SOP 09 Fraud</div>
+            <div class="rtv-kpi-sub">Rujukan Pemeriksaan Fraud</div>
         </div>
     </div>
 </div>
@@ -299,7 +299,7 @@
         <div class="rtv-table-container h-100">
             <div class="rtv-table-header">
                 <h6 class="rtv-table-title">
-                    <i class="bi bi-diagram-2 text-primary"></i> Ringkasan Keputusan Final (SOP 06)
+                    <i class="bi bi-diagram-2 text-primary"></i> Ringkasan Keputusan Final
                 </h6>
                 <span class="badge-role-scope">8 Kategori</span>
             </div>

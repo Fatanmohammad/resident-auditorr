@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Resubmit Perbaikan Laporan (WP-RA-08-G) - SOP 08')
+@section('title', 'Resubmit Perbaikan Laporan')
 
 @section('content')
 <style>
@@ -31,13 +31,13 @@
         <div>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 small">
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.koreksi-approval') }}" class="text-decoration-none">Koreksi & Approval</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Resubmit Perbaikan</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0" style="color: #1e3a8a;">
-                <i class="bi bi-send-check me-2"></i>Resubmit Perbaikan Laporan Bulanan (WP-RA-08-G)
+                <i class="bi bi-send-check me-2"></i>Resubmit Perbaikan Laporan Bulanan
             </h4>
             <p class="text-muted small mb-0">
                 Kirimkan kembali laporan yang telah diperbaiki beserta uraian tindak lanjut atas catatan reviewer SKAI.
@@ -98,12 +98,12 @@
                     @csrf
 
                     <h6 class="fw-bold text-dark mb-3">
-                        <i class="bi bi-input-cursor me-2 text-primary"></i>Pengisian Data Resubmit (Kolom G & H)
+                        <i class="bi bi-input-cursor me-2 text-primary"></i>Pengisian Data Resubmit
                     </h6>
 
                     <div class="mb-3">
                         <label for="tanggal_resubmit" class="form-label">
-                            Tanggal Resubmit Laporan (Kolom G) <span class="text-danger">*</span>
+                            Tanggal Resubmit Laporan <span class="text-danger">*</span>
                         </label>
                         <input type="date" name="tanggal_resubmit" id="tanggal_resubmit" class="form-control"
                                value="{{ old('tanggal_resubmit', $koreksi->tanggal_resubmit ? \Carbon\Carbon::parse($koreksi->tanggal_resubmit)->format('Y-m-d') : date('Y-m-d')) }}" required>
@@ -114,7 +114,7 @@
 
                     <div class="mb-4">
                         <label for="perbaikan_ra" class="form-label">
-                            Uraian Perbaikan yang Dilakukan RA (Kolom H) <span class="text-danger">*</span>
+                            Uraian Perbaikan yang Dilakukan RA <span class="text-danger">*</span>
                         </label>
                         <textarea name="perbaikan_ra" id="perbaikan_ra" rows="5" class="form-control"
                                   placeholder="Jelaskan secara detail bagian laporan, lampiran, KKA, atau isu yang telah disesuaikan berdasarkan catatan reviewer..." required>{{ old('perbaikan_ra', $koreksi->perbaikan_ra) }}</textarea>

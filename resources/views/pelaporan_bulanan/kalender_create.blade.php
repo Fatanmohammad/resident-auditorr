@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Inisiasi Kalender Laporan Bulanan (WP-RA-08-A) - SOP 08')
+@section('title', 'Inisiasi Kalender Laporan Bulanan')
 
 @section('content')
 <div class="container-fluid px-3 py-3">
@@ -47,7 +47,7 @@
                         </div>
                         <div>
                             <h5 class="fw-bold mb-0">Form Inisiasi Kalender Periode</h5>
-                            <small class="text-white-50">Mengacu pada SOP-RA-08 WP-RA-08-A Standar Bank Sulteng</small>
+                            <small class="text-white-50">Mengacu pada Standar Pelaporan Bulanan Bank Sulteng</small>
                         </div>
                     </div>
                 </div>
@@ -59,10 +59,10 @@
                         <div class="alert alert-info border-0 rounded-3 d-flex align-items-start mb-4">
                             <i class="bi bi-info-circle-fill fs-5 text-primary me-3 mt-1"></i>
                             <div class="small">
-                                <strong>Ketentuan SOP 08 Pelaporan Bulanan:</strong>
+                                <strong>Ketentuan Pelaporan Bulanan:</strong>
                                 <ul class="mb-0 ps-3 mt-1">
                                     <li>Jatuh tempo pelaporan otomatis dihitung pada <strong>Hari Kerja ke-5 (H+5)</strong> bulan berikutnya dengan memperhitungkan hari libur nasional & akhir pekan.</li>
-                                    <li>Sistem secara otomatis membuat Checklist Laporan (WP-RA-08-B) dengan 12 instrumen pengujian SOP.</li>
+                                    <li>Sistem secara otomatis membuat Checklist Laporan dengan 12 instrumen pengujian.</li>
                                     <li>Draf lembar Narasi Laporan akan siap diisi atau disinkronkan otomatis dari modul pengawasan.</li>
                                 </ul>
                             </div>

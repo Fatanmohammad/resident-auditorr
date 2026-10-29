@@ -219,19 +219,19 @@
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label">Indikasi Fraud? (SOP 09)</label>
+                    <label class="form-label">Indikasi Fraud?</label>
                     <select name="indikasi_fraud" class="form-select">
                         <option value="Tidak" {{ old('indikasi_fraud') == 'Tidak' ? 'selected' : '' }}>Tidak</option>
-                        <option value="Ya" {{ old('indikasi_fraud') == 'Ya' ? 'selected' : '' }}>Ya (SOP 09 - Pemeriksaan Awal Fraud)</option>
+                        <option value="Ya" {{ old('indikasi_fraud') == 'Ya' ? 'selected' : '' }}>Ya (Pemeriksaan Awal Fraud)</option>
                     </select>
-                    <div class="field-hint">Jika "Ya", sistem otomatis mengunci keputusan ke SOP 09</div>
+                    <div class="field-hint">Jika "Ya", sistem otomatis mengunci keputusan ke Pemeriksaan Awal Fraud</div>
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label">Objek Surprise / Fisik? (SOP 05)</label>
+                    <label class="form-label">Objek Surprise / Fisik?</label>
                     <select name="objek_surprise_fisik" class="form-select">
                         <option value="Tidak" {{ old('objek_surprise_fisik') == 'Tidak' ? 'selected' : '' }}>Tidak</option>
-                        <option value="Ya" {{ old('objek_surprise_fisik') == 'Ya' ? 'selected' : '' }}>Ya (SOP 05 - Surprise Audit Fisik)</option>
+                        <option value="Ya" {{ old('objek_surprise_fisik') == 'Ya' ? 'selected' : '' }}>Ya (Surprise Audit Fisik)</option>
                     </select>
                     <div class="field-hint">Pemeriksaan fisik mendadak (kas/brankas/agunan/stok)</div>
                 </div>

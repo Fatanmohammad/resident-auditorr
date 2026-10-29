@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Register Konsolidasi Laporan (WP-RA-08-J) - SOP 08')
+@section('title', 'Register Konsolidasi Laporan')
 
 @section('content')
 <style>
@@ -38,39 +38,37 @@
     }
     .badge-siap { background-color: #10b981; color: #fff; font-weight: 700; }
     .badge-belum-siap { background-color: #f59e0b; color: #fff; font-weight: 600; }
-    .table-responsive {
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-    }
     .table thead th {
-        background: #f1f5f9;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
         white-space: nowrap;
         text-align: center;
         vertical-align: middle;
+        padding: 0.75rem 0.85rem;
     }
     .table-section-identity { background: #f8fafc !important; }
     .table-section-kegiatan { background: #f0fdf4 !important; }
     .table-section-isu { background: #fef2f2 !important; }
     .table-section-status { background: #eff6ff !important; }
     .table tbody td {
-        font-size: 0.82rem;
+        font-size: 0.875rem;
         vertical-align: middle;
         white-space: nowrap;
+        padding: 0.75rem 0.85rem;
+        color: #334155;
     }
     .table tfoot th {
         background: #e2e8f0;
-        font-size: 0.78rem;
+        font-size: 0.82rem;
         font-weight: 800;
         color: #1e293b;
         vertical-align: middle;
         white-space: nowrap;
+        padding: 0.75rem 0.85rem;
     }
 </style>
 
@@ -81,25 +79,21 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-muted small">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Konsolidasi (WP-RA-08-J)</li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Konsolidasi</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                 <i class="bi bi-diagram-3 text-primary"></i> Register Konsolidasi Laporan Bagian RA
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 fw-semibold">WP-RA-08-J</span>
             </h4>
             <p class="text-muted small mb-0 mt-1">
-                Agregasi real-time 21 kolom (A s.d. U) dari Kalender Laporan, Rekap Kegiatan, dan Rekap Isu & TL sesuai rumus baris 6 sheet Konsolidasi.
+                Agregasi real-time dari Kalender Laporan, Rekap Kegiatan, dan Rekap Isu &amp; Tindak Lanjut.
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
             <button onclick="window.print()" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
                 <i class="bi bi-printer me-1"></i> Cetak / Export
             </button>
-            <a href="{{ route('pelaporan-bulanan.dashboard', ['periode' => $periode]) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
-                <i class="bi bi-speedometer2 me-1"></i> Dashboard Eksekutif
-            </a>
         </div>
     </div>
 
@@ -207,47 +201,47 @@
                 {{-- Super Headers --}}
                 <tr>
                     <th colspan="11" class="table-section-identity text-primary">
-                        <i class="bi bi-file-earmark-text me-1"></i> IDENTITAS & STATUS LAPORAN (Kalender_Laporan Kolom A s.d. K)
+                        <i class="bi bi-file-earmark-text me-1"></i> IDENTITAS &amp; STATUS LAPORAN
                     </th>
                     <th colspan="4" class="table-section-kegiatan text-success">
-                        <i class="bi bi-activity me-1"></i> REKAP KEGIATAN (Kolom L s.d. O)
+                        <i class="bi bi-activity me-1"></i> REKAP KEGIATAN
                     </th>
                     <th colspan="5" class="table-section-isu text-danger">
-                        <i class="bi bi-shield-slash me-1"></i> REKAP ISU & TL (Kolom P s.d. T)
+                        <i class="bi bi-shield-slash me-1"></i> REKAP ISU &amp; TL
                     </th>
                     <th class="table-section-status text-primary">
-                        <i class="bi bi-check-all me-1"></i> KONSOLIDASI (U)
+                        <i class="bi bi-check-all me-1"></i> STATUS KONSOLIDASI
                     </th>
                 </tr>
-                {{-- Column Headers A s.d. U --}}
+                {{-- Column Headers --}}
                 <tr>
-                    <th title="Kolom A - Report ID">Report ID (A)</th>
-                    <th title="Kolom B - Periode">Periode (B)</th>
-                    <th title="Kolom C - Kode Unit">Kode (C)</th>
-                    <th title="Kolom D - Nama Unit">Nama Unit (D)</th>
-                    <th title="Kolom E - Resident Auditor">Resident Auditor (E)</th>
-                    <th title="Kolom F - Tanggal Submit">Tgl Submit (F)</th>
-                    <th title="Kolom G - Ketepatan">Ketepatan (G)</th>
-                    <th title="Kolom H - Kelengkapan">Kelengkapan (H)</th>
-                    <th title="Kolom I - Status Review">Review (I)</th>
-                    <th title="Kolom J - Status Final">Status Final (J)</th>
-                    <th title="Kolom K - Quality Score">Quality (K)</th>
+                    <th>Report ID</th>
+                    <th>Periode</th>
+                    <th>Kode</th>
+                    <th>Nama Unit</th>
+                    <th>Resident Auditor</th>
+                    <th>Tgl Submit</th>
+                    <th>Ketepatan</th>
+                    <th>Kelengkapan</th>
+                    <th>Review</th>
+                    <th>Status Final</th>
+                    <th>Quality</th>
 
                     {{-- 4 Kolom Kegiatan --}}
-                    <th title="Kolom L - COUNTIF Rekap_Kegiatan Report ID">Kegiatan (L)</th>
-                    <th title="Kolom M - SUMIF Populasi">Populasi (M)</th>
-                    <th title="Kolom N - SUMIF Sampel Terpilih">Sampel (N)</th>
-                    <th title="Kolom O - SUMIF Sudah Diuji">Diuji (O)</th>
+                    <th>Kegiatan</th>
+                    <th>Populasi</th>
+                    <th>Sampel</th>
+                    <th>Diuji</th>
 
                     {{-- 5 Kolom Isu & TL --}}
-                    <th title="Kolom P - COUNTIFS Exception">Exception (P)</th>
-                    <th title="Kolom Q - COUNTIFS Finding">Finding (Q)</th>
-                    <th title="Kolom R - COUNTIFS High Risk">High Risk (R)</th>
-                    <th title="Kolom S - COUNTIFS TL Overdue">TL Overdue (S)</th>
-                    <th title="Kolom T - COUNTIFS Isu Signifikan">Isu Signifikan (T)</th>
+                    <th>Exception</th>
+                    <th>Finding</th>
+                    <th>High Risk</th>
+                    <th>TL Overdue</th>
+                    <th>Isu Signifikan</th>
 
-                    {{-- Kolom U Status Konsolidasi --}}
-                    <th title="Kolom U - Status Konsolidasi">Status Konsolidasi (U)</th>
+                    {{-- Status Konsolidasi --}}
+                    <th>Status Konsolidasi</th>
                 </tr>
             </thead>
             <tbody>
@@ -391,9 +385,9 @@
             <div class="d-flex align-items-center gap-2 small text-muted">
                 <i class="bi bi-info-circle-fill text-primary fs-6"></i>
                 <div>
-                    <strong>Petunjuk Formula Excel (WP-RA-08-J):</strong>
-                    Status Konsolidasi (Kolom U) otomatis <code>SIAP KONSOLIDASI</code> jika Status Final (J) == <code>"APPROVED/FINAL"</code> DAN Kelengkapan (H) == <code>100%</code>.
-                    Kolom L s.d. O diagregasikan otomatis dari <code>Rekap_Kegiatan</code>, dan Kolom P s.d. T diagregasikan otomatis dari <code>Rekap_Isu_TL</code>.
+                    <strong>Petunjuk Konsolidasi:</strong>
+                    Status Konsolidasi otomatis <code>SIAP KONSOLIDASI</code> jika Status Final == <code>"APPROVED/FINAL"</code> DAN Kelengkapan == <code>100%</code>.
+                    Data kegiatan dan isu diagregasikan otomatis dari Rekap Kegiatan dan Rekap Isu & Tindak Lanjut.
                 </div>
             </div>
         </div>

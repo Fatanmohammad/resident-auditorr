@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Narasi Laporan Bulanan - SOP 08')
+@section('title', 'Narasi Laporan Bulanan')
 
 @section('content')
 <style>
@@ -35,13 +35,13 @@
                 <i class="bi bi-journal-text me-2"></i>Pengisian Narasi Kualitatif Laporan Bulanan
             </h4>
             <p class="text-muted small mb-0">
-                Penyusunan 6 Blok Narasi Formal untuk Lembar Laporan Bulanan Eksekutif (WP-RA-08-C)
+                Penyusunan 6 Blok Narasi Formal untuk Lembar Laporan Bulanan Eksekutif
             </p>
         </div>
         <div class="d-flex gap-2 mt-2 mt-md-0">
             @if($kalender)
             <a href="{{ route('pelaporan-bulanan.laporan-bulanan', $kalender->report_id) }}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
-                <i class="bi bi-printer me-1"></i> Lihat Cetak Laporan (WP-RA-08-C)
+                <i class="bi bi-printer me-1"></i> Cetak Laporan Bulanan
             </a>
             @endif
         </div>
@@ -69,7 +69,7 @@
         <form method="GET" action="{{ route('pelaporan-bulanan.narasi') }}" class="row g-2 align-items-center">
             <div class="col-md-7">
                 <label class="form-label small fw-bold text-muted mb-1">Pilih Laporan Bulanan (Report ID)</label>
-                <select name="reportId" class="form-select form-select-sm fw-bold" onchange="this.form.submit()">
+                <select name="reportId" class="form-select form-select-sm fw-bold" onchange="if(this.value) { window.location.href = '{{ url('/pelaporan-bulanan/narasi') }}/' + this.value; } else { this.form.submit(); }">
                     @forelse($availableReports as $rep)
                         <option value="{{ $rep->report_id }}" {{ ($reportId == $rep->report_id) ? 'selected' : '' }}>
                             {{ $rep->report_id }} - [{{ $rep->kode_unit }}] {{ $rep->nama_unit }} ({{ \Carbon\Carbon::parse($rep->periode)->translatedFormat('F Y') }})
@@ -115,8 +115,7 @@
                 <div class="col-md-6">
                     <div class="narasi-card">
                         <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-card-text me-1 text-primary"></i> 1. Ringkasan Eksekutif (Kolom B)</span>
-                            <span class="badge bg-light text-muted border">WP-RA-08-C: A16</span>
+                            <span class="fw-bold text-dark small"><i class="bi bi-card-text me-1 text-primary"></i> 1. Ringkasan Eksekutif</span>
                         </div>
                         <div class="p-3">
                             <textarea name="ringkasan_eksekutif" rows="4" class="form-control form-control-sm" placeholder="Rangkuman umum pelaksanaan tugas audit dan kondisi pengawasan cabang..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->ringkasan_eksekutif }}</textarea>
@@ -128,8 +127,7 @@
                 <div class="col-md-6">
                     <div class="narasi-card">
                         <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-trophy me-1 text-primary"></i> 2. Hasil Utama & Temuan Kunci (Kolom C)</span>
-                            <span class="badge bg-light text-muted border">WP-RA-08-C: A20</span>
+                            <span class="fw-bold text-dark small"><i class="bi bi-trophy me-1 text-primary"></i> 2. Hasil Utama & Temuan Kunci</span>
                         </div>
                         <div class="p-3">
                             <textarea name="hasil_utama" rows="4" class="form-control form-control-sm" placeholder="Temuan paling signifikan, kelemahan kontrol internal, dan hasil pengujian sampel..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->hasil_utama }}</textarea>
@@ -141,8 +139,7 @@
                 <div class="col-md-6">
                     <div class="narasi-card">
                         <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-graph-up-arrow me-1 text-primary"></i> 3. Analisis Risiko & Tren (Kolom D)</span>
-                            <span class="badge bg-light text-muted border">WP-RA-08-C: A25</span>
+                            <span class="fw-bold text-dark small"><i class="bi bi-graph-up-arrow me-1 text-primary"></i> 3. Analisis Risiko & Tren</span>
                         </div>
                         <div class="p-3">
                             <textarea name="analisis_risiko_tren" rows="4" class="form-control form-control-sm" placeholder="Perkembangan tren risiko operasional, kepatuhan, atau penyimpangan berulang..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->analisis_risiko_tren }}</textarea>
@@ -154,8 +151,7 @@
                 <div class="col-md-6">
                     <div class="narasi-card">
                         <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-exclamation-triangle me-1 text-primary"></i> 4. Kendala Pengawasan (Kolom E)</span>
-                            <span class="badge bg-light text-muted border">WP-RA-08-C: A30</span>
+                            <span class="fw-bold text-dark small"><i class="bi bi-exclamation-triangle me-1 text-primary"></i> 4. Kendala Pengawasan</span>
                         </div>
                         <div class="p-3">
                             <textarea name="kendala" rows="4" class="form-control form-control-sm" placeholder="Hambatan operasional lapangan, ketersediaan data, atau respon auditee..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->kendala }}</textarea>
@@ -167,8 +163,7 @@
                 <div class="col-md-6">
                     <div class="narasi-card">
                         <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-calendar-check me-1 text-primary"></i> 5. Rencana Bulan Berikut (Kolom F)</span>
-                            <span class="badge bg-light text-muted border">WP-RA-08-C: A35</span>
+                            <span class="fw-bold text-dark small"><i class="bi bi-calendar-check me-1 text-primary"></i> 5. Rencana Bulan Berikut</span>
                         </div>
                         <div class="p-3">
                             <textarea name="rencana_bulan_berikut" rows="4" class="form-control form-control-sm" placeholder="Fokus area pemeriksaan dan target sampling untuk bulan berikutnya..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->rencana_bulan_berikut }}</textarea>
@@ -180,8 +175,7 @@
                 <div class="col-md-6">
                     <div class="narasi-card">
                         <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-megaphone me-1 text-primary"></i> 6. Arahan yang Diperlukan (Kolom G)</span>
-                            <span class="badge bg-light text-muted border">WP-RA-08-C: A40</span>
+                            <span class="fw-bold text-dark small"><i class="bi bi-megaphone me-1 text-primary"></i> 6. Arahan yang Diperlukan</span>
                         </div>
                         <div class="p-3">
                             <textarea name="arahan_diperlukan" rows="4" class="form-control form-control-sm" placeholder="Dukungan manajemen SKAI / Korwas yang diperlukan terkait eskalasi atau tindak lanjut..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->arahan_diperlukan }}</textarea>

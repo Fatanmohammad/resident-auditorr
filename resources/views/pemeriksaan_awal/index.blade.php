@@ -4,7 +4,7 @@
 <div class="container-fluid p-0">
     <div class="d-flex justify-content-between align-items-center mb-4 action-header-tools">
         <div>
-            <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-shield-exclamation me-2"></i> DASHBOARD PEMERIKSAAN AWAL INDIKASI FRAUD (SOP 09)</h4>
+            <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-shield-exclamation me-2"></i> DASHBOARD PEMERIKSAAN AWAL INDIKASI FRAUD</h4>
             <p class="text-muted mb-0" style="font-size: 13px;">Overview eksekutif fact-finding, triase, chain of custody, dan eskalasi kasus</p>
         </div>
     </div>

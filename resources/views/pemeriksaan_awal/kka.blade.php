@@ -98,7 +98,7 @@
             <form action="{{ route('pemeriksaan_awal.kka.store') }}" method="POST">
                 @csrf
                 <div class="modal-header bg-primary text-white py-3">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-journal-plus me-2"></i> Tambah Kertas Kerja Fact-Finding (KKA SOP 09)</h5>
+                    <h5 class="modal-title fw-bold"><i class="bi bi-journal-plus me-2"></i> Tambah Kertas Kerja Fact-Finding</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body row g-3 p-4">

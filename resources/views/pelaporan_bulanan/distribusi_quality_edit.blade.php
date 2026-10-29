@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Edit Distribusi, Arsip & Penyesuaian Quality Score (WP-RA-08-I) - SOP 08')
+@section('title', 'Edit Distribusi, Arsip & Penyesuaian Quality Score')
 
 @section('content')
 <style>
@@ -43,16 +43,16 @@
         <div>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 small">
-                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">SOP 08</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.kalender') }}" class="text-decoration-none">Pelaporan Bulanan</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('pelaporan-bulanan.distribusi-quality', ['periode' => \Carbon\Carbon::parse($kalender->periode)->format('Y-m')]) }}" class="text-decoration-none">Distribusi & Quality</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Edit Data</li>
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0" style="color: #1e3a8a;">
-                <i class="bi bi-award-fill me-2 text-warning"></i>Distribusi, Pengarsipan & Penyesuaian Quality Score (WP-RA-08-I)
+                <i class="bi bi-award-fill me-2 text-warning"></i>Distribusi, Pengarsipan & Penyesuaian Quality Score
             </h4>
             <p class="text-muted small mb-0">
-                Pencatatan distribusi laporan ke stakeholder, lokasi media arsip, dan evaluasi penyesuaian skor mutu reviewer (SOP 08).
+                Pencatatan distribusi laporan ke stakeholder, lokasi media arsip, dan evaluasi penyesuaian skor mutu reviewer.
             </p>
         </div>
         <div>
@@ -113,11 +113,11 @@
                     </div>
                 </div>
 
-                {{-- Visual Breakdown 7 Komponen Skor Dasar (Kolom F s.d. L) --}}
+                {{-- Visual Breakdown 7 Komponen Skor Dasar --}}
                 <div class="glass-card mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold text-dark mb-0">
-                            <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Breakdown 7 Komponen Skor Dasar (Kolom F s.d. L)
+                            <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Breakdown 7 Komponen Skor Dasar
                         </h6>
                         <span class="badge bg-primary-subtle text-primary border">
                             Skor Dasar: <strong>{{ (float)$dist->skor_dasar }}</strong> / 100
@@ -127,7 +127,7 @@
                     <div class="row g-2">
                         <div class="col-6 col-md-3">
                             <div class="score-breakdown-card">
-                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">1. Tepat Waktu (F)</div>
+                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">1. Tepat Waktu</div>
                                 <div class="score-breakdown-val {{ $dist->skor_tepat_waktu == 20 ? 'text-success' : 'text-danger' }}">
                                     {{ (float)$dist->skor_tepat_waktu }} <span class="fs-6 text-muted">/20</span>
                                 </div>
@@ -136,7 +136,7 @@
                         </div>
                         <div class="col-6 col-md-3">
                             <div class="score-breakdown-card">
-                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">2. Kelengkapan (G)</div>
+                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">2. Kelengkapan</div>
                                 <div class="score-breakdown-val {{ $dist->skor_kelengkapan == 20 ? 'text-success' : 'text-warning' }}">
                                     {{ (float)$dist->skor_kelengkapan }} <span class="fs-6 text-muted">/20</span>
                                 </div>
@@ -145,7 +145,7 @@
                         </div>
                         <div class="col-6 col-md-3">
                             <div class="score-breakdown-card">
-                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">3. Akurasi Data (H)</div>
+                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">3. Akurasi Data</div>
                                 <div class="score-breakdown-val text-primary">
                                     {{ (float)$dist->skor_akurasi }} <span class="fs-6 text-muted">/15</span>
                                 </div>
@@ -154,7 +154,7 @@
                         </div>
                         <div class="col-6 col-md-3">
                             <div class="score-breakdown-card">
-                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">4. Analisis (I)</div>
+                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">4. Analisis</div>
                                 <div class="score-breakdown-val text-primary">
                                     {{ (float)$dist->skor_analisis }} <span class="fs-6 text-muted">/15</span>
                                 </div>
@@ -163,7 +163,7 @@
                         </div>
                         <div class="col-4 col-md-4">
                             <div class="score-breakdown-card">
-                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">5. Bukti (J)</div>
+                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">5. Bukti</div>
                                 <div class="score-breakdown-val text-dark">
                                     {{ (float)$dist->skor_bukti }} <span class="fs-6 text-muted">/10</span>
                                 </div>
@@ -172,7 +172,7 @@
                         </div>
                         <div class="col-4 col-md-4">
                             <div class="score-breakdown-card">
-                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">6. Tindak Lanjut (K)</div>
+                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">6. Tindak Lanjut</div>
                                 <div class="score-breakdown-val text-dark">
                                     {{ (float)$dist->skor_tindak_lanjut }} <span class="fs-6 text-muted">/10</span>
                                 </div>
@@ -181,7 +181,7 @@
                         </div>
                         <div class="col-4 col-md-4">
                             <div class="score-breakdown-card">
-                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">7. Eskalasi (L)</div>
+                                <div class="text-muted small fw-bold" style="font-size:0.7rem;">7. Eskalasi</div>
                                 <div class="score-breakdown-val text-dark">
                                     {{ (float)$dist->skor_eskalasi }} <span class="fs-6 text-muted">/10</span>
                                 </div>
@@ -191,20 +191,20 @@
                     </div>
                 </div>
 
-                {{-- Form Metadata Distribusi & Pengarsipan (Kolom B, C, D, E, R) --}}
+                {{-- Form Metadata Distribusi & Pengarsipan --}}
                 <div class="glass-card mb-3">
                     <h6 class="fw-bold text-dark mb-3">
-                        <i class="bi bi-box-seam me-2 text-primary"></i>Metadata Distribusi & Lokasi Arsip (Kolom B s.d. E & R)
+                        <i class="bi bi-box-seam me-2 text-primary"></i>Metadata Distribusi & Lokasi Arsip
                     </h6>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label for="tanggal_distribusi" class="form-label">Tanggal Distribusi Laporan (Kolom B)</label>
+                            <label for="tanggal_distribusi" class="form-label">Tanggal Distribusi Laporan</label>
                             <input type="date" name="tanggal_distribusi" id="tanggal_distribusi" class="form-control"
                                    value="{{ old('tanggal_distribusi', $dist->tanggal_distribusi ? \Carbon\Carbon::parse($dist->tanggal_distribusi)->format('Y-m-d') : '') }}">
                         </div>
                         <div class="col-md-6">
-                            <label for="versi" class="form-label">Versi Laporan (Kolom E)</label>
+                            <label for="versi" class="form-label">Versi Laporan</label>
                             <input type="text" name="versi" id="versi" class="form-control font-monospace"
                                    value="{{ old('versi', $dist->versi ?: 'v1.0 Final') }}" placeholder="Contoh: v1.0 Final">
                         </div>
@@ -212,13 +212,13 @@
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label for="penerima" class="form-label">Daftar Penerima / Stakeholder (Kolom C)</label>
+                            <label for="penerima" class="form-label">Daftar Penerima / Stakeholder</label>
                             <input type="text" name="penerima" id="penerima" class="form-control"
                                    value="{{ old('penerima', $dist->penerima ?: 'Pemimpin Cabang, Kadiv SKAI, Direksi Kepatuhan') }}"
                                    placeholder="Contoh: Pemimpin Cabang, Kadiv SKAI, Direksi Kepatuhan">
                         </div>
                         <div class="col-md-6">
-                            <label for="media_arsip" class="form-label">Media / Lokasi Arsip Laporan (Kolom D)</label>
+                            <label for="media_arsip" class="form-label">Media / Lokasi Arsip Laporan</label>
                             <input type="text" name="media_arsip" id="media_arsip" class="form-control"
                                    value="{{ old('media_arsip', $dist->media_arsip ?: 'Shared Drive SKAI / E-Doc Bank Sulselbar') }}"
                                    placeholder="Contoh: Shared Drive SKAI / E-Doc Bank Sulselbar">
@@ -226,7 +226,7 @@
                     </div>
 
                     <div class="mb-2">
-                        <label for="status_arsip" class="form-label">Status Arsip Laporan (Kolom R) <span class="text-danger">*</span></label>
+                        <label for="status_arsip" class="form-label">Status Arsip Laporan <span class="text-danger">*</span></label>
                         <select name="status_arsip" id="status_arsip" class="form-select fw-bold">
                             @foreach($opsiStatusArsip as $opt)
                                 <option value="{{ $opt }}" {{ old('status_arsip', $dist->status_arsip) == $opt ? 'selected' : '' }}>
@@ -247,7 +247,7 @@
                     </h6>
 
                     <div class="mb-3 pb-3 border-bottom border-light border-opacity-25">
-                        <div class="small text-uppercase opacity-75">Quality Score Final (Kolom O)</div>
+                        <div class="small text-uppercase opacity-75">Quality Score Final</div>
                         <div class="d-flex align-items-baseline gap-2">
                             <span class="display-4 fw-bold" id="previewQualityScore">{{ (float)$dist->quality_score }}</span>
                             <span class="fs-5 opacity-75">/ 100</span>
@@ -258,7 +258,7 @@
                     </div>
 
                     <div>
-                        <div class="small text-uppercase opacity-75">Kategori Mutu (Kolom P)</div>
+                        <div class="small text-uppercase opacity-75">Kategori Mutu</div>
                         <div class="fs-4 fw-bold mt-1 text-warning" id="previewKategori">
                             {{ $dist->kategori }}
                         </div>
@@ -268,17 +268,17 @@
                     </div>
                 </div>
 
-                {{-- Penyesuaian Reviewer & Catatan KPI (Kolom N & Q) --}}
+                {{-- Penyesuaian Reviewer & Catatan KPI --}}
                 <div class="glass-card mb-3">
                     <h6 class="fw-bold text-dark mb-2">
-                        <i class="bi bi-sliders2 me-2 text-warning"></i>Penyesuaian Reviewer (Kolom N & Q)
+                        <i class="bi bi-sliders2 me-2 text-warning"></i>Penyesuaian Reviewer
                     </h6>
                     <p class="text-muted small mb-3" style="font-size:0.75rem;">
                         Penyesuaian nilai positif (+)/negatif (-) atas dinamika kualitas yang tidak terakomodasi dalam rumus dasar.
                     </p>
 
                     <div class="mb-3">
-                        <label for="penyesuaian_reviewer" class="form-label">Nilai Penyesuaian Reviewer (Kolom N)</label>
+                        <label for="penyesuaian_reviewer" class="form-label">Nilai Penyesuaian Reviewer</label>
                         <input type="number" step="0.5" name="penyesuaian_reviewer" id="penyesuaian_reviewer" class="form-control"
                                value="{{ old('penyesuaian_reviewer', (float)$dist->penyesuaian_reviewer) }}" oninput="recalcQuality()">
                         <small class="text-muted" style="font-size:0.72rem;">Contoh: -5.0 atau +2.5. Default: 0</small>
@@ -286,12 +286,12 @@
 
                     <div class="mb-2">
                         <label for="catatan_kpi" class="form-label">
-                            Catatan KPI Transparansi (Kolom Q) <span class="text-danger" id="kpiReqStar" style="display:none;">*</span>
+                            Catatan KPI Transparansi <span class="text-danger" id="kpiReqStar" style="display:none;">*</span>
                         </label>
                         <textarea name="catatan_kpi" id="catatan_kpi" rows="4" class="form-control"
                                   placeholder="Wajib memberikan penjelasan jika nilai penyesuaian reviewer diisi selain 0...">{{ old('catatan_kpi', $dist->catatan_kpi) }}</textarea>
                         <small class="text-muted" style="font-size:0.72rem;">
-                            SOP 08 Control: Transparansi audit atas setiap modifikasi skor mutu.
+                            Transparansi audit atas setiap modifikasi skor mutu.
                         </small>
                     </div>
                 </div>

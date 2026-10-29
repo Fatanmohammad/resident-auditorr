@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Tambah Kegiatan Pengawasan (WP-RA-08-D) - SOP 08')
+@section('title', 'Tambah Kegiatan Pengawasan')
 
 @section('content')
 <div class="container-fluid px-3 py-3">
@@ -13,7 +13,7 @@
                 </ol>
             </nav>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-plus-circle me-2"></i>Tambah Baris Kegiatan Pengawasan (WP-RA-08-D)
+                <i class="bi bi-plus-circle me-2"></i>Tambah Baris Kegiatan Pengawasan
             </h4>
             <p class="text-muted small mb-0">
                 Pencatatan Rencana, Realisasi, Populasi, Sampel, dan Temuan Audit Lintas Modul
@@ -72,12 +72,12 @@
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-dark">Sumber SOP <span class="text-danger">*</span></label>
                                 <select name="sumber_sop" class="form-select" required>
-                                    <option value="SOP 03">SOP 03 (Daily Register)</option>
-                                    <option value="SOP 04">SOP 04 (Offsite Review)</option>
-                                    <option value="SOP 05">SOP 05 (Onsite Audit)</option>
-                                    <option value="SOP 06">SOP 06 (Risk Trigger Visit)</option>
-                                    <option value="SOP 07">SOP 07 (Monitoring TL)</option>
-                                    <option value="SOP 08" selected>SOP 08 (Pelaporan Bulanan)</option>
+                                    <option value="SOP 03">Daily Register</option>
+                                    <option value="SOP 04">Offsite Review</option>
+                                    <option value="SOP 05">Onsite Audit</option>
+                                    <option value="SOP 06">Risk Trigger Visit</option>
+                                    <option value="SOP 07">Monitoring TL</option>
+                                    <option value="SOP 08" selected>Pelaporan Bulanan</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
@@ -149,8 +149,8 @@
                                 <input type="number" name="high_risk" class="form-control" value="0" min="0">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-dark">Referensi Dokumen WP / KKA</label>
-                                <input type="text" name="referensi_wp_kka" class="form-control" placeholder="Contoh: KKA-2026-001, WP-RA-05-A">
+                                <label class="form-label small fw-bold text-dark">Referensi Dokumen KKA</label>
+                                <input type="text" name="referensi_wp_kka" class="form-control" placeholder="Contoh: KKA-2026-001, KKA-AUDIT-05">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold text-dark">Catatan / Keterangan Tambahan</label>
