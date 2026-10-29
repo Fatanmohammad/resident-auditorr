@@ -5,7 +5,7 @@
     <div class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-800">KKA Teller & Kas — Onsite Audit</h1>
-            <p class="text-sm text-gray-600">Unit: {{ $visit->nama_unit ?? '-' }} ({{ $visit->kode_unit ?? '-' }}) \vert{} Periode: {{ $visit->periode ?? '-' }}</p>
+            <p class="text-sm text-gray-600">Unit: {{ $visit->nama_unit ?? '-' }} ({{ $visit->kode_unit ?? '-' }}) &bull; Periode: {{ $visit->periode ?? '-' }}</p>
         </div>
         <a href="{{ route('onsite.kka', $visit->id) }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
             &larr; Kembali ke Ringkasan KKA
@@ -46,7 +46,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     @if(isset($findings) && count($findings) > 0)
-                        @foreach($findings as$item)
+                        @foreach($findings as $item)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-4 py-3 font-mono text-xs text-gray-600">{{ $item->sample_id ?? '-' }}</td>
                                 <td class="px-4 py-3 whitespace-nowrap">
@@ -55,7 +55,7 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="font-medium text-gray-800">{{ $item->ket_tx ?? '-' }}</div>
-                                    <div class="text-xs text-gray-500">User: {{ $item->kd_user ?? '-' }} \vert{} Alasan: {{ $item->alasan_sampling ?? '-' }}</div>
+                                    <div class="text-xs text-gray-500">User: {{ $item->kd_user ?? '-' }} &bull; Alasan: {{ $item->alasan_sampling ?? '-' }}</div>
                                 </td>
                                 <td class="px-4 py-3 text-right font-semibold text-gray-700">
                                     {{ isset($item->jumlah_tx) ? number_format($item->jumlah_tx, 0, ',', '.') : '0' }}

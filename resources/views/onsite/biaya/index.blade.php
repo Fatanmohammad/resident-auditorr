@@ -5,7 +5,7 @@
     <div class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-800">KKA Biaya & Beban — Onsite Audit</h1>
-            <p class="text-sm text-gray-600">Unit: {{ $visit->nama_unit }} ({{ $visit->kode_unit }}) \vert{} Periode: {{$visit->periode }}</p>
+            <p class="text-sm text-gray-600">Unit: {{ $visit->nama_unit }} ({{ $visit->kode_unit }}) &bull; Periode: {{ $visit->periode }}</p>
         </div>
         <a href="{{ route('onsite.kka', $visit->id) }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
             &larr; Kembali ke Ringkasan KKA
@@ -14,12 +14,12 @@
 
     <!-- Sub Navigasi 6 Area CBS -->
     <div class="flex space-x-2 border-b border-gray-200 mb-6 pb-2 overflow-x-auto">
-        <a href="{{ route('kka.teller_kas.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap">1. Teller & Kas</a>
-        <a href="{{ route('kka.dpk.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap">2. DPK & Layanan</a>
-        <a href="{{ route('kka.kredit.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap">3. Kredit</a>
-        <a href="{{ route('kka.biaya.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white whitespace-nowrap">4. Biaya & Beban</a>
-        <a href="#" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed whitespace-nowrap">5. Kartu ATM</a>
-        <a href="#" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed whitespace-nowrap">6. Pengaduan</a>
+        <a href="{{ route('onsite.kka.teller_kas.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap">1. Teller & Kas</a>
+        <a href="{{ route('onsite.kka.dpk.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap">2. DPK & Layanan</a>
+        <a href="{{ route('onsite.kka.kredit.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap">3. Kredit</a>
+        <a href="{{ route('onsite.kka.biaya.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white whitespace-nowrap">4. Biaya & Beban</a>
+        <a href="{{ route('onsite.kka.atm.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap">5. Kartu ATM</a>
+        <a href="{{ route('onsite.kka.pengaduan.index', $visit->id) }}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap">6. Pengaduan</a>
     </div>
 
     <div class="bg-white shadow-md rounded-lg overflow-hidden">
@@ -38,7 +38,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    @forelse($findings as$item)
+                    @forelse($findings as $item)
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3 font-mono text-xs text-gray-600">{{ $item->sample_id }}</td>
                             <td class="px-4 py-3">
