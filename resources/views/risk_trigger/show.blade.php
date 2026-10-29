@@ -66,59 +66,65 @@
 
 @php
     $riskCls = match($trigger->risk_level_reassessment) {
-        'KRITIS' => 'badge-danger',
-        'TINGGI' => 'badge-warning',
-        'SEDANG' => 'badge-info',
-        default => 'badge-gray',
+        'KRITIS' => 'badge-risk-kritis',
+        'TINGGI' => 'badge-risk-tinggi',
+        'SEDANG' => 'badge-risk-sedang',
+        default => 'badge-risk-rendah',
     };
 
     $kepCls = match($trigger->keputusan_final) {
-        'RISK TRIGGER VISIT' => 'badge-danger',
-        'KLARIFIKASI OFFSITE' => 'badge-warning',
-        'MONITORING' => 'badge-info',
-        'SOP 05 - SURPRISE AUDIT' => 'badge-purple',
-        'SOP 07 - MONITORING TL' => 'badge-gray',
-        'SOP 09 - PEMERIKSAAN AWAL FRAUD' => 'badge-danger',
-        default => 'badge-gray',
+        'RISK TRIGGER VISIT' => 'badge-decision-visit',
+        'KLARIFIKASI OFFSITE' => 'badge-decision-offsite',
+        'MONITORING' => 'badge-decision-monitoring',
+        'SOP 05 - SURPRISE AUDIT' => 'badge-decision-surprise',
+        'SOP 07 - MONITORING TL' => 'badge-decision-tl',
+        'SOP 09 - PEMERIKSAAN AWAL FRAUD' => 'badge-decision-fraud',
+        default => 'badge-decision-monitoring',
     };
 
     $isOverdue = $trigger->sla_deadline && $trigger->sla_deadline->lt(now()->startOfDay()) && $trigger->status_workflow !== 'SELESAI/DALAM TL';
 @endphp
 
-<!-- Page Header -->
-<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-    <div class="page-header-title">
-        <h4 class="fw-bold mb-1" style="color: var(--bs-blue-dark); font-size: 1.35rem;">
-            <i class="bi bi-file-earmark-text text-primary me-2"></i>Detail Register Trigger: {{ $trigger->trigger_id }}
+<!-- Header Harmonized SOP 06 -->
+<div class="rtv-header">
+    <div>
+        <div class="rtv-breadcrumb">
+            <a href="{{ route('dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a> &rsaquo;
+            <a href="{{ route('risk-trigger.register') }}">Register Trigger</a> &rsaquo;
+            <span class="text-dark fw-semibold">Detail: {{ $trigger->trigger_id }}</span>
+        </div>
+        <h4 class="rtv-title">
+            <i class="bi bi-file-earmark-text text-primary"></i> Detail Register Trigger
+            <span class="badge-wp">{{ $trigger->trigger_id }}</span>
         </h4>
-        <p class="text-muted mb-0" style="font-size: 0.88rem;">
+        <p class="rtv-subtitle">
             {{ $trigger->nama_unit }} ({{ $trigger->kode_unit }}) &bull; Area Risiko: <strong>{{ $trigger->area }}</strong> &bull; Sumber: <strong>{{ $trigger->sumber }}</strong>
         </p>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <a href="{{ route('risk-trigger.register') }}" class="btn btn-outline btn-sm" style="font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px;">
+        <a href="{{ route('risk-trigger.register') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
             <i class="bi bi-arrow-left me-1"></i> Kembali ke Register
         </a>
         @if(!$isRa)
             @if($trigger->keputusan_final === 'RISK TRIGGER VISIT')
                 @if($trigger->assignmentScope)
-                    <a href="{{ route('risk-trigger.assignment', ['search' => $trigger->assignmentScope->visit_id]) }}" class="btn btn-primary btn-sm" style="font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 8px;">
+                    <a href="{{ route('risk-trigger.assignment', ['search' => $trigger->assignmentScope->visit_id]) }}" class="btn btn-primary btn-sm rounded-pill px-3">
                         <i class="bi bi-clipboard-check me-1"></i> Penugasan: {{ $trigger->assignmentScope->visit_id }}
                     </a>
                 @else
-                    <a href="{{ route('risk-trigger.assignment.create', ['trigger_id' => $trigger->id]) }}" class="btn btn-success btn-sm" style="font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 8px;">
+                    <a href="{{ route('risk-trigger.assignment.create', ['trigger_id' => $trigger->id]) }}" class="btn btn-success btn-sm rounded-pill px-3">
                         <i class="bi bi-plus-circle me-1"></i> + Terbitkan Assignment Visit
                     </a>
                 @endif
             @endif
-            <a href="{{ route('risk-trigger.edit-override', $trigger->id) }}" class="btn btn-warning btn-sm" style="font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 8px; color: #78350f;">
+            <a href="{{ route('risk-trigger.edit-override', $trigger->id) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
                 <i class="bi bi-sliders me-1"></i> Override Keputusan
             </a>
             @if(str_contains($trigger->source_wp_id ?? '', 'MANUAL-'))
                 <form action="{{ route('risk-trigger.destroy', $trigger->id) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus trigger manual ini?')">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-danger btn-sm" style="font-size: 0.85rem; padding: 0.5rem 0.9rem; border-radius: 8px;">
+                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">
                         <i class="bi bi-trash me-1"></i> Hapus
                     </button>
                 </form>

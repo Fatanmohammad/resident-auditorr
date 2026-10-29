@@ -59,45 +59,26 @@
     }
 </style>
 
-<!-- Page Header -->
-<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-    <div class="page-header-title">
-        <div class="d-flex align-items-center gap-2 mb-1">
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1" style="font-size: 0.78rem; font-weight: 700;">
-                SOP 06 — FASE 2
-            </span>
-            <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1 font-monospace" style="font-size: 0.78rem; font-weight: 600;">
-                {{ $pk->visit_id }}
-            </span>
-            @php
-                $statusBadge = match($pk->status_kesiapan) {
-                    'SIAP UJI' => 'bg-success text-white',
-                    'MENUNGGU DATA' => 'bg-warning text-dark',
-                    'BELUM DIMINTA' => 'bg-secondary text-white',
-                    default => 'bg-danger text-white'
-                };
-            @endphp
-            <span class="badge {{ $statusBadge }} px-2 py-1">
-                <i class="bi bi-circle-fill me-1" style="font-size: 0.65rem;"></i>{{ $pk->status_kesiapan }}
-            </span>
-            @if(!$isRa)
-                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2.5 py-1 font-monospace" style="font-size: 0.76rem;">
-                    <i class="bi bi-eye-fill me-1"></i> Mode Read-Only (Admin / Reviewer)
-                </span>
-            @else
-                <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 font-monospace" style="font-size: 0.76rem;">
-                    <i class="bi bi-pencil-fill me-1"></i> Mode Pengisian (Resident Auditor)
-                </span>
-            @endif
+<!-- Header Harmonized SOP 06 -->
+<div class="rtv-header">
+    <div>
+        <div class="rtv-breadcrumb">
+            <a href="{{ route('dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a> &rsaquo;
+            <a href="{{ route('risk-trigger.program-kerja') }}">Program Kerja &amp; Data</a> &rsaquo;
+            <span class="text-dark fw-semibold">PKA ({{ $pk->visit_id }})</span>
         </div>
-        <h4 class="fw-bold mb-1" style="color: var(--bs-blue-dark); font-size: 1.35rem;">
+        <h4 class="rtv-title">
             @if(!$isRa)
-                <i class="bi bi-eye-fill text-primary me-2"></i>Tinjauan Pelaksanaan Kerja &amp; Kesiapan Data (PKA)
+                <i class="bi bi-eye-fill text-primary"></i> Tinjauan Program Kerja &amp; Kesiapan Data
             @else
-                <i class="bi bi-clipboard2-check-fill text-primary me-2"></i>Input Pelaksanaan Kerja &amp; Kesiapan Data (PKA)
+                <i class="bi bi-clipboard2-check-fill text-primary"></i> Input Pelaksanaan Kerja &amp; Kesiapan Data (PKA)
             @endif
+            <span class="badge-wp">{{ $pk->visit_id }}</span>
+            <span class="badge-status {{ $pk->status_kesiapan === 'SIAP UJI' ? 'badge-status-success' : ($pk->status_kesiapan === 'MENUNGGU DATA' ? 'badge-status-warning' : 'badge-status-neutral') }}">
+                {{ $pk->status_kesiapan }}
+            </span>
         </h4>
-        <p class="text-muted mb-0" style="font-size: 0.88rem;">
+        <p class="rtv-subtitle">
             @if(!$isRa)
                 Memantau tanggal permintaan &amp; penerimaan data, langkah pengujian, dan catatan kendala akses yang diisi oleh Resident Auditor (RA).
             @else
@@ -106,7 +87,7 @@
         </p>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <a href="{{ route('risk-trigger.program-kerja') }}" class="btn btn-outline btn-sm" style="font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px;">
+        <a href="{{ route('risk-trigger.program-kerja') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-xs">
             <i class="bi bi-arrow-left me-1"></i> Kembali ke Program Kerja
         </a>
     </div>

@@ -82,6 +82,16 @@ class RegisterTrigger extends Model
         self::KEPUTUSAN_TUTUP_TIDAK_RELEVAN,
     ];
 
+    public static array $STANDAR_SUMBER = [
+        'Daily Review',
+        'Offsite',
+        'Onsite',
+        'Surprise',
+        'Monitoring TL',
+        'Pengaduan',
+        'Informasi Manajemen',
+    ];
+
     // Relations
     public function user()
     {
@@ -99,6 +109,11 @@ class RegisterTrigger extends Model
     }
 
     /**
+     * Cache for sequential ID generation within current request
+     */
+    protected static array $seqCache = [];
+
+    /**
      * Helper to generate sequential Trigger ID: RT-{YYYYMMDD}-{0001}
      */
     public static function generateNextTriggerId($tanggal = null): string
@@ -107,18 +122,20 @@ class RegisterTrigger extends Model
         $dateStr = $dateObj->format('Ymd');
         $prefix = "RT-{$dateStr}-";
 
-        $lastRecord = static::where('trigger_id', 'like', "{$prefix}%")
-            ->orderBy('trigger_id', 'desc')
-            ->first();
+        if (!isset(static::$seqCache[$dateStr])) {
+            $lastRecord = static::where('trigger_id', 'like', "{$prefix}%")
+                ->orderBy('trigger_id', 'desc')
+                ->first();
 
-        if ($lastRecord) {
-            $lastSeq = (int) substr($lastRecord->trigger_id, -4);
-            $nextSeq = $lastSeq + 1;
-        } else {
-            $nextSeq = 1;
+            if ($lastRecord) {
+                static::$seqCache[$dateStr] = (int) substr($lastRecord->trigger_id, -4);
+            } else {
+                static::$seqCache[$dateStr] = 0;
+            }
         }
 
-        return $prefix . str_pad((string)$nextSeq, 4, '0', STR_PAD_LEFT);
+        static::$seqCache[$dateStr]++;
+        return $prefix . str_pad((string)static::$seqCache[$dateStr], 4, '0', STR_PAD_LEFT);
     }
 
     /**

@@ -56,18 +56,24 @@
     }
 </style>
 
-<!-- Page Header -->
-<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-    <div class="page-header-title">
-        <h4 class="fw-bold mb-1" style="color: var(--bs-blue-dark); font-size: 1.3rem;">
-            <i class="bi bi-plus-circle text-success me-2"></i>Input Trigger Manual (SOP 06)
+<!-- Header Harmonized SOP 06 -->
+<div class="rtv-header">
+    <div>
+        <div class="rtv-breadcrumb">
+            <a href="{{ route('dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a> &rsaquo;
+            <a href="{{ route('risk-trigger.register') }}">Register Trigger</a> &rsaquo;
+            <span class="text-dark fw-semibold">Input Trigger Manual</span>
+        </div>
+        <h4 class="rtv-title">
+            <i class="bi bi-plus-circle text-primary"></i> Input Trigger Manual
+            <span class="badge-wp">FORM ENTRY</span>
         </h4>
-        <p class="text-muted mb-0" style="font-size: 0.88rem;">
+        <p class="rtv-subtitle">
             Pencatatan temuan/anomali baru dari sumber manual/eksternal. Parameter risiko, SLA, dan rekomendasi visit akan dikalkulasi otomatis.
         </p>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <a href="{{ route('risk-trigger.register') }}" class="btn btn-outline btn-sm" style="font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px;">
+        <a href="{{ route('risk-trigger.register') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
             <i class="bi bi-arrow-left me-1"></i> Kembali ke Register
         </a>
     </div>

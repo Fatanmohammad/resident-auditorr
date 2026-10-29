@@ -59,29 +59,27 @@
     }
 </style>
 
-<!-- Page Header -->
-<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-    <div class="page-header-title">
-        <div class="d-flex align-items-center gap-2 mb-1">
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1" style="font-size: 0.78rem; font-weight: 700;">
-                SOP 06 — FASE 2
-            </span>
-            <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1 font-monospace" style="font-size: 0.78rem; font-weight: 600;">
-                {{ $assignment->visit_id }}
-            </span>
-            <span class="badge {{ $assignment->status_assignment === 'SIAP DILAKSANAKAN' ? 'bg-success text-white' : 'bg-warning text-dark' }} px-2 py-1">
+<!-- Header Harmonized SOP 06 -->
+<div class="rtv-header">
+    <div>
+        <div class="rtv-breadcrumb">
+            <a href="{{ route('dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a> &rsaquo;
+            <a href="{{ route('risk-trigger.assignment') }}">Assignment &amp; Scope</a> &rsaquo;
+            <span class="text-dark fw-semibold">Pelaksanaan Lapangan ({{ $assignment->visit_id }})</span>
+        </div>
+        <h4 class="rtv-title">
+            <i class="bi bi-calendar2-check-fill text-primary"></i> Pelaksanaan Lapangan Aktual
+            <span class="badge-wp">{{ $assignment->visit_id }}</span>
+            <span class="badge-status {{ $assignment->status_assignment === 'SIAP DILAKSANAKAN' ? 'badge-status-success' : 'badge-status-warning' }}">
                 {{ $assignment->status_assignment }}
             </span>
-        </div>
-        <h4 class="fw-bold mb-1" style="color: var(--bs-blue-dark); font-size: 1.35rem;">
-            <i class="bi bi-calendar2-check-fill text-primary me-2"></i>Pelaksanaan Lapangan (Mulai & Selesai Aktual)
         </h4>
-        <p class="text-muted mb-0" style="font-size: 0.88rem;">
+        <p class="rtv-subtitle">
             Pembaruan tanggal pelaksanaan audit lapangan aktual oleh Resident Auditor pelaksana penugasan.
         </p>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <a href="{{ route('risk-trigger.assignment') }}" class="btn btn-outline btn-sm" style="font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px;">
+        <a href="{{ route('risk-trigger.assignment') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-xs">
             <i class="bi bi-arrow-left me-1"></i> Kembali ke Assignment
         </a>
     </div>
@@ -224,11 +222,11 @@
                     </div>
 
                     <div class="p-3 bg-light rounded-3 border mb-4" style="font-size: 0.82rem;">
-                        <div class="fw-bold text-dark mb-1"><i class="bi bi-journal-check text-primary me-1"></i> Program Kerja Terarah (PKA):</div>
+                        <div class="fw-bold text-dark mb-1"><i class="bi bi-file-earmark-spreadsheet text-primary me-1"></i> Kertas Kerja Audit (KKA):</div>
                         <div class="text-muted">
-                            Penugasan ini memiliki Program Kerja aktif: 
-                            <a href="{{ route('risk-trigger.program-kerja', ['search' => $assignment->visit_id]) }}" class="fw-bold text-primary font-monospace ms-1" target="_blank">
-                                Buka PKA {{ $assignment->visit_id }} <i class="bi bi-box-arrow-up-right"></i>
+                            Penugasan ini langsung terhubung ke KKA Pengujian Lapangan: 
+                            <a href="{{ route('risk-trigger.kka.index', ['search' => $assignment->visit_id]) }}" class="fw-bold text-primary font-monospace ms-1" target="_blank">
+                                Buka KKA {{ $assignment->visit_id }} <i class="bi bi-box-arrow-up-right"></i>
                             </a>
                         </div>
                     </div>

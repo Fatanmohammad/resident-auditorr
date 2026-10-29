@@ -185,31 +185,32 @@ class RiskTriggerService
             $targetUnits = static::expandUnitCode($filterKodeUnit);
         }
 
-        // Preload existing WP IDs for lightning-fast O(1) checks
-        $existingMap = RegisterTrigger::pluck('id', 'source_wp_id')->toArray();
+        // Preload existing WP IDs and duplicate keys for lightning-fast O(1) checks & duplicate prevention
+        $existingMap = RegisterTrigger::whereNotNull('source_wp_id')->pluck('id', 'source_wp_id')->toArray();
+        $existingDupKeyMap = RegisterTrigger::whereNotNull('duplicate_key')->pluck('id', 'duplicate_key')->toArray();
 
         DB::beginTransaction();
         try {
             // 1. Sync Daily Register Findings
-            $drStats = $this->syncDailyRegisterFindings($user, $existingMap, $targetUnits);
+            $drStats = $this->syncDailyRegisterFindings($user, $existingMap, $existingDupKeyMap, $targetUnits);
             $stats['daily_register'] += $drStats['new'];
             $stats['total_new'] += $drStats['new'];
             $stats['total_updated'] += $drStats['updated'];
 
             // 2. Sync Physical KKA Exceptions
-            $physStats = $this->syncPhysicalKkaExceptions($user, $existingMap, $targetUnits);
+            $physStats = $this->syncPhysicalKkaExceptions($user, $existingMap, $existingDupKeyMap, $targetUnits);
             $stats['physical_kka'] += $physStats['new'];
             $stats['total_new'] += $physStats['new'];
             $stats['total_updated'] += $physStats['updated'];
 
             // 3. Sync Offsite Findings
-            $offStats = $this->syncOffsiteFindings($user, $existingMap, $targetUnits);
+            $offStats = $this->syncOffsiteFindings($user, $existingMap, $existingDupKeyMap, $targetUnits);
             $stats['offsite'] += $offStats['new'];
             $stats['total_new'] += $offStats['new'];
             $stats['total_updated'] += $offStats['updated'];
 
-            // 4. Sync Onsite Findings (Future-proof slot)
-            $onStats = $this->syncOnsiteFindings($user, $existingMap, $targetUnits);
+            // 4. Sync Onsite Findings (11 KKA + onsite_kka_findings)
+            $onStats = $this->syncOnsiteFindings($user, $existingMap, $existingDupKeyMap, $targetUnits);
             $stats['onsite'] += $onStats['new'];
             $stats['total_new'] += $onStats['new'];
             $stats['total_updated'] += $onStats['updated'];
@@ -227,9 +228,104 @@ class RiskTriggerService
     }
 
     /**
+     * Unified Helper untuk Upsert RegisterTrigger dengan pencegahan duplikasi
+     * Menggunakan source_wp_id dan duplicate_key ({Kode_Unit}|{Area}|{Objek_Key}|{YYYYMMDD_Mulai}|{YYYYMMDD_Selesai})
+     */
+    protected function upsertTriggerRecord(array $data, array &$existingMap, array &$existingDupKeyMap, ?User $user = null): string
+    {
+        $sourceWpId = $data['source_wp_id'] ?? null;
+        $tanggal = $data['tanggal_trigger'] ?? Carbon::today()->toDateString();
+        $periodeMulai = $data['periode_mulai'] ?? $tanggal;
+        $periodeSelesai = $data['periode_selesai'] ?? $tanggal;
+
+        $startStr = !empty($periodeMulai) ? Carbon::parse($periodeMulai)->format('Ymd') : '';
+        $endStr = !empty($periodeSelesai) ? Carbon::parse($periodeSelesai)->format('Ymd') : '';
+        $kodeUnit = $data['kode_unit'] ?? '000';
+        $area = $data['area'] ?? RegisterTrigger::AREA_UMUM_LAINNYA;
+        $objekKey = substr($data['objek_key'] ?? '-', 0, 250);
+
+        $computedDupKey = "{$kodeUnit}|{$area}|{$objekKey}|{$startStr}|{$endStr}";
+
+        $existingId = null;
+        if ($sourceWpId && isset($existingMap[$sourceWpId])) {
+            $existingId = $existingMap[$sourceWpId];
+        } elseif (isset($existingDupKeyMap[$computedDupKey])) {
+            $existingId = $existingDupKeyMap[$computedDupKey];
+        }
+
+        if ($existingId) {
+            $trigger = RegisterTrigger::find($existingId);
+            if ($trigger) {
+                $trigger->uraian_trigger = $data['uraian_trigger'] ?? $trigger->uraian_trigger;
+                $trigger->bukti_awal = $data['bukti_awal'] ?? $trigger->bukti_awal;
+                $trigger->risk_score_sumber = (float)($data['risk_score_sumber'] ?? $trigger->risk_score_sumber);
+                $trigger->risk_level_sumber = $data['risk_level_sumber'] ?? $trigger->risk_level_sumber;
+                $trigger->jumlah_kejadian = (int)($data['jumlah_kejadian'] ?? $trigger->jumlah_kejadian);
+                $trigger->eksposur_nominal = (float)($data['eksposur_nominal'] ?? $trigger->eksposur_nominal);
+                if (isset($data['perlu_verifikasi_lapangan'])) {
+                    $trigger->perlu_verifikasi_lapangan = $data['perlu_verifikasi_lapangan'];
+                }
+                if (isset($data['indikasi_fraud'])) {
+                    $trigger->indikasi_fraud = $data['indikasi_fraud'];
+                }
+                if (isset($data['objek_surprise_fisik'])) {
+                    $trigger->objek_surprise_fisik = $data['objek_surprise_fisik'];
+                }
+
+                $trigger->calculateDerivedAttributes();
+                $trigger->save();
+
+                if ($sourceWpId) {
+                    $existingMap[$sourceWpId] = $trigger->id;
+                }
+                if ($trigger->duplicate_key) {
+                    $existingDupKeyMap[$trigger->duplicate_key] = $trigger->id;
+                }
+
+                return 'updated';
+            }
+        }
+
+        // Insert new
+        $trigger = new RegisterTrigger();
+        $trigger->trigger_id = RegisterTrigger::generateNextTriggerId($tanggal);
+        $trigger->sumber = $data['sumber'] ?? 'Onsite';
+        $trigger->source_wp_id = $sourceWpId;
+        $trigger->tanggal_trigger = $tanggal;
+        $trigger->kode_unit = $kodeUnit;
+        $trigger->nama_unit = $data['nama_unit'] ?? $this->resolveUnitName($kodeUnit);
+        $trigger->area = $area;
+        $trigger->objek_key = $objekKey;
+        $trigger->periode_mulai = $periodeMulai;
+        $trigger->periode_selesai = $periodeSelesai;
+        $trigger->uraian_trigger = $data['uraian_trigger'] ?? '';
+        $trigger->bukti_awal = $data['bukti_awal'] ?? '';
+        $trigger->risk_score_sumber = (float)($data['risk_score_sumber'] ?? 5);
+        $trigger->risk_level_sumber = $data['risk_level_sumber'] ?? 'SEDANG';
+        $trigger->jumlah_kejadian = (int)($data['jumlah_kejadian'] ?? 1);
+        $trigger->eksposur_nominal = (float)($data['eksposur_nominal'] ?? 0);
+        $trigger->perlu_verifikasi_lapangan = $data['perlu_verifikasi_lapangan'] ?? 'Tidak';
+        $trigger->indikasi_fraud = $data['indikasi_fraud'] ?? 'Tidak';
+        $trigger->objek_surprise_fisik = $data['objek_surprise_fisik'] ?? 'Tidak';
+        $trigger->user_id = $user?->id;
+
+        $trigger->calculateDerivedAttributes();
+        $trigger->save();
+
+        if ($sourceWpId) {
+            $existingMap[$sourceWpId] = $trigger->id;
+        }
+        if ($trigger->duplicate_key) {
+            $existingDupKeyMap[$trigger->duplicate_key] = $trigger->id;
+        }
+
+        return 'new';
+    }
+
+    /**
      * Sync from Daily Register 6 KKA Harian (daily_register_findings)
      */
-    protected function syncDailyRegisterFindings(?User $user = null, array &$existingMap = [], ?array $targetUnits = null): array
+    protected function syncDailyRegisterFindings(?User $user = null, array &$existingMap = [], array &$existingDupKeyMap = [], ?array $targetUnits = null): array
     {
         $newCount = 0;
         $updatedCount = 0;
@@ -257,8 +353,6 @@ class RiskTriggerService
 
         foreach ($findings as $f) {
             $sourceWpId = "DRF-{$f->id}";
-            $isExisting = isset($existingMap[$sourceWpId]);
-
             $tanggal = $f->tanggal_data ?: ($f->tanggal_ditemukan ?: Carbon::today()->toDateString());
             $area = static::mapSourceSheetToArea($f->source_sheet ?? $f->kategori ?? '');
             [$riskScore, $riskLevel] = static::parseRiskScoreAndLevel($f->risk_awal, $f->skor_dampak, $f->skor_kemungkinan);
@@ -267,34 +361,31 @@ class RiskTriggerService
             $fraudIndicator = str_contains(strtolower($deskripsi), 'fraud') || str_contains(strtolower($f->kategori ?? ''), 'fraud') ? 'Ya' : 'Tidak';
             $perluLap = (!empty($f->perlu_onsite) && in_array(strtolower((string)$f->perlu_onsite), ['1', 'ya', 'true', 'yes'])) ? 'Ya' : 'Tidak';
 
-            if (!$isExisting) {
-                $trigger = new RegisterTrigger();
-                $trigger->trigger_id = RegisterTrigger::generateNextTriggerId($tanggal);
-                $trigger->sumber = 'Daily Review';
-                $trigger->source_wp_id = $sourceWpId;
-                $trigger->tanggal_trigger = $tanggal;
-                $trigger->kode_unit = $f->kode_unit ?: '000';
-                $trigger->nama_unit = $f->nama_unit ?: $this->resolveUnitName($f->kode_unit);
-                $trigger->area = $area;
-                $trigger->objek_key = substr($f->jenis_exception_awal ?: $f->rincian ?: "ID-{$f->id}", 0, 250);
-                $trigger->periode_mulai = $f->tanggal_data ?: $tanggal;
-                $trigger->periode_selesai = $f->tanggal_data ?: $tanggal;
-                $trigger->uraian_trigger = $deskripsi;
-                $trigger->bukti_awal = $f->bukti_referensi ?: 'KKA Daily Register & Log Transaksi';
-                $trigger->risk_score_sumber = $riskScore;
-                $trigger->risk_level_sumber = $riskLevel;
-                $trigger->jumlah_kejadian = 1;
-                $trigger->eksposur_nominal = (float) ($f->nominal_terkait ?: 0);
-                $trigger->perlu_verifikasi_lapangan = $perluLap;
-                $trigger->indikasi_fraud = $fraudIndicator;
-                $trigger->objek_surprise_fisik = 'Tidak';
-                $trigger->user_id = $user?->id;
+            $res = $this->upsertTriggerRecord([
+                'sumber' => 'Daily Review',
+                'source_wp_id' => $sourceWpId,
+                'tanggal_trigger' => $tanggal,
+                'kode_unit' => $f->kode_unit ?: '000',
+                'nama_unit' => $f->nama_unit ?: $this->resolveUnitName($f->kode_unit),
+                'area' => $area,
+                'objek_key' => substr($f->jenis_exception_awal ?: $f->rincian ?: "ID-{$f->id}", 0, 250),
+                'periode_mulai' => $f->tanggal_data ?: $tanggal,
+                'periode_selesai' => $f->tanggal_data ?: $tanggal,
+                'uraian_trigger' => $deskripsi,
+                'bukti_awal' => $f->bukti_referensi ?: 'KKA Daily Register & Log Transaksi',
+                'risk_score_sumber' => $riskScore,
+                'risk_level_sumber' => $riskLevel,
+                'jumlah_kejadian' => 1,
+                'eksposur_nominal' => (float) ($f->nominal_terkait ?: 0),
+                'perlu_verifikasi_lapangan' => $perluLap,
+                'indikasi_fraud' => $fraudIndicator,
+                'objek_surprise_fisik' => 'Tidak',
+            ], $existingMap, $existingDupKeyMap, $user);
 
-                $trigger->calculateDerivedAttributes();
-                $trigger->save();
-
-                $existingMap[$sourceWpId] = $trigger->id;
+            if ($res === 'new') {
                 $newCount++;
+            } else {
+                $updatedCount++;
             }
         }
 
@@ -304,7 +395,7 @@ class RiskTriggerService
     /**
      * Sync from 5 KKA Fisik Exceptions (register_klarifikasis & physical_kka_*_details)
      */
-    protected function syncPhysicalKkaExceptions(?User $user = null, array &$existingMap = [], ?array $targetUnits = null): array
+    protected function syncPhysicalKkaExceptions(?User $user = null, array &$existingMap = [], array &$existingDupKeyMap = [], ?array $targetUnits = null): array
     {
         $newCount = 0;
         $updatedCount = 0;
@@ -326,8 +417,6 @@ class RiskTriggerService
             }
 
             $sourceWpId = "PKKA-KLARIFIKASI-{$k->id}";
-            $isExisting = isset($existingMap[$sourceWpId]);
-
             $tanggal = $k->created_at ? $k->created_at->toDateString() : Carbon::today()->toDateString();
             $kodeUnit = $k->kode_unit ?: '000';
             $namaUnit = $this->resolveUnitName($kodeUnit);
@@ -382,34 +471,31 @@ class RiskTriggerService
 
             $fraudIndicator = str_contains(strtolower($penyebab), 'fraud') ? 'Ya' : 'Tidak';
 
-            if (!$isExisting) {
-                $trigger = new RegisterTrigger();
-                $trigger->trigger_id = RegisterTrigger::generateNextTriggerId($tanggal);
-                $trigger->sumber = 'Daily Review';
-                $trigger->source_wp_id = $sourceWpId;
-                $trigger->tanggal_trigger = $tanggal;
-                $trigger->kode_unit = $kodeUnit;
-                $trigger->nama_unit = $namaUnit;
-                $trigger->area = $area;
-                $trigger->objek_key = substr($objekKey, 0, 250);
-                $trigger->periode_mulai = $tanggal;
-                $trigger->periode_selesai = $tanggal;
-                $trigger->uraian_trigger = $penyebab ?: "Exception fisik pada {$objekKey}";
-                $trigger->bukti_awal = $source->bukti_path ? "Lampiran Bukti Fisik ({$source->bukti_path})" : 'Berita Acara Hitung Fisik & KKA Fisik';
-                $trigger->risk_score_sumber = $riskScore;
-                $trigger->risk_level_sumber = $riskLevel;
-                $trigger->jumlah_kejadian = 1;
-                $trigger->eksposur_nominal = $selisih;
-                $trigger->perlu_verifikasi_lapangan = 'Ya'; // Temuan fisik otomatis butuh verifikasi lapangan
-                $trigger->indikasi_fraud = $fraudIndicator;
-                $trigger->objek_surprise_fisik = 'Ya';
-                $trigger->user_id = $user?->id;
+            $res = $this->upsertTriggerRecord([
+                'sumber' => 'Daily Review',
+                'source_wp_id' => $sourceWpId,
+                'tanggal_trigger' => $tanggal,
+                'kode_unit' => $kodeUnit,
+                'nama_unit' => $namaUnit,
+                'area' => $area,
+                'objek_key' => substr($objekKey, 0, 250),
+                'periode_mulai' => $tanggal,
+                'periode_selesai' => $tanggal,
+                'uraian_trigger' => $penyebab ?: "Exception fisik pada {$objekKey}",
+                'bukti_awal' => $source->bukti_path ? "Lampiran Bukti Fisik ({$source->bukti_path})" : 'Berita Acara Hitung Fisik & KKA Fisik',
+                'risk_score_sumber' => $riskScore,
+                'risk_level_sumber' => $riskLevel,
+                'jumlah_kejadian' => 1,
+                'eksposur_nominal' => $selisih,
+                'perlu_verifikasi_lapangan' => 'Ya',
+                'indikasi_fraud' => $fraudIndicator,
+                'objek_surprise_fisik' => 'Ya',
+            ], $existingMap, $existingDupKeyMap, $user);
 
-                $trigger->calculateDerivedAttributes();
-                $trigger->save();
-
-                $existingMap[$sourceWpId] = $trigger->id;
+            if ($res === 'new') {
                 $newCount++;
+            } else {
+                $updatedCount++;
             }
         }
 
@@ -419,7 +505,7 @@ class RiskTriggerService
     /**
      * Sync from Offsite Findings (kka_findings)
      */
-    protected function syncOffsiteFindings(?User $user = null, array &$existingMap = [], ?array $targetUnits = null): array
+    protected function syncOffsiteFindings(?User $user = null, array &$existingMap = [], array &$existingDupKeyMap = [], ?array $targetUnits = null): array
     {
         $newCount = 0;
         $updatedCount = 0;
@@ -445,8 +531,6 @@ class RiskTriggerService
 
         foreach ($findings as $f) {
             $sourceWpId = "OFF-{$f->id}";
-            $isExisting = isset($existingMap[$sourceWpId]);
-
             $tanggal = $f->tanggal_data ?: ($f->tanggal_ditemukan ?: Carbon::today()->toDateString());
             $area = static::mapSourceSheetToArea($f->source_sheet ?? '');
             [$riskScore, $riskLevel] = static::parseRiskScoreAndLevel($f->risk_awal, $f->skor_dampak, $f->skor_kemungkinan);
@@ -455,34 +539,31 @@ class RiskTriggerService
             $fraudIndicator = str_contains(strtolower($deskripsi), 'fraud') ? 'Ya' : 'Tidak';
             $perluLap = (!empty($f->perlu_onsite) && in_array(strtolower((string)$f->perlu_onsite), ['1', 'ya', 'true', 'yes'])) ? 'Ya' : 'Tidak';
 
-            if (!$isExisting) {
-                $trigger = new RegisterTrigger();
-                $trigger->trigger_id = RegisterTrigger::generateNextTriggerId($tanggal);
-                $trigger->sumber = 'Offsite';
-                $trigger->source_wp_id = $sourceWpId;
-                $trigger->tanggal_trigger = $tanggal;
-                $trigger->kode_unit = $f->kode_unit ?: '000';
-                $trigger->nama_unit = $f->nama_unit ?: $this->resolveUnitName($f->kode_unit);
-                $trigger->area = $area;
-                $trigger->objek_key = substr($f->jenis_exception_awal ?: "OFF-ID-{$f->id}", 0, 250);
-                $trigger->periode_mulai = $f->tanggal_data ?: $tanggal;
-                $trigger->periode_selesai = $f->tanggal_data ?: $tanggal;
-                $trigger->uraian_trigger = $deskripsi;
-                $trigger->bukti_awal = $f->bukti_referensi ?: 'Data Dump CBS & Laporan Offsite';
-                $trigger->risk_score_sumber = $riskScore;
-                $trigger->risk_level_sumber = $riskLevel;
-                $trigger->jumlah_kejadian = 1;
-                $trigger->eksposur_nominal = (float) ($f->nominal_terkait ?: 0);
-                $trigger->perlu_verifikasi_lapangan = $perluLap;
-                $trigger->indikasi_fraud = $fraudIndicator;
-                $trigger->objek_surprise_fisik = 'Tidak';
-                $trigger->user_id = $user?->id;
+            $res = $this->upsertTriggerRecord([
+                'sumber' => 'Offsite',
+                'source_wp_id' => $sourceWpId,
+                'tanggal_trigger' => $tanggal,
+                'kode_unit' => $f->kode_unit ?: '000',
+                'nama_unit' => $f->nama_unit ?: $this->resolveUnitName($f->kode_unit),
+                'area' => $area,
+                'objek_key' => substr($f->jenis_exception_awal ?: "OFF-ID-{$f->id}", 0, 250),
+                'periode_mulai' => $f->tanggal_data ?: $tanggal,
+                'periode_selesai' => $f->tanggal_data ?: $tanggal,
+                'uraian_trigger' => $deskripsi,
+                'bukti_awal' => $f->bukti_referensi ?: 'Data Dump CBS & Laporan Offsite',
+                'risk_score_sumber' => $riskScore,
+                'risk_level_sumber' => $riskLevel,
+                'jumlah_kejadian' => 1,
+                'eksposur_nominal' => (float) ($f->nominal_terkait ?: 0),
+                'perlu_verifikasi_lapangan' => $perluLap,
+                'indikasi_fraud' => $fraudIndicator,
+                'objek_surprise_fisik' => 'Tidak',
+            ], $existingMap, $existingDupKeyMap, $user);
 
-                $trigger->calculateDerivedAttributes();
-                $trigger->save();
-
-                $existingMap[$sourceWpId] = $trigger->id;
+            if ($res === 'new') {
                 $newCount++;
+            } else {
+                $updatedCount++;
             }
         }
 
@@ -490,71 +571,477 @@ class RiskTriggerService
     }
 
     /**
-     * Future-proof Slot: Sync from Onsite Findings (onsite_kka_findings)
+     * Penarikan Otomatis Temuan Onsite ke Register Trigger (SOP 06)
+     * Mengintegrasikan 11 KKA Onsite (6 Transaksional, Cash Opname, Observasi, 3 Rekon Fisik) + onsite_kka_findings
+     * Aturan Sheet Petunjuk SOP 06 Baris 9: Sumber = "Onsite", Perlu Verifikasi Lapangan = "Tidak" kecuali ada catatan perluasan scope / bukti baru / belum tuntas, atau akumulasi > 5.
      */
-    protected function syncOnsiteFindings(?User $user = null, array &$existingMap = [], ?array $targetUnits = null): array
+    protected function syncOnsiteFindings(?User $user = null, array &$existingMap = [], array &$existingDupKeyMap = [], ?array $targetUnits = null): array
     {
-        if (!Schema::hasTable('onsite_kka_findings')) {
-            return ['new' => 0, 'updated' => 0];
-        }
-
         $newCount = 0;
         $updatedCount = 0;
 
-        try {
-            $query = DB::table('onsite_kka_findings')
-                ->where(function ($q) {
-                    $q->whereIn(DB::raw('LOWER(COALESCE(risk_level, ""))'), ['high', 'critical', 'tinggi', 'kritis', 'moderate', 'moderate to high', 'sedang'])
-                        ->orWhere('stable_score', '>=', 5)
-                        ->orWhereRaw('(COALESCE(skor_dampak, 1) * COALESCE(skor_kemungkinan, 1)) >= 5');
+        // 1. Integrasi 6 KKA Transaksional Onsite
+        $kkaConfigs = [
+            [
+                'table' => 'onsite_kka_teller_kas',
+                'prefix' => 'ONSITE-TTK-',
+                'area' => RegisterTrigger::AREA_TELLER_KAS,
+                'key_col' => 'no_arsip',
+                'desc_col' => 'ket_tx',
+                'date_col' => 'tgl_tx',
+                'nominal_col' => null,
+                'count_col' => 'jumlah_tx',
+                'name' => 'Teller Kas',
+            ],
+            [
+                'table' => 'onsite_kka_dpks',
+                'prefix' => 'ONSITE-DPK-',
+                'area' => RegisterTrigger::AREA_DPK_LAYANAN,
+                'key_col' => 'no_rekening',
+                'desc_col' => 'kondisi',
+                'date_col' => 'tgl_tx',
+                'nominal_col' => 'nominal',
+                'count_col' => null,
+                'name' => 'DPK Layanan',
+            ],
+            [
+                'table' => 'onsite_kka_kredits',
+                'prefix' => 'ONSITE-KRD-',
+                'area' => RegisterTrigger::AREA_KREDIT,
+                'key_col' => 'no_rekening',
+                'desc_col' => 'kondisi',
+                'date_col' => 'tgl_akad',
+                'nominal_col' => 'plafon',
+                'count_col' => null,
+                'name' => 'Kredit',
+            ],
+            [
+                'table' => 'onsite_kka_biayas',
+                'prefix' => 'ONSITE-BYA-',
+                'area' => RegisterTrigger::AREA_BIAYA_BEBAN,
+                'key_col' => 'no_voucher',
+                'desc_col' => 'keterangan_biaya',
+                'date_col' => 'tgl_tx',
+                'nominal_col' => 'nominal',
+                'count_col' => null,
+                'name' => 'Biaya Beban',
+            ],
+            [
+                'table' => 'onsite_kka_atms',
+                'prefix' => 'ONSITE-ATM-',
+                'area' => RegisterTrigger::AREA_KARTU_ATM,
+                'key_col' => 'nomor_kartu',
+                'desc_col' => 'kondisi',
+                'date_col' => 'tgl_transaksi',
+                'nominal_col' => null,
+                'count_col' => null,
+                'name' => 'Kartu ATM',
+            ],
+            [
+                'table' => 'onsite_kka_pengaduans',
+                'prefix' => 'ONSITE-PGD-',
+                'area' => RegisterTrigger::AREA_PENGADUAN,
+                'key_col' => 'no_tiket',
+                'desc_col' => 'kategori_pengaduan',
+                'date_col' => 'tgl_pengaduan',
+                'nominal_col' => 'nominal_sengketa',
+                'count_col' => null,
+                'name' => 'Pengaduan',
+            ],
+        ];
+
+        foreach ($kkaConfigs as $cfg) {
+            try {
+                if (!Schema::hasTable($cfg['table'])) {
+                    continue;
+                }
+
+                $q = DB::table($cfg['table'])
+                    ->leftJoin('onsite_visits', 'onsite_visits.id', '=', "{$cfg['table']}.onsite_visit_id")
+                    ->select(
+                        "{$cfg['table']}.*",
+                        'onsite_visits.kode_unit as visit_kode_unit',
+                        'onsite_visits.nama_unit as visit_nama_unit',
+                        'onsite_visits.tanggal_mulai as visit_tanggal_mulai',
+                        'onsite_visits.tanggal_selesai as visit_tanggal_selesai'
+                    );
+
+                if (!empty($targetUnits)) {
+                    $q->where(function ($sub) use ($targetUnits, $cfg) {
+                        $sub->whereIn('onsite_visits.kode_unit', $targetUnits);
+                    });
+                }
+
+                // Filter temuan dengan skor risiko >= 5, level Moderate/High/Critical, atau critical_trigger == 'Ya'
+                $q->where(function ($sub) use ($cfg) {
+                    $sub->whereIn(DB::raw("LOWER(COALESCE({$cfg['table']}.risk_level, ''))"), ['high', 'critical', 'tinggi', 'kritis', 'moderate', 'moderate to high', 'sedang'])
+                        ->orWhere("{$cfg['table']}.skor_risiko", '>=', 5)
+                        ->orWhereRaw("(COALESCE({$cfg['table']}.skor_dampak, 1) * COALESCE({$cfg['table']}.skor_kemungkinan, 1)) >= 5")
+                        ->orWhereRaw("LOWER(COALESCE({$cfg['table']}.critical_trigger, '')) IN ('ya', '1', 'true')");
                 });
 
-            if (!empty($targetUnits)) {
-                $query->whereIn('kode_unit', $targetUnits);
+                $records = $q->latest("{$cfg['table']}.id")->take(200)->get();
+
+                foreach ($records as $r) {
+                    $sourceWpId = $cfg['prefix'] . $r->id;
+                    $dateCol = $cfg['date_col'];
+                    $tanggal = $r->$dateCol ?: ($r->visit_tanggal_mulai ?: Carbon::today()->toDateString());
+                    $kodeUnit = $r->visit_kode_unit ?: '000';
+                    $namaUnit = $r->visit_nama_unit ?: $this->resolveUnitName($kodeUnit);
+
+                    [$riskScore, $riskLevel] = static::parseRiskScoreAndLevel(
+                        $r->skor_risiko ?? $r->risk_level,
+                        $r->skor_dampak ?? null,
+                        $r->skor_kemungkinan ?? null
+                    );
+
+                    $descCol = $cfg['desc_col'];
+                    $deskripsi = $r->kondisi ?: ($r->jenis_exception ?: ($r->$descCol ?: "Temuan Onsite {$cfg['name']}"));
+                    $keyCol = $cfg['key_col'];
+                    $objKey = $r->$keyCol ?: ($r->sample_id ?: "{$cfg['prefix']}{$r->id}");
+
+                    // Aturan Khusus SOP 06 Excel Baris 9 untuk Sumber Onsite:
+                    // Tidak otomatis visit ulang; Visit hanya untuk perluasan, lokasi lain, bukti baru, atau belum tuntas diuji
+                    $isCritical = in_array(strtolower((string)($r->critical_trigger ?? '')), ['ya', '1', 'true']);
+                    $textContext = strtolower(($r->kondisi ?? '') . ' ' . ($r->simpulan_ra ?? '') . ' ' . ($r->jenis_exception ?? '') . ' ' . ($r->status_uji ?? ''));
+                    $needsFollowup = str_contains($textContext, 'perluasan')
+                        || str_contains($textContext, 'bukti baru')
+                        || str_contains($textContext, 'belum tuntas')
+                        || str_contains($textContext, 'pendalaman')
+                        || str_contains($textContext, 'lokasi lain');
+                    $perluLap = ($isCritical || $needsFollowup) ? 'Ya' : 'Tidak';
+
+                    $fraudIndicator = str_contains(strtolower($deskripsi), 'fraud') ? 'Ya' : 'Tidak';
+
+                    $nomCol = $cfg['nominal_col'];
+                    $nominal = $nomCol ? (float)($r->$nomCol ?: 0) : 0;
+                    $cntCol = $cfg['count_col'];
+                    $count = $cntCol ? max(1, (int)($r->$cntCol ?: 1)) : 1;
+
+                    $buktiAwal = "KKA Onsite {$cfg['name']} (Sample: " . ($r->sample_id ?: '-') . ") | Simpulan: " . ($r->simpulan_ra ?: '-');
+
+                    $res = $this->upsertTriggerRecord([
+                        'sumber' => 'Onsite',
+                        'source_wp_id' => $sourceWpId,
+                        'tanggal_trigger' => $tanggal,
+                        'kode_unit' => $kodeUnit,
+                        'nama_unit' => $namaUnit,
+                        'area' => $cfg['area'],
+                        'objek_key' => $objKey,
+                        'periode_mulai' => $r->visit_tanggal_mulai ?: $tanggal,
+                        'periode_selesai' => $r->visit_tanggal_selesai ?: $tanggal,
+                        'uraian_trigger' => $deskripsi,
+                        'bukti_awal' => $buktiAwal,
+                        'risk_score_sumber' => $riskScore,
+                        'risk_level_sumber' => $riskLevel,
+                        'jumlah_kejadian' => $count,
+                        'eksposur_nominal' => $nominal,
+                        'perlu_verifikasi_lapangan' => $perluLap,
+                        'indikasi_fraud' => $fraudIndicator,
+                        'objek_surprise_fisik' => 'Tidak',
+                    ], $existingMap, $existingDupKeyMap, $user);
+
+                    if ($res === 'new') {
+                        $newCount++;
+                    } else {
+                        $updatedCount++;
+                    }
+                }
+            } catch (\Exception $e) {
+                report($e);
             }
+        }
 
-            $findings = $query->latest('id')
-                ->take(300)
-                ->get();
+        // 2. Integrasi Cash Opname Items Onsite
+        try {
+            if (Schema::hasTable('onsite_cash_opname_items') && Schema::hasTable('onsite_cash_opnames')) {
+                $q = DB::table('onsite_cash_opname_items')
+                    ->join('onsite_cash_opnames', 'onsite_cash_opnames.id', '=', 'onsite_cash_opname_items.onsite_cash_opname_id')
+                    ->leftJoin('onsite_visits', 'onsite_visits.id', '=', 'onsite_cash_opnames.onsite_visit_id')
+                    ->select(
+                        'onsite_cash_opname_items.*',
+                        'onsite_cash_opnames.ra_pelaksana',
+                        'onsite_cash_opnames.pemegang_kas',
+                        'onsite_cash_opnames.tanggal_opname',
+                        'onsite_visits.kode_unit as visit_kode_unit',
+                        'onsite_visits.nama_unit as visit_nama_unit'
+                    );
 
-            foreach ($findings as $f) {
-                $sourceWpId = "ONSITE-{$f->id}";
-                $isExisting = isset($existingMap[$sourceWpId]);
+                if (!empty($targetUnits)) {
+                    $q->whereIn('onsite_visits.kode_unit', $targetUnits);
+                }
 
-                $tanggal = $f->tgl_tx ?: ($f->tanggal_ditemukan ?: Carbon::today()->toDateString());
-                [$riskScore, $riskLevel] = static::parseRiskScoreAndLevel($f->stable_score ?? $f->risk_level, $f->skor_dampak, $f->skor_kemungkinan);
+                $q->where(function ($sub) {
+                    $sub->where('onsite_cash_opname_items.status_uji', '!=', 'SESUAI')
+                        ->orWhereNotNull('onsite_cash_opname_items.kondisi')
+                        ->orWhere('onsite_cash_opname_items.simpulan_ra', 'like', '%selisih%')
+                        ->orWhere('onsite_cash_opname_items.simpulan_ra', 'like', '%tidak sesuai%');
+                });
 
-                $deskripsi = $f->ket_tx ?: ($f->hasil_uji ?: 'Temuan Pemeriksaan Onsite');
-                $fraudIndicator = str_contains(strtolower($deskripsi), 'fraud') ? 'Ya' : 'Tidak';
+                $cashItems = $q->latest('onsite_cash_opname_items.id')->take(100)->get();
+                foreach ($cashItems as $item) {
+                    $sourceWpId = "ONSITE-CSH-{$item->id}";
+                    $tanggal = $item->tanggal_opname ?: Carbon::today()->toDateString();
+                    $kodeUnit = $item->visit_kode_unit ?: '000';
+                    $namaUnit = $item->visit_nama_unit ?: $this->resolveUnitName($kodeUnit);
 
-                if (!$isExisting) {
-                    $trigger = new RegisterTrigger();
-                    $trigger->trigger_id = RegisterTrigger::generateNextTriggerId($tanggal);
-                    $trigger->sumber = 'Onsite';
-                    $trigger->source_wp_id = $sourceWpId;
-                    $trigger->tanggal_trigger = $tanggal;
-                    $trigger->kode_unit = $f->kode_unit ?: '000';
-                    $trigger->nama_unit = $this->resolveUnitName($f->kode_unit);
-                    $trigger->area = RegisterTrigger::AREA_UMUM_LAINNYA;
-                    $trigger->objek_key = substr($f->no_arsip ?: "TX-{$f->id}", 0, 250);
-                    $trigger->periode_mulai = $tanggal;
-                    $trigger->periode_selesai = $tanggal;
-                    $trigger->uraian_trigger = $deskripsi;
-                    $trigger->bukti_awal = $f->bukti_referensi ?: 'KKA Onsite Sampling';
-                    $trigger->risk_score_sumber = $riskScore;
-                    $trigger->risk_level_sumber = $riskLevel;
-                    $trigger->jumlah_kejadian = (int) ($f->jumlah_tx ?: 1);
-                    $trigger->eksposur_nominal = 0;
-                    $trigger->perlu_verifikasi_lapangan = 'Ya';
-                    $trigger->indikasi_fraud = $fraudIndicator;
-                    $trigger->objek_surprise_fisik = 'Tidak';
-                    $trigger->user_id = $user?->id;
+                    $deskripsi = $item->kondisi ?: ($item->simpulan_ra ?: 'Selisih / Deviasi Fisik Kas Opname');
+                    $fraudIndicator = str_contains(strtolower($deskripsi), 'fraud') ? 'Ya' : 'Tidak';
 
-                    $trigger->calculateDerivedAttributes();
-                    $trigger->save();
+                    $res = $this->upsertTriggerRecord([
+                        'sumber' => 'Onsite',
+                        'source_wp_id' => $sourceWpId,
+                        'tanggal_trigger' => $tanggal,
+                        'kode_unit' => $kodeUnit,
+                        'nama_unit' => $namaUnit,
+                        'area' => RegisterTrigger::AREA_CASH_OPNAME,
+                        'objek_key' => $item->sub_area ?: ($item->objek_lokasi ?: "CSH-{$item->id}"),
+                        'periode_mulai' => $tanggal,
+                        'periode_selesai' => $tanggal,
+                        'uraian_trigger' => $deskripsi,
+                        'bukti_awal' => "Fisik: " . ($item->hasil_fisik ?: '-') . " | Status: " . ($item->status_uji ?: '-') . " | Pemegang: " . ($item->pemegang_kas ?: '-'),
+                        'risk_score_sumber' => 10.0,
+                        'risk_level_sumber' => 'TINGGI',
+                        'jumlah_kejadian' => 1,
+                        'eksposur_nominal' => 0,
+                        'perlu_verifikasi_lapangan' => 'Ya', // Fisik Cash Opname otomatis butuh visit lapangan
+                        'indikasi_fraud' => $fraudIndicator,
+                        'objek_surprise_fisik' => 'Ya',
+                    ], $existingMap, $existingDupKeyMap, $user);
 
-                    $existingMap[$sourceWpId] = $trigger->id;
-                    $newCount++;
+                    if ($res === 'new') $newCount++; else $updatedCount++;
+                }
+            }
+        } catch (\Exception $e) {
+            report($e);
+        }
+
+        // 3. Integrasi Observasi Lingkungan Items Onsite
+        try {
+            if (Schema::hasTable('onsite_observasi_items') && Schema::hasTable('onsite_observasi')) {
+                $q = DB::table('onsite_observasi_items')
+                    ->join('onsite_observasi', 'onsite_observasi.id', '=', 'onsite_observasi_items.onsite_observasi_id')
+                    ->leftJoin('onsite_visits', 'onsite_visits.id', '=', 'onsite_observasi.onsite_visit_id')
+                    ->select(
+                        'onsite_observasi_items.*',
+                        'onsite_observasi.ra_pelaksana',
+                        'onsite_observasi.tanggal_observasi',
+                        'onsite_visits.kode_unit as visit_kode_unit',
+                        'onsite_visits.nama_unit as visit_nama_unit'
+                    );
+
+                if (!empty($targetUnits)) {
+                    $q->whereIn('onsite_visits.kode_unit', $targetUnits);
+                }
+
+                $q->where(function ($sub) {
+                    $sub->whereIn(DB::raw('LOWER(COALESCE(onsite_observasi_items.risk_level, ""))'), ['high', 'critical', 'tinggi', 'kritis', 'moderate', 'moderate to high', 'sedang'])
+                        ->orWhere('onsite_observasi_items.risk_score', '>=', 5)
+                        ->orWhereRaw('(COALESCE(onsite_observasi_items.impact, 1) * COALESCE(onsite_observasi_items.likelihood, 1)) >= 5')
+                        ->orWhereNotNull('onsite_observasi_items.uraian_ketidaksesuaian');
+                });
+
+                $obsItems = $q->latest('onsite_observasi_items.id')->take(100)->get();
+                foreach ($obsItems as $item) {
+                    $sourceWpId = "ONSITE-OBS-{$item->id}";
+                    $tanggal = $item->tanggal_observasi ?: Carbon::today()->toDateString();
+                    $kodeUnit = $item->visit_kode_unit ?: '000';
+                    $namaUnit = $item->visit_nama_unit ?: $this->resolveUnitName($kodeUnit);
+
+                    [$riskScore, $riskLevel] = static::parseRiskScoreAndLevel(
+                        $item->risk_score ?? $item->risk_level,
+                        $item->impact ?? null,
+                        $item->likelihood ?? null
+                    );
+
+                    $deskripsi = $item->uraian_ketidaksesuaian ?: ($item->hasil_observasi ?: ($item->kondisi_aktual ?: 'Temuan Observasi Fisik/Fasilitas'));
+                    $fraudIndicator = str_contains(strtolower($deskripsi), 'fraud') ? 'Ya' : 'Tidak';
+
+                    $res = $this->upsertTriggerRecord([
+                        'sumber' => 'Onsite',
+                        'source_wp_id' => $sourceWpId,
+                        'tanggal_trigger' => $tanggal,
+                        'kode_unit' => $kodeUnit,
+                        'nama_unit' => $namaUnit,
+                        'area' => RegisterTrigger::AREA_OBSERVASI_LINGKUNGAN,
+                        'objek_key' => $item->objek ?: ($item->area ?: "OBS-{$item->id}"),
+                        'periode_mulai' => $tanggal,
+                        'periode_selesai' => $tanggal,
+                        'uraian_trigger' => $deskripsi,
+                        'bukti_awal' => $item->referensi_bukti ?: 'Hasil Observasi Fisik Lapangan',
+                        'risk_score_sumber' => $riskScore,
+                        'risk_level_sumber' => $riskLevel,
+                        'jumlah_kejadian' => 1,
+                        'eksposur_nominal' => 0,
+                        'perlu_verifikasi_lapangan' => 'Ya',
+                        'indikasi_fraud' => $fraudIndicator,
+                        'objek_surprise_fisik' => 'Ya',
+                    ], $existingMap, $existingDupKeyMap, $user);
+
+                    if ($res === 'new') $newCount++; else $updatedCount++;
+                }
+            }
+        } catch (\Exception $e) {
+            report($e);
+        }
+
+        // 4. Integrasi 3 Rekon Fisik Onsite (Kartu ATM, Cek BG, Barang Cetakan)
+        $rekonConfigs = [
+            [
+                'parent_table' => 'onsite_rekon_kartu_atm',
+                'item_table' => 'onsite_rekon_kartu_atm_items',
+                'prefix' => 'ONSITE-RKA-',
+                'area' => RegisterTrigger::AREA_REKON_KARTU_ATM,
+                'key_col' => 'jenis_kartu',
+                'satuan' => 'kartu',
+                'desc_name' => 'Rekon Kartu ATM',
+            ],
+            [
+                'parent_table' => 'onsite_rekon_cek_bg',
+                'item_table' => 'onsite_rekon_cek_bg_items',
+                'prefix' => 'ONSITE-RCK-',
+                'area' => RegisterTrigger::AREA_REKON_CEK_BG,
+                'key_col' => 'objek',
+                'satuan' => 'warkat',
+                'desc_name' => 'Rekon Cek BG',
+            ],
+            [
+                'parent_table' => 'onsite_rekon_barang_cetakan',
+                'item_table' => 'onsite_rekon_barang_cetakan_items',
+                'prefix' => 'ONSITE-RBC-',
+                'area' => RegisterTrigger::AREA_REKON_BARANG_CETAKAN,
+                'key_col' => 'nama_barang',
+                'satuan' => 'unit',
+                'desc_name' => 'Rekon Barang Cetakan',
+            ],
+        ];
+
+        foreach ($rekonConfigs as $rcfg) {
+            try {
+                if (!Schema::hasTable($rcfg['item_table']) || !Schema::hasTable($rcfg['parent_table'])) {
+                    continue;
+                }
+
+                $q = DB::table($rcfg['item_table'])
+                    ->join($rcfg['parent_table'], "{$rcfg['parent_table']}.id", '=', "{$rcfg['item_table']}.rekon_id")
+                    ->leftJoin('onsite_visits', 'onsite_visits.id', '=', "{$rcfg['parent_table']}.onsite_visit_id")
+                    ->select(
+                        "{$rcfg['item_table']}.*",
+                        "{$rcfg['parent_table']}.kode_unit as parent_kode_unit",
+                        "{$rcfg['parent_table']}.ra_pelaksana",
+                        "{$rcfg['parent_table']}.tanggal_opname",
+                        'onsite_visits.kode_unit as visit_kode_unit',
+                        'onsite_visits.nama_unit as visit_nama_unit'
+                    );
+
+                if (!empty($targetUnits)) {
+                    $q->where(function ($sub) use ($targetUnits, $rcfg) {
+                        $sub->whereIn("{$rcfg['parent_table']}.kode_unit", $targetUnits)
+                            ->orWhereIn('onsite_visits.kode_unit', $targetUnits);
+                    });
+                }
+
+                $q->where(function ($sub) use ($rcfg) {
+                    $sub->where(DB::raw("ABS(COALESCE({$rcfg['item_table']}.selisih, 0))"), '>', 0)
+                        ->orWhereIn(DB::raw("LOWER(COALESCE({$rcfg['item_table']}.risk_level, ''))"), ['high', 'critical', 'tinggi', 'kritis', 'moderate', 'moderate to high', 'sedang'])
+                        ->orWhereRaw("(COALESCE({$rcfg['item_table']}.impact, 1) * COALESCE({$rcfg['item_table']}.likelihood, 1)) >= 5");
+                });
+
+                $items = $q->latest("{$rcfg['item_table']}.id")->take(100)->get();
+
+                foreach ($items as $item) {
+                    $sourceWpId = $rcfg['prefix'] . $item->id;
+                    $tanggal = $item->tanggal_opname ?: Carbon::today()->toDateString();
+                    $kodeUnit = $item->parent_kode_unit ?: ($item->visit_kode_unit ?: '000');
+                    $namaUnit = $item->visit_nama_unit ?: $this->resolveUnitName($kodeUnit);
+
+                    [$riskScore, $riskLevel] = static::parseRiskScoreAndLevel(
+                        $item->risk_level ?? 5,
+                        $item->impact ?? null,
+                        $item->likelihood ?? null
+                    );
+
+                    $keyCol = $rcfg['key_col'];
+                    $objKey = $item->$keyCol ?: ($item->sub_area ?: "{$rcfg['prefix']}{$item->id}");
+                    $selisih = abs((float)($item->selisih ?? 0));
+                    $deskripsi = "Selisih Stok Fisik vs Catatan: {$selisih} {$rcfg['satuan']} pada {$objKey}. " . ($item->simpulan_ra ?: ($item->dampak ?: ''));
+                    $fraudIndicator = str_contains(strtolower($deskripsi), 'fraud') ? 'Ya' : 'Tidak';
+
+                    $res = $this->upsertTriggerRecord([
+                        'sumber' => 'Onsite',
+                        'source_wp_id' => $sourceWpId,
+                        'tanggal_trigger' => $tanggal,
+                        'kode_unit' => $kodeUnit,
+                        'nama_unit' => $namaUnit,
+                        'area' => $rcfg['area'],
+                        'objek_key' => $objKey,
+                        'periode_mulai' => $tanggal,
+                        'periode_selesai' => $tanggal,
+                        'uraian_trigger' => $deskripsi,
+                        'bukti_awal' => $item->referensi_bukti ?: "KKA {$rcfg['desc_name']} (Selisih: {$selisih})",
+                        'risk_score_sumber' => $riskScore,
+                        'risk_level_sumber' => $riskLevel,
+                        'jumlah_kejadian' => 1,
+                        'eksposur_nominal' => $selisih,
+                        'perlu_verifikasi_lapangan' => 'Ya',
+                        'indikasi_fraud' => $fraudIndicator,
+                        'objek_surprise_fisik' => 'Ya',
+                    ], $existingMap, $existingDupKeyMap, $user);
+
+                    if ($res === 'new') $newCount++; else $updatedCount++;
+                }
+            } catch (\Exception $e) {
+                report($e);
+            }
+        }
+
+        // 5. Integrasi Onsite KKA Findings (onsite_kka_findings)
+        try {
+            if (Schema::hasTable('onsite_kka_findings')) {
+                $query = DB::table('onsite_kka_findings')
+                    ->where(function ($q) {
+                        $q->whereIn(DB::raw('LOWER(COALESCE(risk_level, ""))'), ['high', 'critical', 'tinggi', 'kritis', 'moderate', 'moderate to high', 'sedang'])
+                            ->orWhere('stable_score', '>=', 5)
+                            ->orWhereRaw('(COALESCE(skor_dampak, 1) * COALESCE(skor_kemungkinan, 1)) >= 5');
+                    });
+
+                if (!empty($targetUnits)) {
+                    $query->whereIn('kode_unit', $targetUnits);
+                }
+
+                $findings = $query->latest('id')->take(200)->get();
+
+                foreach ($findings as $f) {
+                    $sourceWpId = "ONSITE-FND-{$f->id}";
+                    $tanggal = $f->tgl_tx ?: ($f->tanggal_ditemukan ?: Carbon::today()->toDateString());
+                    [$riskScore, $riskLevel] = static::parseRiskScoreAndLevel($f->stable_score ?? $f->risk_level, $f->skor_dampak, $f->skor_kemungkinan);
+
+                    $deskripsi = $f->ket_tx ?: ($f->hasil_uji ?: 'Temuan Pemeriksaan Onsite');
+                    $fraudIndicator = str_contains(strtolower($deskripsi), 'fraud') ? 'Ya' : 'Tidak';
+                    $area = static::mapSourceSheetToArea($f->source_sheet ?? $f->area ?? '');
+
+                    $res = $this->upsertTriggerRecord([
+                        'sumber' => 'Onsite',
+                        'source_wp_id' => $sourceWpId,
+                        'tanggal_trigger' => $tanggal,
+                        'kode_unit' => $f->kode_unit ?: '000',
+                        'nama_unit' => $this->resolveUnitName($f->kode_unit),
+                        'area' => $area,
+                        'objek_key' => substr($f->no_arsip ?: ($f->sample_id ?: "TX-{$f->id}"), 0, 250),
+                        'periode_mulai' => $tanggal,
+                        'periode_selesai' => $tanggal,
+                        'uraian_trigger' => $deskripsi,
+                        'bukti_awal' => $f->bukti_referensi ?: 'KKA Onsite Sampling',
+                        'risk_score_sumber' => $riskScore,
+                        'risk_level_sumber' => $riskLevel,
+                        'jumlah_kejadian' => (int) ($f->jumlah_tx ?: 1),
+                        'eksposur_nominal' => 0,
+                        'perlu_verifikasi_lapangan' => 'Tidak', // Default row 9: tidak otomatis visit ulang
+                        'indikasi_fraud' => $fraudIndicator,
+                        'objek_surprise_fisik' => 'Tidak',
+                    ], $existingMap, $existingDupKeyMap, $user);
+
+                    if ($res === 'new') $newCount++; else $updatedCount++;
                 }
             }
         } catch (\Exception $e) {
@@ -618,12 +1105,15 @@ class RiskTriggerService
     {
         $allTriggers = RegisterTrigger::orderBy('id', 'asc')->get();
 
-        // 1. Hitung akumulasi per Unit + Area risiko (skor >= 5 Moderate-to-High / High)
+        // 1. Hitung akumulasi temuan Moderate-to-High dan High/Critical (skor >= 5) per Unit + Area risiko
         $unitAreaHighCounts = [];
+        $unitAreaSourceCounts = [];
         foreach ($allTriggers as $t) {
-            if ($t->risk_score_reassessment >= 5) {
+            if ($t->risk_score_reassessment >= 5 || $t->risk_score_sumber >= 5) {
                 $compositeKey = "{$t->kode_unit}|{$t->area}";
                 $unitAreaHighCounts[$compositeKey] = ($unitAreaHighCounts[$compositeKey] ?? 0) + 1;
+                $src = $t->sumber ?: 'Lainnya';
+                $unitAreaSourceCounts[$compositeKey][$src] = ($unitAreaSourceCounts[$compositeKey][$src] ?? 0) + 1;
             }
         }
 
@@ -649,19 +1139,27 @@ class RiskTriggerService
                 $changed = true;
             }
 
-            // Alarm Akumulasi > 5 Temuan
+            // Alarm Akumulasi > 5 Temuan (Daily Review + Offsite + Onsite)
             $compositeKey = "{$t->kode_unit}|{$t->area}";
             $countInGroup = $unitAreaHighCounts[$compositeKey] ?? 0;
             $alarmActive = $countInGroup > 5;
 
             if ($alarmActive) {
+                $drCount = $unitAreaSourceCounts[$compositeKey]['Daily Review'] ?? 0;
+                $offCount = $unitAreaSourceCounts[$compositeKey]['Offsite'] ?? 0;
+                $onCount = $unitAreaSourceCounts[$compositeKey]['Onsite'] ?? 0;
+                $namaUnit = $t->nama_unit ?: $this->resolveUnitName($t->kode_unit);
+
                 if (!isset($triggeredAlarms[$compositeKey])) {
                     $triggeredAlarms[$compositeKey] = [
                         'kode_unit' => $t->kode_unit,
-                        'nama_unit' => $t->nama_unit ?: $this->resolveUnitName($t->kode_unit),
+                        'nama_unit' => $namaUnit,
                         'area' => $t->area,
                         'count' => $countInGroup,
-                        'message' => "PERINGATAN RISK TRIGGER: Area {$t->area} pada " . ($t->nama_unit ?: $t->kode_unit) . " memiliki {$countInGroup} akumulasi temuan Moderate-to-High / High (> 5). Segera lakukan pendalaman kembali / pemeriksaan Risk Trigger Visit!",
+                        'dr_count' => $drCount,
+                        'off_count' => $offCount,
+                        'on_count' => $onCount,
+                        'message' => "PERINGATAN RISK TRIGGER: Area {$t->area} pada {$namaUnit} memiliki {$countInGroup} akumulasi temuan Moderate-to-High / High (> 5) dari gabungan [Daily Review: {$drCount}, Offsite: {$offCount}, Onsite: {$onCount}]. Segera lakukan pendalaman kembali / pemeriksaan Risk Trigger Visit!",
                     ];
                 }
 
@@ -682,10 +1180,14 @@ class RiskTriggerService
 
     /**
      * Dapatkan daftar aktif Notifikasi Alarm (> 5 Temuan per Unit & Area)
+     * Mengagregasi seluruh temuan Moderate-to-High & High/Critical dari Daily Review, Offsite, dan Onsite
      */
     public function getActiveAlarms(?User $user = null, ?string $filterKodeUnit = null): array
     {
-        $query = RegisterTrigger::where('risk_score_reassessment', '>=', 5);
+        $query = RegisterTrigger::where(function ($q) {
+            $q->where('risk_score_reassessment', '>=', 5)
+                ->orWhere('risk_score_sumber', '>=', 5);
+        });
 
         if ($user && strtolower($user->role) === 'ra') {
             $query->byBranch($user);
@@ -694,21 +1196,32 @@ class RiskTriggerService
             $query->whereIn('kode_unit', $expanded);
         }
 
-        $grouped = $query->select('kode_unit', 'nama_unit', 'area', DB::raw('count(*) as total'))
-            ->groupBy('kode_unit', 'nama_unit', 'area')
-            ->having('total', '>', 5)
-            ->get();
+        $allHighTriggers = $query->get();
+        $grouped = $allHighTriggers->groupBy(function ($t) {
+            return "{$t->kode_unit}|{$t->area}";
+        });
 
         $alarms = [];
-        foreach ($grouped as $row) {
-            $namaUnit = $row->nama_unit ?: $this->resolveUnitName($row->kode_unit);
-            $alarms[] = [
-                'kode_unit' => $row->kode_unit,
-                'nama_unit' => $namaUnit,
-                'area' => $row->area,
-                'count' => $row->total,
-                'message' => "PERINGATAN RISK TRIGGER: Area {$row->area} pada {$namaUnit} memiliki {$row->total} akumulasi temuan Moderate-to-High / High (> 5). Segera lakukan pendalaman kembali / pemeriksaan Risk Trigger Visit!",
-            ];
+        foreach ($grouped as $key => $triggers) {
+            $total = $triggers->count();
+            if ($total > 5) {
+                $first = $triggers->first();
+                $namaUnit = $first->nama_unit ?: $this->resolveUnitName($first->kode_unit);
+                $drCount = $triggers->where('sumber', 'Daily Review')->count();
+                $offCount = $triggers->where('sumber', 'Offsite')->count();
+                $onCount = $triggers->where('sumber', 'Onsite')->count();
+
+                $alarms[] = [
+                    'kode_unit' => $first->kode_unit,
+                    'nama_unit' => $namaUnit,
+                    'area' => $first->area,
+                    'count' => $total,
+                    'dr_count' => $drCount,
+                    'off_count' => $offCount,
+                    'on_count' => $onCount,
+                    'message' => "PERINGATAN RISK TRIGGER: Area {$first->area} pada {$namaUnit} memiliki {$total} akumulasi temuan Moderate-to-High / High (> 5) dari gabungan [Daily Review: {$drCount}, Offsite: {$offCount}, Onsite: {$onCount}]. Segera lakukan pendalaman kembali / pemeriksaan Risk Trigger Visit!",
+                ];
+            }
         }
 
         return $alarms;

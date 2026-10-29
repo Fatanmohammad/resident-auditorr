@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ asset('css/custom-app.css') }}">
+    @if(request()->is('risk-trigger*'))
+    <link rel="stylesheet" href="{{ asset('css/risk-trigger.css') }}">
+    @endif
     
     <style>
         /* Perbaikan z-index untuk memastikan tombol header pojok kanan atas selalu bisa diklik */
@@ -29,12 +32,18 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            z-index: 1;
         }
 
         .page-content {
             position: relative;
-            z-index: 2;
+        }
+
+        /* Pastikan Modal Bootstrap selalu tampil paling depan di atas sidebar (sidebar z-index: 40) */
+        .modal {
+            z-index: 2050 !important;
+        }
+        .modal-backdrop {
+            z-index: 2040 !important;
         }
 
         /* Penyesuaian Sticky Header Tabel agar tidak menutupi tombol header */
@@ -87,6 +96,13 @@
                 setTimeout(function() { el.remove(); }, 500);
             });
         }, 10000);
+
+        // Pindahkan modal Bootstrap ke document.body saat ditampilkan agar bebas dari stacking context container/sidebar
+        document.addEventListener('show.bs.modal', function (event) {
+            if (event.target && event.target.parentElement !== document.body) {
+                document.body.appendChild(event.target);
+            }
+        });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     @stack('scripts')

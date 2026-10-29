@@ -68,7 +68,25 @@ class AppServiceProvider extends ServiceProvider
                     ]));
             }
 
-            $view->with('headerNotifs', $notifs->take(8));
+            // Notifikasi Peringatan Alarm SOP 06 (Risk Trigger Visit > 5 Temuan Akumulasi)
+            try {
+                if (class_exists(\App\Services\RiskTrigger\RiskTriggerService::class) && class_exists(\App\Models\RiskTrigger\RegisterTrigger::class)) {
+                    $rtService = app(\App\Services\RiskTrigger\RiskTriggerService::class);
+                    $rtAlarms = $rtService->getActiveAlarms($user);
+                    foreach ($rtAlarms as $alarm) {
+                        $notifs->push([
+                            'icon' => 'bi-exclamation-octagon-fill text-danger',
+                            'text' => "ALARM SOP 06: {$alarm['area']} di {$alarm['nama_unit']} ({$alarm['count']} temuan)",
+                            'url'  => route('risk-trigger.register', ['kode_unit' => $alarm['kode_unit'], 'area' => $alarm['area']]),
+                            'time' => "Akumulasi > 5 Temuan (DR: {$alarm['dr_count']}, Off: {$alarm['off_count']}, On: {$alarm['on_count']})",
+                        ]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Abaikan error database jika migration belum lengkap
+            }
+
+            $view->with('headerNotifs', $notifs->take(12));
         });
     }
 }

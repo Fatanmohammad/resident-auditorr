@@ -102,26 +102,31 @@
     .badge-final { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 </style>
 
-<div class="container-fluid px-3 px-md-4 py-3">
-    {{-- Breadcrumb & Back --}}
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-        <div class="d-flex align-items-center gap-2">
-            <a href="{{ route('risk-trigger.kka.index') }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar KKA
-            </a>
-            <span class="text-muted">/</span>
-            <span class="fw-bold text-dark font-monospace" style="font-size: 0.95rem;">{{ $kka->visit_id }}</span>
+<!-- Header Harmonized SOP 06 -->
+<div class="rtv-header">
+    <div>
+        <div class="rtv-breadcrumb">
+            <a href="{{ route('dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a> &rsaquo;
+            <a href="{{ route('risk-trigger.kka.index') }}">KKA Risk Trigger</a> &rsaquo;
+            <span class="text-dark fw-semibold">{{ $kka->visit_id }}</span>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            @if($kka->status_review === 'FINAL')
-                <span class="badge-status badge-final"><i class="bi bi-lock-fill"></i> STATUS: FINAL</span>
-            @elseif($kka->status_review === 'REVISI')
-                <span class="badge-status badge-revisi"><i class="bi bi-arrow-repeat"></i> STATUS: REVISI</span>
-            @else
-                <span class="badge-status badge-draft"><i class="bi bi-pencil"></i> STATUS: DRAFT</span>
-            @endif
-        </div>
+        <h4 class="rtv-title">
+            <i class="bi bi-file-earmark-spreadsheet text-primary"></i> Lembar Kerja KKA Induk &amp; 8 Area
+            <span class="badge-wp">{{ $kka->visit_id }}</span>
+            <span class="badge-status {{ $kka->status_review === 'FINAL' ? 'badge-status-success' : ($kka->status_review === 'REVISI' ? 'badge-status-warning' : 'badge-status-neutral') }}">
+                STATUS: {{ $kka->status_review }}
+            </span>
+        </h4>
+        <p class="rtv-subtitle">
+            KKA Induk (20 Kolom Excel A s.d. T) dan pengujian spesifik per-area risiko.
+        </p>
     </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ route('risk-trigger.kka.index') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-xs">
+            <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar KKA
+        </a>
+    </div>
+</div>
 
     {{-- Alert Notice jika KKA sudah FINAL --}}
     @if($isFinal)
@@ -486,7 +491,6 @@
         @default
             @include('risk_trigger.kka.areas.teller_kas')
     @endswitch
-</div>
 
 <script>
     function toggleAlasanPerluasan() {

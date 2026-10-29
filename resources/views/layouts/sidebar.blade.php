@@ -296,15 +296,84 @@
                 <a href="{{ route('risk-trigger.assignment') }}" class="nav-item {{ request()->routeIs('risk-trigger.assignment*') ? 'active' : '' }}">
                     <i class="bi bi-clipboard-check nav-icon"></i> Assignment & Scope
                 </a>
-                <a href="{{ route('risk-trigger.program-kerja') }}" class="nav-item {{ request()->routeIs('risk-trigger.program-kerja*') ? 'active' : '' }}">
-                    <i class="bi bi-journal-text nav-icon"></i> Program Kerja & Data
-                </a>
                 <a href="{{ route('risk-trigger.kka.index') }}" class="nav-item {{ request()->routeIs('risk-trigger.kka*') ? 'active' : '' }}">
                     <i class="bi bi-file-earmark-spreadsheet nav-icon"></i> KKA Risk Trigger
                 </a>
                 <a href="{{ route('risk-trigger.simpulan-tl.index') }}" class="nav-item {{ request()->routeIs('risk-trigger.simpulan-tl*') ? 'active' : '' }}">
                     <i class="bi bi-check2-circle nav-icon"></i> Klarifikasi & Simpulan TL
                 </a>
+            </div>
+        </div>
+        @endif
+        {{-- ======================================================================= --}}
+
+        {{-- ===================== PELAPORAN BULANAN & KONSOLIDASI (SOP 08) ===================== --}}
+        @php
+            $canAccessSop08 = in_array($role, ['admin', 'kabag_ra', 'kadiv_skai', 'ra', 'reviewer', 'pimsie', 'korwas']);
+        @endphp
+        @if($canAccessSop08)
+        <div class="nav-group {{ request()->is('pelaporan-bulanan*') ? 'open' : '' }}">
+            <div class="nav-group-toggle">
+                <i class="bi bi-file-earmark-bar-graph-fill nav-icon text-primary"></i> Pelaporan Bulanan (SOP 08)
+                <i class="bi bi-chevron-down nav-arrow"></i>
+            </div>
+            <div class="nav-group-children">
+                <a href="{{ route('pelaporan-bulanan.dashboard') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.dashboard*') ? 'active' : '' }}">
+                    <i class="bi bi-speedometer2 nav-icon text-info"></i> Dashboard SOP 08
+                </a>
+                <a href="{{ route('pelaporan-bulanan.kalender') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.kalender*') ? 'active' : '' }}">
+                    <i class="bi bi-calendar3-range nav-icon"></i> Kalender Laporan
+                </a>
+                <a href="{{ route('pelaporan-bulanan.checklist') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.checklist*') ? 'active' : '' }}">
+                    <i class="bi bi-ui-checks nav-icon"></i> Checklist Laporan
+                </a>
+                <a href="{{ route('pelaporan-bulanan.rekap-kegiatan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.rekap-kegiatan*') ? 'active' : '' }}">
+                    <i class="bi bi-list-task nav-icon"></i> Rekap Kegiatan
+                </a>
+                <a href="{{ route('pelaporan-bulanan.rekap-isu-tl') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.rekap-isu-tl*') ? 'active' : '' }}">
+                    <i class="bi bi-exclamation-diamond nav-icon"></i> Rekap Isu & TL
+                </a>
+                <a href="{{ route('pelaporan-bulanan.review-laporan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.review-laporan*') ? 'active' : '' }}">
+                    <i class="bi bi-clipboard-check nav-icon"></i> Review Laporan (WP-RA-08-F)
+                </a>
+                <a href="{{ route('pelaporan-bulanan.koreksi-approval') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.koreksi-approval*') ? 'active' : '' }}">
+                    <i class="bi bi-check2-circle nav-icon"></i> Koreksi & Approval
+                </a>
+                <a href="{{ route('pelaporan-bulanan.isu-signifikan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.isu-signifikan*') ? 'active' : '' }}">
+                    <i class="bi bi-shield-exclamation nav-icon"></i> Isu Signifikan
+                </a>
+                <a href="{{ route('pelaporan-bulanan.distribusi-quality') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.distribusi-quality*') ? 'active' : '' }}">
+                    <i class="bi bi-award nav-icon"></i> Distribusi & Quality
+                </a>
+                <a href="{{ route('pelaporan-bulanan.konsolidasi') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.konsolidasi*') ? 'active' : '' }}">
+                    <i class="bi bi-diagram-3 nav-icon"></i> Konsolidasi (WP-RA-08-J)
+                </a>
+                <a href="{{ route('pelaporan-bulanan.tren-isu') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.tren-isu*') ? 'active' : '' }}">
+                    <i class="bi bi-graph-up-arrow nav-icon"></i> Tren Isu (WP-RA-08-K)
+                </a>
+                <a href="{{ route('pelaporan-bulanan.feedback') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.feedback*') ? 'active' : '' }}">
+                    <i class="bi bi-chat-square-quote nav-icon"></i> Feedback (WP-RA-08-M)
+                </a>
+                <a href="{{ route('pelaporan-bulanan.master-ra') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.master-ra*') ? 'active' : '' }}">
+                    <i class="bi bi-people nav-icon"></i> Roster RA (WP-RA-08-N)
+                </a>
+                <a href="{{ route('pelaporan-bulanan.log-harian') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.log-harian*') ? 'active' : '' }}">
+                    <i class="bi bi-journal-check nav-icon"></i> Log Harian (WP-RA-08-O)
+                </a>
+                <a href="{{ route('pelaporan-bulanan.kalender-kinerja') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.kalender-kinerja*') ? 'active' : '' }}">
+                    <i class="bi bi-calendar2-check nav-icon"></i> Kinerja RA (WP-RA-08-P)
+                </a>
+                <a href="{{ route('pelaporan-bulanan.narasi') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.narasi*') ? 'active' : '' }}">
+                    <i class="bi bi-journal-text nav-icon"></i> Narasi Laporan
+                </a>
+                <a href="{{ route('pelaporan-bulanan.laporan-bulanan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.laporan-bulanan*') ? 'active' : '' }}">
+                    <i class="bi bi-printer-fill nav-icon text-success"></i> Cetak Laporan Bulanan
+                </a>
+                @if($isAdmin)
+                <a href="{{ route('pelaporan-bulanan.master-parameter') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.master-parameter*') ? 'active' : '' }}">
+                    <i class="bi bi-sliders nav-icon"></i> Master & Hari Libur
+                </a>
+                @endif
             </div>
         </div>
         @endif

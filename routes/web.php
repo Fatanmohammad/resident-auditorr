@@ -37,6 +37,7 @@ use App\Http\Controllers\SurpriseAudit\SurpriseAuditController;
 use App\Http\Controllers\Monitoring\MonitoringController;
 use App\Http\Controllers\FraudIn\PemeriksaanAwalController;
 use App\Http\Controllers\RiskTrigger\RiskTriggerController;
+use App\Http\Controllers\PelaporanBulanan\PelaporanBulananController;
 
 Route::get('/debug-test', function () {
     $unit = \App\Models\Unit::find(2);
@@ -440,10 +441,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/assignment/{id}/actual-dates', [RiskTriggerController::class, 'updateActualDates'])->whereNumber('id')->name('risk-trigger.assignment.actual-dates');
         Route::get('/assignment/{id}', [RiskTriggerController::class, 'showAssignment'])->whereNumber('id')->name('risk-trigger.assignment.show');
 
-        // FASE 2: PROGRAM KERJA TERARAH & DAFTAR DATA
-        Route::get('/program-kerja', [RiskTriggerController::class, 'programKerja'])->name('risk-trigger.program-kerja');
-        Route::get('/program-kerja/{id}/edit', [RiskTriggerController::class, 'editProgramKerja'])->whereNumber('id')->name('risk-trigger.program-kerja.edit');
-        Route::post('/program-kerja/{id}', [RiskTriggerController::class, 'updateProgramKerja'])->whereNumber('id')->name('risk-trigger.program-kerja.update');
+        // PROGRAM KERJA TERARAH (DIHILANGKAN DARI WORKFLOW: LANGSUNG KE KKA RISK TRIGGER)
+        Route::get('/program-kerja', function () {
+            return redirect()->route('risk-trigger.kka.index');
+        })->name('risk-trigger.program-kerja');
+        Route::get('/program-kerja/{id}/edit', function () {
+            return redirect()->route('risk-trigger.kka.index');
+        })->whereNumber('id')->name('risk-trigger.program-kerja.edit');
+        Route::post('/program-kerja/{id}', function () {
+            return redirect()->route('risk-trigger.kka.index');
+        })->whereNumber('id')->name('risk-trigger.program-kerja.update');
 
         // FASE 3: KKA RISK TRIGGER (KKA INDUK - 20 KOLOM EXCEL) & 8 KKA AREA
         Route::get('/kka', [RiskTriggerController::class, 'kkaIndex'])->name('risk-trigger.kka.index');
@@ -471,5 +478,112 @@ Route::middleware('auth')->group(function () {
         Route::post('/{id}/override', [RiskTriggerController::class, 'override'])->whereNumber('id')->name('risk-trigger.override');
         Route::delete('/{id}', [RiskTriggerController::class, 'destroy'])->whereNumber('id')->name('risk-trigger.destroy');
     }); // Akhir Route::prefix('risk-trigger')
+
+    // =========================================================================
+    // MODUL PELAPORAN BULANAN & KONSOLIDASI (SOP 08) - FASE 1
+    // =========================================================================
+    Route::prefix('pelaporan-bulanan')->group(function () {
+        // Kalender Laporan (WP-RA-08-A)
+        Route::get('/kalender', [PelaporanBulananController::class, 'kalender'])->name('pelaporan-bulanan.kalender');
+        Route::get('/kalender/generate', [PelaporanBulananController::class, 'createKalender'])->name('pelaporan-bulanan.kalender.create');
+        Route::post('/kalender/generate', [PelaporanBulananController::class, 'generateKalender'])->name('pelaporan-bulanan.kalender.generate');
+        Route::get('/kalender/{id}/edit', [PelaporanBulananController::class, 'editKalender'])->whereNumber('id')->name('pelaporan-bulanan.kalender.edit');
+        Route::post('/kalender/{id}/submit', [PelaporanBulananController::class, 'submitLaporan'])->whereNumber('id')->name('pelaporan-bulanan.kalender.submit');
+        Route::post('/kalender/{id}/update', [PelaporanBulananController::class, 'updateKalender'])->whereNumber('id')->name('pelaporan-bulanan.kalender.update');
+
+        // Checklist Laporan (WP-RA-08-B)
+        Route::get('/checklist/{reportId?}', [PelaporanBulananController::class, 'checklist'])->name('pelaporan-bulanan.checklist');
+        Route::post('/checklist/{reportId}', [PelaporanBulananController::class, 'updateChecklist'])->name('pelaporan-bulanan.checklist.update');
+
+        // Rekap Kegiatan (WP-RA-08-D)
+        Route::get('/rekap-kegiatan', [PelaporanBulananController::class, 'rekapKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan');
+        Route::get('/rekap-kegiatan/{reportId}/create', [PelaporanBulananController::class, 'createKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.create');
+        Route::post('/rekap-kegiatan/{reportId}/store', [PelaporanBulananController::class, 'storeKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.store');
+        Route::get('/rekap-kegiatan/{id}/edit', [PelaporanBulananController::class, 'editKegiatan'])->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.edit');
+        Route::put('/rekap-kegiatan/{id}', [PelaporanBulananController::class, 'updateKegiatan'])->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.update');
+        Route::delete('/rekap-kegiatan/{id}', [PelaporanBulananController::class, 'destroyKegiatan'])->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.destroy');
+        Route::post('/rekap-kegiatan/{reportId}/sync', [PelaporanBulananController::class, 'syncKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.sync');
+        Route::get('/rekap-kegiatan/{reportId}', [PelaporanBulananController::class, 'rekapKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.show');
+
+        // Rekap Isu & TL (WP-RA-08-E)
+        Route::get('/rekap-isu-tl', [PelaporanBulananController::class, 'rekapIsu'])->name('pelaporan-bulanan.rekap-isu-tl');
+        Route::get('/rekap-isu-tl/{reportId}/create', [PelaporanBulananController::class, 'createIsu'])->name('pelaporan-bulanan.rekap-isu-tl.create');
+        Route::post('/rekap-isu-tl/{reportId}/store', [PelaporanBulananController::class, 'storeIsu'])->name('pelaporan-bulanan.rekap-isu-tl.store');
+        Route::get('/rekap-isu-tl/{id}/edit', [PelaporanBulananController::class, 'editIsu'])->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.edit');
+        Route::put('/rekap-isu-tl/{id}', [PelaporanBulananController::class, 'updateIsu'])->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.update');
+        Route::delete('/rekap-isu-tl/{id}', [PelaporanBulananController::class, 'destroyIsu'])->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.destroy');
+        Route::get('/rekap-isu-tl/{reportId}', [PelaporanBulananController::class, 'rekapIsu'])->name('pelaporan-bulanan.rekap-isu-tl.show');
+
+        // FASE 2: Review Laporan (WP-RA-08-F)
+        Route::get('/review-laporan', [PelaporanBulananController::class, 'reviewLaporan'])->name('pelaporan-bulanan.review-laporan');
+        Route::get('/review-laporan/{reportId}/edit', [PelaporanBulananController::class, 'editReviewLaporan'])->name('pelaporan-bulanan.review-laporan.edit');
+        Route::post('/review-laporan/{reportId}', [PelaporanBulananController::class, 'updateReviewLaporan'])->name('pelaporan-bulanan.review-laporan.update');
+
+        // FASE 2: Koreksi & Approval (WP-RA-08-G)
+        Route::get('/koreksi-approval', [PelaporanBulananController::class, 'koreksiApproval'])->name('pelaporan-bulanan.koreksi-approval');
+        Route::get('/koreksi-approval/{reportId}/edit', [PelaporanBulananController::class, 'editKoreksiApproval'])->name('pelaporan-bulanan.koreksi-approval.edit');
+        Route::post('/koreksi-approval/{reportId}', [PelaporanBulananController::class, 'updateKoreksiApproval'])->name('pelaporan-bulanan.koreksi-approval.update');
+        Route::get('/koreksi-approval/{reportId}/resubmit', [PelaporanBulananController::class, 'resubmitKoreksiApproval'])->name('pelaporan-bulanan.koreksi-approval.resubmit');
+        Route::post('/koreksi-approval/{reportId}/resubmit', [PelaporanBulananController::class, 'postResubmitKoreksiApproval'])->name('pelaporan-bulanan.koreksi-approval.post-resubmit');
+
+        // FASE 2: Matriks Isu Signifikan (WP-RA-08-H)
+        Route::get('/isu-signifikan', [PelaporanBulananController::class, 'isuSignifikan'])->name('pelaporan-bulanan.isu-signifikan');
+        Route::post('/isu-signifikan/{reportId}/pull', [PelaporanBulananController::class, 'pullIsuSignifikanAction'])->name('pelaporan-bulanan.isu-signifikan.pull');
+        Route::get('/isu-signifikan/{id}/edit', [PelaporanBulananController::class, 'editIsuSignifikan'])->whereNumber('id')->name('pelaporan-bulanan.isu-signifikan.edit');
+        Route::put('/isu-signifikan/{id}', [PelaporanBulananController::class, 'updateIsuSignifikan'])->whereNumber('id')->name('pelaporan-bulanan.isu-signifikan.update');
+
+        // FASE 2: Distribusi, Arsip & Quality Score (WP-RA-08-I)
+        Route::get('/distribusi-quality', [PelaporanBulananController::class, 'distribusiQuality'])->name('pelaporan-bulanan.distribusi-quality');
+        Route::get('/distribusi-quality/{reportId}/edit', [PelaporanBulananController::class, 'editDistribusiQuality'])->name('pelaporan-bulanan.distribusi-quality.edit');
+        Route::post('/distribusi-quality/{reportId}', [PelaporanBulananController::class, 'updateDistribusiQuality'])->name('pelaporan-bulanan.distribusi-quality.update');
+
+        // FASE 3: Dashboard SOP 08 (WP-RA-08-L)
+        Route::get('/dashboard-sop08', [PelaporanBulananController::class, 'dashboard'])->name('pelaporan-bulanan.dashboard');
+
+        // FASE 3: Register Konsolidasi Laporan (WP-RA-08-J)
+        Route::get('/konsolidasi', [PelaporanBulananController::class, 'konsolidasi'])->name('pelaporan-bulanan.konsolidasi');
+
+        // FASE 3: Matriks Tren Isu & Temuan (WP-RA-08-K)
+        Route::get('/tren-isu', [PelaporanBulananController::class, 'trenIsu'])->name('pelaporan-bulanan.tren-isu');
+
+        // FASE 3: Register Feedback Konsolidasi & Perbaikan (WP-RA-08-M)
+        Route::get('/feedback', [PelaporanBulananController::class, 'feedback'])->name('pelaporan-bulanan.feedback');
+        Route::get('/feedback/create', [PelaporanBulananController::class, 'createFeedback'])->name('pelaporan-bulanan.feedback.create');
+        Route::post('/feedback', [PelaporanBulananController::class, 'storeFeedback'])->name('pelaporan-bulanan.feedback.store');
+        Route::get('/feedback/{id}/edit', [PelaporanBulananController::class, 'editFeedback'])->whereNumber('id')->name('pelaporan-bulanan.feedback.edit');
+        Route::put('/feedback/{id}', [PelaporanBulananController::class, 'updateFeedback'])->whereNumber('id')->name('pelaporan-bulanan.feedback.update');
+
+        // FASE 4: Roster Resident Auditor (WP-RA-08-N)
+        Route::get('/master-ra', [PelaporanBulananController::class, 'masterRa'])->name('pelaporan-bulanan.master-ra');
+        Route::get('/master-ra/create', [PelaporanBulananController::class, 'createMasterRa'])->name('pelaporan-bulanan.master-ra.create');
+        Route::post('/master-ra', [PelaporanBulananController::class, 'storeMasterRa'])->name('pelaporan-bulanan.master-ra.store');
+        Route::get('/master-ra/{id}/edit', [PelaporanBulananController::class, 'editMasterRa'])->whereNumber('id')->name('pelaporan-bulanan.master-ra.edit');
+        Route::put('/master-ra/{id}', [PelaporanBulananController::class, 'updateMasterRa'])->whereNumber('id')->name('pelaporan-bulanan.master-ra.update');
+
+        // FASE 4: Log Aktivitas Harian RA (WP-RA-08-O)
+        Route::get('/log-harian', [PelaporanBulananController::class, 'logHarian'])->name('pelaporan-bulanan.log-harian');
+        Route::get('/log-harian/create', [PelaporanBulananController::class, 'createLogHarian'])->name('pelaporan-bulanan.log-harian.create');
+        Route::post('/log-harian', [PelaporanBulananController::class, 'storeLogHarian'])->name('pelaporan-bulanan.log-harian.store');
+        Route::get('/log-harian/{id}/edit', [PelaporanBulananController::class, 'editLogHarian'])->whereNumber('id')->name('pelaporan-bulanan.log-harian.edit');
+        Route::put('/log-harian/{id}', [PelaporanBulananController::class, 'updateLogHarian'])->whereNumber('id')->name('pelaporan-bulanan.log-harian.update');
+        Route::post('/log-harian/batch-review', [PelaporanBulananController::class, 'batchReviewLogHarian'])->name('pelaporan-bulanan.log-harian.batch-review');
+        Route::post('/log-harian/pull', [PelaporanBulananController::class, 'pullLogHarian'])->name('pelaporan-bulanan.log-harian.pull');
+
+        // FASE 4: Kalender Pelaksanaan Tugas & Kinerja Bulanan RA (WP-RA-08-P)
+        Route::get('/kalender-kinerja', [PelaporanBulananController::class, 'kalenderKinerjaRa'])->name('pelaporan-bulanan.kalender-kinerja');
+
+        // Narasi Laporan
+        Route::get('/narasi/{reportId?}', [PelaporanBulananController::class, 'narasi'])->name('pelaporan-bulanan.narasi');
+        Route::post('/narasi/{reportId}', [PelaporanBulananController::class, 'updateNarasi'])->name('pelaporan-bulanan.narasi.update');
+
+        // View & Cetak Laporan Bulanan (WP-RA-08-C)
+        Route::get('/laporan-bulanan/{reportId?}', [PelaporanBulananController::class, 'laporanBulanan'])->name('pelaporan-bulanan.laporan-bulanan');
+
+        // Konfigurasi Master Parameter & Hari Libur (Admin)
+        Route::get('/master-parameter', [PelaporanBulananController::class, 'masterParameter'])->name('pelaporan-bulanan.master-parameter');
+        Route::post('/master-parameter', [PelaporanBulananController::class, 'updateMasterParameter'])->name('pelaporan-bulanan.master-parameter.update');
+        Route::post('/master-parameter/hari-libur', [PelaporanBulananController::class, 'storeHariLibur'])->name('pelaporan-bulanan.master-parameter.store-libur');
+        Route::delete('/master-parameter/hari-libur/{id}', [PelaporanBulananController::class, 'destroyHariLibur'])->whereNumber('id')->name('pelaporan-bulanan.master-parameter.destroy-libur');
+    });
 
 }); // Akhir Route::middleware('auth') (dibuka pada baris 60)

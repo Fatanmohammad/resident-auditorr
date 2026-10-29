@@ -70,38 +70,34 @@
     }
 </style>
 
-<div class="container-fluid px-3 px-md-4 py-3">
-    {{-- Breadcrumb & Back --}}
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-        <div class="d-flex align-items-center gap-2">
-            <a href="{{ route('risk-trigger.simpulan-tl.index') }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar Simpulan
-            </a>
-            <span class="text-muted">/</span>
-            <span class="fw-bold text-dark font-monospace" style="font-size: 0.95rem;">{{ $simpulan->visit_id }}</span>
+<!-- Header Harmonized SOP 06 -->
+<div class="rtv-header">
+    <div>
+        <div class="rtv-breadcrumb">
+            <a href="{{ route('dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a> &rsaquo;
+            <a href="{{ route('risk-trigger.simpulan-tl.index') }}">Klarifikasi &amp; Simpulan TL</a> &rsaquo;
+            <span class="text-dark fw-semibold">{{ $simpulan->visit_id }}</span>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            {{-- Status Review Badge --}}
-            @if($simpulan->status_review === 'FINAL')
-                <span class="badge-status badge-final"><i class="bi bi-lock-fill"></i> STATUS: FINAL</span>
-            @elseif($simpulan->status_review === 'REVISI')
-                <span class="badge-status badge-revisi"><i class="bi bi-arrow-repeat"></i> STATUS: REVISI</span>
-            @else
-                <span class="badge-status badge-draft"><i class="bi bi-pencil"></i> STATUS: DRAFT</span>
-            @endif
-
-            {{-- Status Closure Badge --}}
-            @if($simpulan->status_closure === 'CLOSED/DITERUSKAN')
-                <span class="badge-status badge-closed"><i class="bi bi-check-circle-fill"></i> CLOSURE: CLOSED</span>
-            @elseif($simpulan->status_closure === 'TL BELUM LENGKAP')
-                <span class="badge-status badge-tl"><i class="bi bi-exclamation-triangle-fill"></i> CLOSURE: TL BELUM LENGKAP</span>
-            @elseif($simpulan->status_closure === 'KLARIFIKASI BELUM SELESAI')
-                <span class="badge-status badge-klar"><i class="bi bi-hourglass-split"></i> CLOSURE: KLARIFIKASI OPEN</span>
-            @else
-                <span class="badge-status badge-open"><i class="bi bi-x-circle-fill"></i> CLOSURE: BELUM DITUTUP</span>
-            @endif
-        </div>
+        <h4 class="rtv-title">
+            <i class="bi bi-check2-circle text-primary"></i> Lembar Kerja Simpulan &amp; Tindak Lanjut
+            <span class="badge-wp">{{ $simpulan->visit_id }}</span>
+            <span class="badge-status {{ $simpulan->status_review === 'FINAL' ? 'badge-status-success' : ($simpulan->status_review === 'REVISI' ? 'badge-status-warning' : 'badge-status-neutral') }}">
+                STATUS: {{ $simpulan->status_review }}
+            </span>
+            <span class="badge-status {{ $simpulan->status_closure === 'CLOSED/DITERUSKAN' ? 'badge-status-success' : 'badge-status-warning' }}">
+                CLOSURE: {{ $simpulan->status_closure }}
+            </span>
+        </h4>
+        <p class="rtv-subtitle">
+            Pencatatan klarifikasi bukti, simpulan pengujian, rencana tindak lanjut, dan approval review.
+        </p>
     </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ route('risk-trigger.simpulan-tl.index') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-xs">
+            <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar Simpulan
+        </a>
+    </div>
+</div>
 
     {{-- Alert Notice jika Simpulan sudah FINAL & CLOSED untuk RA --}}
     @if($isLockedForRa)
@@ -763,5 +759,4 @@
             </form>
         </div>
     </div>
-</div>
 @endsection

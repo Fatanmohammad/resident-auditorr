@@ -44,28 +44,27 @@
     }
 </style>
 
-<!-- Page Header Harmonized -->
-<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <div class="page-header-title">
-        <div class="d-flex align-items-center gap-2 mb-1">
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1" style="font-size: 0.78rem; font-weight: 700;">
-                SOP 06 — FASE 2
-            </span>
-            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1" style="font-size: 0.78rem; font-weight: 600;">
-                <i class="bi bi-shield-check me-1"></i> KHUSUS REVIEWER / ADMIN
-            </span>
+<!-- Header Harmonized SOP 06 -->
+<div class="rtv-header">
+    <div>
+        <div class="rtv-breadcrumb">
+            <a href="{{ route('dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a> &rsaquo;
+            <a href="{{ route('risk-trigger.assignment') }}">Assignment &amp; Scope</a> &rsaquo;
+            <span class="text-dark fw-semibold">Penerbitan Penugasan</span>
         </div>
-        <h4 class="fw-bold mb-1" style="color: var(--bs-blue-dark); font-size: 1.25rem;">
-            <i class="bi bi-send-plus-fill text-primary me-2"></i>Penerbitan Penugasan Risk Trigger Visit
+        <h4 class="rtv-title">
+            <i class="bi bi-send-plus-fill text-primary"></i> Penerbitan Penugasan Risk Trigger Visit
+            <span class="badge-wp">FORM ASSIGNMENT</span>
+            <span class="badge-role-scope"><i class="bi bi-shield-check text-warning me-1"></i> Khusus Reviewer / Admin</span>
         </h4>
-        <p class="text-muted mb-0" style="font-size: 0.86rem;">
+        <p class="rtv-subtitle">
             Menerbitkan Assignment &amp; Scope dan menghasilkan Program Kerja Terarah secara otomatis dari Register Trigger terpilih.
         </p>
     </div>
 
     <div>
-        <a href="{{ route('risk-trigger.assignment') }}" class="btn btn-outline btn-sm d-flex align-items-center gap-2" style="font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px;">
-            <i class="bi bi-arrow-left"></i>
+        <a href="{{ route('risk-trigger.assignment') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-xs">
+            <i class="bi bi-arrow-left me-1"></i>
             <span>Kembali ke Daftar Assignment</span>
         </a>
     </div>

@@ -63,18 +63,25 @@
     $isFraud = strtoupper((string)$trigger->indikasi_fraud) === 'YA';
 @endphp
 
-<!-- Page Header -->
-<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-    <div class="page-header-title">
-        <h4 class="fw-bold mb-1" style="color: var(--bs-blue-dark); font-size: 1.3rem;">
-            <i class="bi bi-sliders text-warning me-2"></i>Override Keputusan Profesional RA / Reviewer
+<!-- Header Harmonized SOP 06 -->
+<div class="rtv-header">
+    <div>
+        <div class="rtv-breadcrumb">
+            <a href="{{ route('dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a> &rsaquo;
+            <a href="{{ route('risk-trigger.register') }}">Register Trigger</a> &rsaquo;
+            <a href="{{ route('risk-trigger.show', $trigger->id) }}">{{ $trigger->trigger_id }}</a> &rsaquo;
+            <span class="text-dark fw-semibold">Override Keputusan</span>
+        </div>
+        <h4 class="rtv-title">
+            <i class="bi bi-sliders text-warning"></i> Override Keputusan Profesional RA / Reviewer
+            <span class="badge-wp">{{ $trigger->trigger_id }}</span>
         </h4>
-        <p class="text-muted mb-0" style="font-size: 0.88rem;">
+        <p class="rtv-subtitle">
             Penetapan keputusan berdasarkan pertimbangan keahlian auditor terhadap trigger <strong>{{ $trigger->trigger_id }}</strong>
         </p>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <a href="{{ route('risk-trigger.show', $trigger->id) }}" class="btn btn-outline btn-sm" style="font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px;">
+        <a href="{{ route('risk-trigger.show', $trigger->id) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
             <i class="bi bi-arrow-left me-1"></i> Kembali ke Detail
         </a>
     </div>

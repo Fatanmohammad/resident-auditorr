@@ -170,6 +170,7 @@ class RiskTriggerController extends Controller
             'userCabangName' => $userCabangName,
             'standarAreas' => RegisterTrigger::$STANDAR_AREAS,
             'standarKeputusan' => RegisterTrigger::$STANDAR_KEPUTUSAN,
+            'standarSumber' => RegisterTrigger::$STANDAR_SUMBER,
         ]);
     }
 
@@ -198,6 +199,11 @@ class RiskTriggerController extends Controller
             }
             $units = Unit::orderBy('unit_code', 'asc')->get();
             $userCabangName = 'Semua Cabang (Global)';
+        }
+
+        // Filter Sumber
+        if ($request->filled('sumber')) {
+            $query->where('sumber', $request->sumber);
         }
 
         // Filter Area
@@ -237,17 +243,33 @@ class RiskTriggerController extends Controller
             });
         }
 
+        $baseQuery = RegisterTrigger::query();
+        if ($isRa) {
+            $baseQuery->byBranch($user);
+        } elseif ($request->filled('kode_unit')) {
+            $expanded = RiskTriggerService::expandUnitCode($request->kode_unit);
+            $baseQuery->whereIn('kode_unit', $expanded);
+        }
+        $stats = [
+            'total' => (clone $baseQuery)->count(),
+            'visit' => (clone $baseQuery)->where('keputusan_final', 'RISK TRIGGER VISIT')->count(),
+            'kritis' => (clone $baseQuery)->where('risk_level_reassessment', 'KRITIS')->count(),
+            'overdue' => (clone $baseQuery)->whereNotNull('sla_deadline')->where('sla_deadline', '<', now()->startOfDay())->where('status_workflow', '!=', 'SELESAI/DALAM TL')->count(),
+        ];
+
         $triggers = $query->latest('id')->paginate(25)->withQueryString();
         $alarms = $this->service->getActiveAlarms($user, $isRa ? null : $request->kode_unit);
 
         return view('risk_trigger.register', [
             'triggers' => $triggers,
             'alarms' => $alarms,
+            'stats' => $stats,
             'units' => $units,
             'isRa' => $isRa,
             'userCabangName' => $userCabangName,
             'standarAreas' => RegisterTrigger::$STANDAR_AREAS,
             'standarKeputusan' => RegisterTrigger::$STANDAR_KEPUTUSAN,
+            'standarSumber' => RegisterTrigger::$STANDAR_SUMBER,
         ]);
     }
 
@@ -302,7 +324,7 @@ class RiskTriggerController extends Controller
     }
 
     /**
-     * 1-Click Sync Trigger dari Daily Register & Offsite
+     * 1-Click Sync Trigger dari Daily Register, Offsite, dan Onsite
      */
     public function sync(Request $request)
     {
@@ -313,7 +335,7 @@ class RiskTriggerController extends Controller
         try {
             $stats = $this->service->syncAll($user, $filterKodeUnit);
             $targetLabel = $isRa ? "cabang penempatan Anda" : ($filterKodeUnit ? "cabang {$filterKodeUnit}" : "seluruh cabang");
-            $msg = "Sinkronisasi untuk {$targetLabel} berhasil! {$stats['total_new']} trigger baru ditarik (Daily Register: {$stats['daily_register']}, KKA Fisik: {$stats['physical_kka']}, Offsite: {$stats['offsite']}).";
+            $msg = "Sinkronisasi untuk {$targetLabel} berhasil! {$stats['total_new']} trigger baru ditarik, {$stats['total_updated']} trigger diperbarui (Daily Register: {$stats['daily_register']}, KKA Fisik: {$stats['physical_kka']}, Offsite: {$stats['offsite']}, Onsite: {$stats['onsite']}).";
             return redirect()->back()->with('success', $msg);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal menyinkronkan data trigger: ' . $e->getMessage());

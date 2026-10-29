@@ -15,19 +15,30 @@
                 <span class="notif-badge">{{ $headerNotifs->count() }}</span>
                 @endif
             </button>
-            <div class="notif-dropdown" id="notifDropdown">
-                <div class="notif-header">Notifikasi</div>
-                @forelse($headerNotifs as $n)
-                <a href="{{ $n['url'] }}" class="notif-item">
-                    <div class="notif-icon"><i class="bi {{ $n['icon'] }}"></i></div>
-                    <div class="notif-content">
-                        <div class="notif-text">{{ $n['text'] }}</div>
-                        <div class="notif-time">{{ $n['time'] }}</div>
-                    </div>
-                </a>
-                @empty
-                <div class="notif-empty"><i class="bi bi-bell-slash"></i><span>Tidak ada notifikasi</span></div>
-                @endforelse
+            <div class="notif-dropdown" id="notifDropdown" style="width: 360px;">
+                <div class="notif-header d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="bi bi-bell me-1.5 text-primary"></i> Notifikasi Sistem</span>
+                    @if($headerNotifs->count() > 0)
+                        <span class="badge bg-danger rounded-pill px-2 py-0.5" style="font-size: 0.7rem; font-weight: 700;">
+                            {{ $headerNotifs->count() }} Baru
+                        </span>
+                    @endif
+                </div>
+                <div style="max-height: 380px; overflow-y: auto;">
+                    @forelse($headerNotifs as $n)
+                    <a href="{{ $n['url'] }}" class="notif-item">
+                        <div class="notif-icon" style="{{ str_contains($n['icon'], 'text-danger') ? 'background: #fee2e2; color: #dc2626;' : '' }}">
+                            <i class="bi {{ $n['icon'] }}"></i>
+                        </div>
+                        <div class="notif-content">
+                            <div class="notif-text fw-semibold" style="font-size: 0.82rem;">{{ $n['text'] }}</div>
+                            <div class="notif-time text-muted" style="font-size: 0.72rem;">{{ $n['time'] }}</div>
+                        </div>
+                    </a>
+                    @empty
+                    <div class="notif-empty"><i class="bi bi-bell-slash"></i><span>Tidak ada notifikasi saat ini</span></div>
+                    @endforelse
+                </div>
             </div>
         </div>
 
