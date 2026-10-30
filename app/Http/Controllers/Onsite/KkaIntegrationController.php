@@ -14,11 +14,11 @@ class KkaIntegrationController extends Controller
         // 11 Area KKA Sesuai Sheet KKA_Control & KKA_Integrasi Excel SOP 04.1
         $definitions = [
             ['no' => 1, 'area' => 'Teller / Kas', 'sheet' => 'KKA_Teller_Kas', 'table' => 'onsite_kka_teller_kas', 'route' => 'onsite.kka.teller_kas.index'],
-            ['no' => 2, 'area' => 'DPK & Layanan Nasabah', 'sheet' => 'KKA_DPK_Layanan', 'table' => 'onsite_kka_dpk_layanan', 'route' => 'onsite.kka.dpk.index'],
-            ['no' => 3, 'area' => 'Kredit', 'sheet' => 'KKA_Kredit', 'table' => 'onsite_kka_kredit', 'route' => 'onsite.kka.kredit.index'],
-            ['no' => 4, 'area' => 'Biaya / Beban', 'sheet' => 'KKA_Biaya_Beban', 'table' => 'onsite_kka_biaya_beban', 'route' => 'onsite.kka.biaya.index'],
-            ['no' => 5, 'area' => 'Kartu ATM', 'sheet' => 'KKA_Kartu_ATM', 'table' => 'onsite_kka_kartu_atm', 'route' => 'onsite.kka.atm.index'],
-            ['no' => 6, 'area' => 'Pengaduan Nasabah', 'sheet' => 'KKA_Pengaduan', 'table' => 'onsite_kka_pengaduan', 'route' => 'onsite.kka.pengaduan.index'],
+            ['no' => 2, 'area' => 'DPK & Layanan Nasabah', 'sheet' => 'KKA_DPK_Layanan', 'table' => 'onsite_kka_dpks', 'route' => 'onsite.kka.dpk.index'],
+            ['no' => 3, 'area' => 'Kredit', 'sheet' => 'KKA_Kredit', 'table' => 'onsite_kka_kredits', 'route' => 'onsite.kka.kredit.index'],
+            ['no' => 4, 'area' => 'Biaya / Beban', 'sheet' => 'KKA_Biaya_Beban', 'table' => 'onsite_kka_biayas', 'route' => 'onsite.kka.biaya.index'],
+            ['no' => 5, 'area' => 'Kartu ATM', 'sheet' => 'KKA_Kartu_ATM', 'table' => 'onsite_kka_atms', 'route' => 'onsite.kka.atm.index'],
+            ['no' => 6, 'area' => 'Pengaduan Nasabah', 'sheet' => 'KKA_Pengaduan', 'table' => 'onsite_kka_pengaduans', 'route' => 'onsite.kka.pengaduan.index'],
             ['no' => 7, 'area' => 'Cash Opname Khasanah & ATM', 'sheet' => 'KKA_Cash_Opname', 'table' => 'onsite_cash_opnames', 'route' => 'onsite.cash_opname.create'],
             ['no' => 8, 'area' => 'Observasi Lingkungan & Gedung', 'sheet' => 'KKA_Observasi_Lingkungan', 'table' => 'onsite_observasis', 'route' => 'onsite.observasi.create'],
             ['no' => 9, 'area' => 'Rekonsiliasi Stok Cek & BG', 'sheet' => 'KKA_Rekon_Stok_Cek_BG', 'table' => 'onsite_rekon_cek_bgs', 'route' => 'onsite.rekon.cekbg.create'],

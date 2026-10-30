@@ -12,14 +12,86 @@ class TellerKasController extends Controller
     /**
      * Tampilkan halaman KKA Teller & Kas untuk kunjungan onsite tertentu
      */
-    public function index(OnsiteVisit $visit)
+    public function index(Request $request, OnsiteVisit $visit)
     {
-        $findings = OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id)
-            ->orderBy('prioritas')
-            ->orderBy('tgl_tx')
-            ->paginate(25);
+        // Auto-sync jika OnsiteKkaFinding ada data tapi OnsiteKkaTellerKas masih kosong
+        if (OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $findingsKka = \App\Models\Onsite\OnsiteKkaFinding::where('onsite_visit_id', $visit->id)->get();
+            if ($findingsKka->isNotEmpty()) {
+                $syncData = [];
+                foreach ($findingsKka as $f) {
+                    $syncData[] = [
+                        'onsite_visit_id'       => $visit->id,
+                        'onsite_population_id'  => $f->onsite_population_id,
+                        'sample_id'             => $f->sample_id,
+                        'tgl_tx'                => $f->tgl_tx,
+                        'no_arsip'              => $f->no_arsip,
+                        'ket_tx'                => $f->ket_tx,
+                        'jumlah_tx'             => $f->jumlah_tx,
+                        'kd_user'               => $f->kd_user,
+                        'jenis_sampling'        => $f->jenis_sampling,
+                        'prioritas'             => $f->prioritas ?? 5,
+                        'alasan_sampling'       => $f->alasan_sampling,
+                        'status_uji'            => $f->hasil_uji ? 'Ada Exception' : 'Belum Diuji',
+                        'risk_level'            => $f->risk_level ?? 'Low',
+                        'status_review'         => $f->status_review ?? 'Belum Direview',
+                        'simpulan_ra'           => $f->simpulan_ra,
+                        'created_at'            => now(),
+                        'updated_at'            => now(),
+                    ];
+                }
+                foreach (array_chunk($syncData, 500) as $chunk) {
+                    OnsiteKkaTellerKas::insert($chunk);
+                }
+            }
+        }
 
-        return view('onsite.teller_kas.index', compact('visit', 'findings'));
+        $query = OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id);
+
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('sample_id', 'like', "%{$q}%")
+                    ->orWhere('ket_tx', 'like', "%{$q}%")
+                    ->orWhere('kd_user', 'like', "%{$q}%")
+                    ->orWhere('no_arsip', 'like', "%{$q}%");
+            });
+        }
+
+        if ($request->filled('jenis_sampling')) {
+            $query->where('jenis_sampling', $request->jenis_sampling);
+        }
+
+        if ($request->filled('status_uji')) {
+            $query->where('status_uji', $request->status_uji);
+        }
+
+        if ($request->filled('risk_level')) {
+            $query->where('risk_level', $request->risk_level);
+        }
+
+        if ($request->filled('status_review')) {
+            $query->where('status_review', $request->status_review);
+        }
+
+        $allBase = OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id);
+        $summary = [
+            'total'       => (clone $allBase)->count(),
+            'sesuai'      => (clone $allBase)->where('status_uji', 'Sesuai')->count(),
+            'exception'   => (clone $allBase)->where('status_uji', 'Ada Exception')->count(),
+            'high_risk'   => (clone $allBase)->whereIn('risk_level', ['High', 'Kritis'])->count(),
+            'approved'    => (clone $allBase)->where('status_review', 'Approved')->count(),
+            'belum_diuji' => (clone $allBase)->where(function($q) {
+                $q->whereNull('status_uji')->orWhere('status_uji', 'Belum Diuji')->orWhere('status_uji', '');
+            })->count(),
+        ];
+
+        $findings = $query->orderBy('prioritas')
+            ->orderBy('tgl_tx', 'desc')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('onsite.teller_kas.index', compact('visit', 'findings', 'summary'));
     }
 
     /**

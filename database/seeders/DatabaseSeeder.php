@@ -100,6 +100,8 @@ class DatabaseSeeder extends Seeder
             SamplingPolicySeeder::class,
             // Master Parameter SOP 06 Risk Trigger Visit
             RiskTriggerMasterParameterSeeder::class,
+            // Starter Master Data SOP 09 Pemeriksaan Awal Fraud & Chain of Custody
+            Sop09IndikasiSeeder::class,
         ]);
     }
 }

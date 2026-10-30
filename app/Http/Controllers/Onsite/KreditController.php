@@ -9,19 +9,59 @@ use Illuminate\Http\Request;
 
 class KreditController extends Controller
 {
-    public function index(OnsiteVisit $visit)
+    public function index(Request $request, OnsiteVisit $visit)
     {
-        $findings = OnsiteKkaKredit::where('onsite_visit_id', $visit->id)
-            ->orderBy('prioritas')
-            ->orderBy('tgl_akad')
-            ->paginate(25);
+        $query = OnsiteKkaKredit::where('onsite_visit_id', $visit->id);
 
-        return view('onsite.kredit.index', compact('visit', 'findings'));
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('sample_id', 'like', "%{$q}%")
+                    ->orWhere('no_rekening', 'like', "%{$q}%")
+                    ->orWhere('nama_debitur', 'like', "%{$q}%")
+                    ->orWhere('alasan_sampling', 'like', "%{$q}%");
+            });
+        }
+
+        if ($request->filled('jenis_sampling')) {
+            $query->where('jenis_sampling', $request->jenis_sampling);
+        }
+
+        if ($request->filled('status_uji')) {
+            $query->where('status_uji', $request->status_uji);
+        }
+
+        if ($request->filled('risk_level')) {
+            $query->where('risk_level', $request->risk_level);
+        }
+
+        if ($request->filled('status_review')) {
+            $query->where('status_review', $request->status_review);
+        }
+
+        $allBase = OnsiteKkaKredit::where('onsite_visit_id', $visit->id);
+        $summary = [
+            'total'       => (clone $allBase)->count(),
+            'sesuai'      => (clone $allBase)->where('status_uji', 'Sesuai')->count(),
+            'exception'   => (clone $allBase)->where('status_uji', 'Ada Exception')->count(),
+            'high_risk'   => (clone $allBase)->whereIn('risk_level', ['High', 'Kritis'])->count(),
+            'approved'    => (clone $allBase)->where('status_review', 'Approved')->count(),
+            'belum_diuji' => (clone $allBase)->where(function($q) {
+                $q->whereNull('status_uji')->orWhere('status_uji', 'Belum Diuji')->orWhere('status_uji', '');
+            })->count(),
+        ];
+
+        $findings = $query->orderBy('prioritas')
+            ->orderBy('tgl_akad', 'desc')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('onsite.kredit.index', compact('visit', 'findings', 'summary'));
     }
 
     public function update(Request $request, OnsiteKkaKredit $item)
     {
-        if ($item->status_review === 'Approved') {
+        if ($item->status_review === 'Approved' && !in_array(strtolower(auth()->user()->role ?? ''), ['admin', 'kabag_ra', 'kadiv_skai'])) {
             return response()->json([
                 'status' => 'error', 
                 'message' => 'KKA Kredit sudah Approved dan tidak dapat diubah.'
@@ -43,6 +83,8 @@ class KreditController extends Controller
             'skor_kemungkinan'             => 'required|integer|min:1|max:5',
             'critical_trigger'             => 'required|in:Ya,Tidak',
             'simpulan_ra'                  => 'nullable|string',
+            'status_review'                => 'nullable|string',
+            'catatan_reviewer'             => 'nullable|string',
         ]);
 
         $attributes = [
@@ -67,7 +109,7 @@ class KreditController extends Controller
             $riskLevel = 'Moderate';
         }
 
-        $item->update([
+        $dataUpdate = [
             'attr_analisa_kelayakan'       => $request->attr_analisa_kelayakan,
             'attr_otorisasi_kredit'        => $request->attr_otorisasi_kredit,
             'attr_keabsahan_agunan'        => $request->attr_keabsahan_agunan,
@@ -90,7 +132,16 @@ class KreditController extends Controller
             'risk_level'                   => $riskLevel,
             'critical_trigger'             => $request->critical_trigger,
             'simpulan_ra'                  => $request->simpulan_ra,
-        ]);
+        ];
+
+        if ($request->filled('status_review')) {
+            $dataUpdate['status_review'] = $request->status_review;
+        }
+        if ($request->has('catatan_reviewer')) {
+            $dataUpdate['catatan_reviewer'] = $request->catatan_reviewer;
+        }
+
+        $item->update($dataUpdate);
 
         return response()->json([
             'status' => 'success',

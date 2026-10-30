@@ -145,12 +145,23 @@
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small">Kode Unit Kerja</label>
-                        <input type="text" name="kode_unit" class="form-control form-control-sm" placeholder="Misal: 001 / KC-PLU" required>
+                        <label class="form-label fw-bold small">Pilih Unit / Cabang Bank Sulteng</label>
+                        <select id="select_unit_register" class="form-select form-select-sm" onchange="var opt = this.options[this.selectedIndex]; if(this.value){ document.getElementById('reg_kode_unit').value = this.value; document.getElementById('reg_nama_unit').value = opt.getAttribute('data-nama'); }">
+                            <option value="">-- Pilih dari Daftar Unit --</option>
+                            @foreach($units ?? [] as $u)
+                                <option value="{{ $u->kode_unit }}" data-nama="{{ $u->nama_unit }}">
+                                    [{{ $u->kode_unit }}] {{ $u->nama_unit }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold small">Nama Unit / Cabang</label>
-                        <input type="text" name="nama_unit" class="form-control form-control-sm" placeholder="Misal: Kantor Cabang Palu" required>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small">Kode Unit Kerja <span class="text-danger">*</span></label>
+                        <input type="text" name="kode_unit" id="reg_kode_unit" class="form-control form-control-sm" placeholder="Misal: 501" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small">Nama Unit / Cabang <span class="text-danger">*</span></label>
+                        <input type="text" name="nama_unit" id="reg_nama_unit" class="form-control form-control-sm" placeholder="Misal: KCP Bahomotefe" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-bold small">Area / Bagian Terindikasi</label>

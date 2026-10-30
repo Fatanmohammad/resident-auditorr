@@ -48,6 +48,7 @@ class CbsOnsiteParser
         // Hapus data lama untuk kunjungan ini (delete-before-insert)
         OnsitePopulation::where('onsite_visit_id', $visit->id)->delete();
         OnsiteKkaFinding::where('onsite_visit_id', $visit->id)->delete();
+        \App\Models\Onsite\OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id)->delete();
 
         $rows = [];
         while (($row = fgetcsv($file, 0, $delimiter)) !== false) {
@@ -210,6 +211,32 @@ class CbsOnsiteParser
 
         foreach (array_chunk($kkaInsert, 500) as $chunk) {
             OnsiteKkaFinding::insert($chunk);
+        }
+
+        // Sinkronisasi otomatis ke KKA Teller & Kas
+        $tellerInsert = [];
+        foreach ($kkaInsert as $item) {
+            $tellerInsert[] = [
+                'onsite_visit_id'       => $item['onsite_visit_id'],
+                'onsite_population_id'  => $item['onsite_population_id'],
+                'sample_id'             => $item['sample_id'],
+                'tgl_tx'                => $item['tgl_tx'],
+                'no_arsip'              => $item['no_arsip'],
+                'ket_tx'                => $item['ket_tx'],
+                'jumlah_tx'             => $item['jumlah_tx'],
+                'kd_user'               => $item['kd_user'],
+                'jenis_sampling'        => $item['jenis_sampling'],
+                'prioritas'             => $item['prioritas'],
+                'alasan_sampling'       => $item['alasan_sampling'],
+                'status_uji'            => 'Belum Diuji',
+                'risk_level'            => 'Low',
+                'status_review'         => 'Belum Direview',
+                'created_at'            => now(),
+                'updated_at'            => now(),
+            ];
+        }
+        foreach (array_chunk($tellerInsert, 500) as $chunk) {
+            \App\Models\Onsite\OnsiteKkaTellerKas::insert($chunk);
         }
 
         $totalSampel = count($kkaInsert);
