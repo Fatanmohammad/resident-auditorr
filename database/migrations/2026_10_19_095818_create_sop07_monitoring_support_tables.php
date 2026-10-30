@@ -27,6 +27,7 @@ return new class extends Migration
             $table->date('target_berlaku')->nullable();
             $table->date('tanggal_komunikasi')->nullable();
             $table->string('jenis_komunikasi')->nullable();
+            $table->string('saluran')->nullable(); // Ditambahkan untuk menyamakan dengan controller
             $table->string('timing')->nullable();
             $table->string('media')->nullable();
             $table->string('penerima')->nullable();
@@ -34,6 +35,10 @@ return new class extends Migration
             $table->text('respons_auditee')->nullable();
             $table->string('status_auditee')->nullable();
             $table->string('bukti_komunikasi')->nullable();
+            $table->string('bukti_diterima')->default('TIDAK')->nullable(); // Ditambahkan untuk controller storeLogBukti
+            $table->string('referensi_bukti')->nullable(); // Ditambahkan untuk controller storeLogBukti
+            $table->text('ringkasan_komunikasi')->nullable(); // Ditambahkan untuk controller storeLogBukti
+            $table->string('status_log')->default('SUBMITTED')->nullable(); // Ditambahkan untuk controller storeLogBukti
             $table->string('follow_up_berikut')->nullable();
             $table->string('ketepatan')->nullable();
             $table->string('ra_pemantau')->nullable();
@@ -44,7 +49,8 @@ return new class extends Migration
         // 3. KKA Verifikasi Bukti (WP-RA-07-E)
         Schema::create('sop07_kka_verifikasis', function (Blueprint $table) {
             $table->id();
-            $table->string('kka_id')->unique();
+            $table->string('kka_id')->unique()->nullable();
+            $table->string('no_kka')->nullable(); // Ditambahkan untuk controller storeKkaVerifikasi
             $table->string('tl_id');
             $table->date('tanggal_bukti_diterima')->nullable();
             $table->date('tanggal_verifikasi')->nullable();
@@ -61,13 +67,16 @@ return new class extends Migration
             $table->string('dapat_diuji')->nullable();
             $table->integer('populasi_terdampak')->nullable();
             $table->integer('objek_diuji')->nullable();
-            $table->decimal('coverage', 5, 2)->nullable();
+            $table->string('coverage')->nullable(); // Diubah jadi string untuk menampung '100.0%' dari controller
             $table->string('efektif_setelah_koreksi')->nullable();
+            $table->string('efektif')->nullable(); // Ditambahkan untuk controller storeKkaVerifikasi
             $table->text('exception')->nullable();
             $table->text('analisis_ra')->nullable();
             $table->string('hasil_verifikasi')->nullable();
             $table->string('bukti_tambahan_diperlukan')->nullable();
+            $table->string('bukti_tambahan')->nullable(); // Ditambahkan untuk controller storeKkaVerifikasi
             $table->string('perlu_verifikasi_lapangan')->nullable();
+            $table->string('perlu_lapangan')->nullable(); // Ditambahkan untuk controller storeKkaVerifikasi
             $table->string('usulan_status')->nullable();
             $table->string('ra_pemantau')->nullable();
             $table->string('reviewer')->nullable();

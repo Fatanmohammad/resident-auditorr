@@ -1,18 +1,18 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid p-0">
+<div class="container-fluid p-0 position-relative" style="z-index: 10;">
     <!-- Header Tools (Diberi Action Z-Index agar bisa diklik) -->
-    <div class="d-flex justify-content-between align-items-center mb-4 action-header-tools">
+    <div class="d-flex justify-content-between align-items-center mb-4 action-header-tools" style="position: relative; z-index: 1050;">
         <div>
             <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-table me-2"></i> WP-RA-07-B | REGISTER TEMUAN DAN TINDAK LANJUT</h4>
             <p class="text-muted mb-0" style="font-size: 13px;">Daftar master komprehensif 132 kolom temuan audit, rekomendasi, komitmen, dan status tindak lanjut</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('monitoring.export_excel', 'register_tl') }}" class="btn btn-sm btn-outline-success shadow-sm fw-semibold">
+            <a href="{{ route('monitoring.export_excel', 'register_tl') }}" class="btn btn-sm btn-outline-success shadow-sm fw-semibold" style="position: relative; z-index: 1060;">
                 <i class="bi bi-file-earmark-excel me-1"></i> Export Master Excel
             </a>
-            <button type="button" class="btn btn-sm btn-primary shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalTambahRegister">
+            <button type="button" class="btn btn-sm btn-primary shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalTambahRegister" style="position: relative; z-index: 1060;">
                 <i class="bi bi-plus-circle me-1"></i> Tambah Item TL
             </button>
         </div>
@@ -28,7 +28,7 @@
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height: 680px; overflow-y: auto;">
                 <table class="table table-bordered table-hover align-middle mb-0 text-nowrap" style="font-size: 11px;">
-                    <thead class="table-dark text-center sticky-top">
+                    <thead class="table-dark text-center sticky-top" style="z-index: 5;">
                         <tr>
                             <!-- 1-10 -->
                             <th class="py-2">No</th>
@@ -369,4 +369,54 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Tambah Item TL -->
+<div class="modal fade" id="modalTambahRegister" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i> Form Tambah Item TL</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('monitoring.register_tl.store') }}" method="POST">
+                @csrf
+                <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">TL ID</label>
+                            <input type="text" name="tl_id" class="form-control" required placeholder="TL-20261001-0001">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Nomor Laporan</label>
+                            <input type="text" name="no_laporan" class="form-control" required placeholder="No. Laporan Hasil Audit">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Sumber TL</label>
+                            <input type="text" name="sumber_tl" class="form-control" required placeholder="Contoh: Audit Operasional">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Nama Unit Sumber</label>
+                            <input type="text" name="nama_unit_sumber" class="form-control" required placeholder="Unit / Kantor Auditee">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-3">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal { z-index: 999999 !important; }
+    .modal-backdrop { z-index: 999990 !important; background-color: rgba(0,0,0,0.5) !important; }
+</style>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const modalEl = document.getElementById('modalTambahRegister');
+        if (modalEl) { document.body.appendChild(modalEl); }
+    });
+</script>
 @endsection

@@ -12,13 +12,13 @@ return new class extends Migration
             $table->id();
             $table->string('tl_id')->unique(); // Contoh: TL-2026-001
             $table->string('sumber_tl')->default('SKAI'); // Regulator, SKAI, Auditor Eksternal, Resident Auditor, Manajemen/Komite
-            $table->string('kode_unit');
-            $table->string('nama_unit');
-            $table->string('nomor_laporan');
-            $table->date('tanggal_laporan');
-            $table->text('rekomendasi_temuan');
-            $table->text('komitmen_auditee');
-            $table->date('target_penyelesaian');
+            $table->string('kode_unit')->nullable();
+            $table->string('nama_unit')->nullable();
+            $table->string('nomor_laporan')->nullable();
+            $table->date('tanggal_laporan')->nullable();
+            $table->text('rekomendasi_temuan')->nullable();
+            $table->text('komitmen_auditee')->nullable();
+            $table->date('target_penyelesaian')->nullable();
             $table->string('prioritas')->default('MEDIUM'); // LOW, MEDIUM, HIGH
             $table->string('pic_auditee')->nullable();
             

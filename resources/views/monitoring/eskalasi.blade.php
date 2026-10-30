@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-4 px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container-fluid py-4 px-4 position-relative" style="z-index: 10;">
+    <div class="d-flex justify-content-between align-items-center mb-4" style="position: relative; z-index: 1050;">
         <div>
             <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-arrow-up-right-circle me-2"></i> WP-RA-07-G | REGISTER PERPANJANGAN, ESKALASI DAN REOPENING</h4>
             <p class="text-muted mb-0" style="font-size: 13px;">Riwayat overdue tidak dihapus oleh perpanjangan; keputusan dan bukti persetujuan wajib dapat ditelusuri</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('monitoring.export_excel', 'eskalasi') }}" class="btn btn-sm btn-outline-success shadow-sm fw-semibold">
+            <a href="{{ route('monitoring.export_excel', 'eskalasi') }}" class="btn btn-sm btn-outline-success shadow-sm fw-semibold" style="position: relative; z-index: 1060;">
                 <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
             </a>
-            <button type="button" class="btn btn-sm btn-primary shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalEskalasi">
+            <button type="button" class="btn btn-sm btn-primary shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalEskalasi" style="position: relative; z-index: 1060;">
                 <i class="bi bi-plus-circle me-1"></i> Tambah Aksi Eskalasi
             </button>
         </div>
@@ -23,7 +23,7 @@
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height: 680px; overflow-y: auto;">
                 <table class="table table-bordered table-hover align-middle mb-0 text-nowrap" style="font-size: 11.5px;">
-                    <thead class="table-dark text-center sticky-top" style="z-index: 10;">
+                    <thead class="table-dark text-center sticky-top" style="z-index: 5;">
                         <tr>
                             <th class="py-3">1. Action ID</th>
                             <th class="py-3">2. TL ID</th>
@@ -81,7 +81,7 @@
             </div>
             <form action="{{ route('monitoring.eskalasi.store') }}" method="POST">
                 @csrf
-                <div class="modal-body p-4">
+                <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold small">TL ID</label>
@@ -117,4 +117,15 @@
         </div>
     </div>
 </div>
+
+<style>
+    .modal { z-index: 999999 !important; }
+    .modal-backdrop { z-index: 999990 !important; background-color: rgba(0,0,0,0.5) !important; }
+</style>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const modalEl = document.getElementById('modalEskalasi');
+        if (modalEl) { document.body.appendChild(modalEl); }
+    });
+</script>
 @endsection

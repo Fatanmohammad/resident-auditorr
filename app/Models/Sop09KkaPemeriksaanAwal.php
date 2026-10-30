@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Sop09KkaPemeriksaan extends Model
+class Sop09KkaPemeriksaanAwal extends Model
 {
     use HasFactory;
 

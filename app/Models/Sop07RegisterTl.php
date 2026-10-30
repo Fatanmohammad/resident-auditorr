@@ -19,6 +19,8 @@ class Sop07RegisterTl extends Model
         'tanggal_temuan',
         'kode_unit',
         'nama_unit_sumber',
+        'nama_unit',         // Ditambahkan agar tidak diblokir Laravel
+        'unit_kantor',       // Ditambahkan untuk kompatibilitas
         'area',
         'uraian_temuan',
         'rencana_aksi',

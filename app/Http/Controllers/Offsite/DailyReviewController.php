@@ -8,7 +8,7 @@ use App\Http\Requests\Offsite\UpdateKkaRaRequest;
 use App\Http\Requests\Offsite\UpdateKkaAdminRequest;
 use Illuminate\Http\Request;
 
-class KkaController extends Controller
+class DailyReviewController extends Controller
 {
     /**
      * HANYA untuk menampilkan halaman UI (Blade)

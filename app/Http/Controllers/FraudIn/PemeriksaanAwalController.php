@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Sop09RegisterIndikasi;
 use App\Models\Sop09Triase;
 use App\Models\Sop09ChainOfCustody;
-use App\Models\Sop09KkaPemeriksaan;
+use App\Models\Sop09KkaPemeriksaanAwal;
 use App\Models\Sop09KeputusanEskalasi;
 
 class PemeriksaanAwalController extends Controller
@@ -20,7 +20,7 @@ class PemeriksaanAwalController extends Controller
         $totalRegister = Sop09RegisterIndikasi::count();
         $totalTriase = Sop09Triase::count();
         $totalCustody = Sop09ChainOfCustody::count();
-        $totalKka = Sop09KkaPemeriksaan::count();
+        $totalKka = Sop09KkaPemeriksaanAwal::count();
         $totalEskalasi = Sop09KeputusanEskalasi::count();
 
         return view('pemeriksaan_awal.index', compact(
@@ -131,7 +131,7 @@ class PemeriksaanAwalController extends Controller
     public function kka()
     {
         $indikasis = Sop09RegisterIndikasi::orderBy('id', 'desc')->get();
-        $kkas = Sop09KkaPemeriksaan::orderBy('id', 'desc')->get();
+        $kkas = Sop09KkaPemeriksaanAwal::orderBy('id', 'desc')->get();
         return view('pemeriksaan_awal.kka', compact('indikasis', 'kkas'));
     }
 
@@ -150,7 +150,7 @@ class PemeriksaanAwalController extends Controller
         $data['rasio_anomali'] = round(($data['jumlah_anomali'] / $populasi) * 100, 2);
         $data['selisih'] = abs(($data['nominal_sistem'] ?? 0) - ($data['nominal_dokumen_bukti'] ?? 0));
 
-        Sop09KkaPemeriksaan::create($data);
+        Sop09KkaPemeriksaanAwal::create($data);
 
         return redirect()->route('pemeriksaan_awal.kka')->with('success', 'Kertas kerja KKA pemeriksaan berhasil disimpan.');
     }

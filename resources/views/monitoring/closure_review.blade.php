@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-4 px-4">
+<div class="container-fluid py-3 px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-check2-circle me-2"></i> WP-RA-07-F | CLOSURE REVIEW DAN KEPUTUSAN FINAL</h4>
@@ -23,9 +23,9 @@
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height: 680px; overflow-y: auto;">
                 <table class="table table-bordered table-hover align-middle mb-0 text-nowrap" style="font-size: 11.5px;">
-                    <thead class="table-dark text-center sticky-top" style="z-index: 10;">
+                    <thead class="table-dark text-center sticky-top" style="z-index: 5;">
                         <tr>
-                            <th class="py-3">1. Closure Review ID</th>
+                            <th class="py-3">Closure Review ID</th>
                             <th class="py-3">2. TL ID</th>
                             <th class="py-3">3. Unit / Kantor</th>
                             <th class="py-3">4. Sumber TL</th>
@@ -72,9 +72,32 @@
     </div>
 </div>
 
+<!-- CSS Mutlak agar Modal Keluar dari Batasan Kontainer Layout -->
+<style>
+    body > .modal {
+        z-index: 999999 !important;
+    }
+    .modal-backdrop {
+        z-index: 999990 !important;
+    }
+</style>
+
+<!-- Script Otomatis Pindahkan Modal ke Body Saat Dibuka -->
+@push('scripts')
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var myModalEl = document.getElementById('modalAjukanClosure');
+        if(myModalEl) {
+            document.body.appendChild(myModalEl);
+        }
+    });
+</script>
+@endpush
+
+<!-- Modal Pengajuan Closure Review -->
 <div class="modal fade" id="modalAjukanClosure" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-dark text-white">
                 <h5 class="modal-title fw-bold"><i class="bi bi-check2-circle me-2"></i> Form Pengajuan Closure Review</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>

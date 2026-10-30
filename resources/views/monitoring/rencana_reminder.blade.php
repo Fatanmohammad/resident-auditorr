@@ -1,14 +1,16 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid py-3 position-relative" style="z-index: 10;">
+    <div class="d-flex justify-content-between align-items-center mb-3" style="position: relative; z-index: 1050;">
         <div>
             <h4 class="fw-bold mb-0 text-primary">WP SOP 07 | RENCANA MONITORING, REMINDER DAN PRIORITAS</h4>
             <small class="text-muted">Dibentuk otomatis dari Master Register TL; RA tidak perlu menyalin identitas atau menghitung jadwal</small>
         </div>
         <div>
-            <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Export Excel</button>
+            <a href="{{ route('monitoring.export_excel', 'rencana_reminder') }}" class="btn btn-sm btn-outline-success shadow-sm fw-semibold" style="position: relative; z-index: 1060;">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+            </a>
         </div>
     </div>
 
@@ -28,7 +30,7 @@
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">
                 <table class="table table-bordered table-hover align-middle mb-0 text-nowrap" style="font-size: 11px;">
-                    <thead class="bg-dark text-white text-center sticky-top">
+                    <thead class="bg-dark text-white text-center sticky-top" style="z-index: 5;">
                         <tr>
                             <th>TL ID</th>
                             <th>Unit/Kantor</th>
@@ -64,14 +66,17 @@
                             <td class="text-center">{{ $item->reminder_terakhir ?? '-' }}</td>
                             <td class="text-center"><span class="badge bg-secondary">{{ $item->status_reminder }}</span></td>
                             <td class="text-center fw-bold text-primary">{{ $item->tindakan_berikut }}</td>
-                            <td class="text-wrap">{{ $item->bukti_diharapkan }}</td>
-                            <td>{{ $item->closure_authority }}</td>
-                            <td>{{ $item->ra_pemantau }}</td>
-                            <td>{{ $item->reviewer }}</td>
+                            <td>{{ $item->bukti_diharapkan ?? '-' }}</td>
+                            <td>{{ $item->closure_authority ?? '-' }}</td>
+                            <td>{{ $item->ra_pemantau ?? '-' }}</td>
+                            <td>{{ $item->reviewer ?? '-' }}</td>
                         </tr>
                         @empty
-                        <tr class="table-light text-center">
-                            <td colspan="16" class="text-muted py-3">Belum ada data rencana monitoring.</td>
+                        <tr>
+                            <td colspan="16" class="text-center text-muted py-5 fw-semibold">
+                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                Belum ada data Rencana & Reminder.
+                            </td>
                         </tr>
                         @endforelse
                     </tbody>
