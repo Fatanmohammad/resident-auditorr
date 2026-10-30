@@ -59,13 +59,48 @@ class PemeriksaanAwalController extends Controller
     /**
      * WP-RA-09-A: Register Indikasi
      */
-    public function register()
+    public function register(Request $request)
     {
         $this->ensureStarterDataIfEmpty();
 
-        $indikasis = Sop09RegisterIndikasi::orderBy('id', 'desc')->get();
+        $query = Sop09RegisterIndikasi::orderBy('id', 'desc');
+
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function($w) use ($q) {
+                $w->where('indikasi_id', 'like', "%{$q}%")
+                  ->orWhere('nama_unit', 'like', "%{$q}%")
+                  ->orWhere('kode_unit', 'like', "%{$q}%")
+                  ->orWhere('red_flag_utama', 'like', "%{$q}%")
+                  ->orWhere('area', 'like', "%{$q}%")
+                  ->orWhere('sumber_indikasi', 'like', "%{$q}%");
+            });
+        }
+
+        if ($request->filled('sumber')) {
+            $query->where('sumber_indikasi', $request->sumber);
+        }
+
+        if ($request->filled('sensitivitas')) {
+            $query->where('sensitivitas_reputasi', $request->sensitivitas);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status_kasus', $request->status);
+        }
+
+        $indikasis = $query->get();
         $units = Unit::orderBy('unit_name')->get();
-        return view('pemeriksaan_awal.register', compact('indikasis', 'units'));
+
+        $allIndikasis = Sop09RegisterIndikasi::all();
+        $summary = [
+            'total_kasus' => $allIndikasis->count(),
+            'open_kasus' => $allIndikasis->where('status_kasus', 'OPEN')->count(),
+            'high_sensitivitas' => $allIndikasis->where('sensitivitas_reputasi', 'TINGGI')->count(),
+            'total_nominal' => $allIndikasis->sum('nominal_awal'),
+        ];
+
+        return view('pemeriksaan_awal.register', compact('indikasis', 'units', 'summary'));
     }
 
     public function storeRegister(Request $request)
@@ -81,11 +116,14 @@ class PemeriksaanAwalController extends Controller
 
         $data = $request->all();
         $data['indikasi_id'] = 'IND-' . date('Ymd') . '-' . str_pad(Sop09RegisterIndikasi::count() + 1, 4, '0', STR_PAD_LEFT);
-        $data['status_kasus'] = 'OPEN';
+        $data['jam'] = $request->jam ?? date('H:i');
+        $data['status_kasus'] = $request->status_kasus ?? 'OPEN';
+        $data['status_triase'] = $request->status_triase ?? 'DRAFT';
 
         Sop09RegisterIndikasi::create($data);
 
-        return redirect()->route('pemeriksaan_awal.register')->with('success', 'Register indikasi fraud berhasil disimpan.');
+        return redirect()->route('pemeriksaan_awal.register')
+            ->with('success', 'Register indikasi fraud [' . $data['indikasi_id'] . '] berhasil dicatatkan.');
     }
 
     /**
