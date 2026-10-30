@@ -129,12 +129,33 @@ class PemeriksaanAwalController extends Controller
     /**
      * WP-RA-09-B: Triase Awal
      */
-    public function triase()
+    public function triase(Request $request)
     {
         $this->ensureStarterDataIfEmpty();
 
         $indikasis = Sop09RegisterIndikasi::orderBy('id', 'desc')->get();
-        $triases = Sop09Triase::orderBy('id', 'desc')->get();
+        $query = Sop09Triase::with('registerIndikasi')->orderBy('id', 'desc');
+
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function($w) use ($q) {
+                $w->where('indikasi_id', 'like', "%{$q}%")
+                  ->orWhere('unit', 'like', "%{$q}%")
+                  ->orWhere('sumber', 'like', "%{$q}%")
+                  ->orWhere('keputusan_triase', 'like', "%{$q}%");
+            });
+        }
+
+        if ($request->filled('urgent')) {
+            $query->where('urgent', $request->urgent);
+        }
+
+        if ($request->filled('keputusan')) {
+            $query->where('keputusan_triase', $request->keputusan);
+        }
+
+        $triases = $query->get();
+
         return view('pemeriksaan_awal.triase', compact('indikasis', 'triases'));
     }
 
@@ -150,19 +171,38 @@ class PemeriksaanAwalController extends Controller
 
         $data = $request->all();
         
-        // Kalkulasi skor prioritas sesuai standar SOP 09
+        // Kalkulasi skor prioritas sesuai standar SOP 09 Bank Sulteng
         $skor = 0;
         if (($data['risiko_bukti_hilang'] ?? '') == 'TINGGI') $skor += 3;
+        if (($data['risiko_bukti_hilang'] ?? '') == 'SEDANG') $skor += 1;
         if (($data['pola_berulang'] ?? 'TIDAK') == 'YA') $skor += 2;
         if (($data['nasabah'] ?? 'TIDAK') == 'YA') $skor += 2;
         if (($data['pihak_kunci_pimpinan'] ?? 'TIDAK') == 'YA') $skor += 3;
 
         $data['skor_prioritas'] = $skor;
-        $data['urgent'] = ($skor >= 5 || ($data['risiko_bukti_hilang'] ?? '') == 'TINGGI') ? 'YA' : 'TIDAK';
+        $isUrgent = ($skor >= 5 || ($data['risiko_bukti_hilang'] ?? '') == 'TINGGI');
+        $data['urgent'] = $isUrgent ? 'YA' : 'TIDAK';
+
+        // Saran sistem otomatis berdasarkan skor
+        if ($isUrgent) {
+            $data['saran_sistem'] = 'INVESTIGASI SEGERA & AMANKAN BUKTI (PRIORITAS TINGGI)';
+        } elseif ($skor >= 3) {
+            $data['saran_sistem'] = 'FACT-FINDING MENDALAM DENGAN KLARIFIKASI AUDITEE';
+        } else {
+            $data['saran_sistem'] = 'MONITORING BERKALA ATAU ARSIP KASUS';
+        }
 
         Sop09Triase::create($data);
 
-        return redirect()->route('pemeriksaan_awal.triase')->with('success', 'Data triase awal berhasil disimpan.');
+        // Update status_triase di Sop09RegisterIndikasi jika kasus terdaftar
+        Sop09RegisterIndikasi::where('indikasi_id', $data['indikasi_id'])
+            ->update([
+                'status_triase' => 'SELESAI',
+                'keputusan_final' => $data['keputusan_triase'],
+            ]);
+
+        return redirect()->route('pemeriksaan_awal.triase')
+            ->with('success', 'Data Triase Awal untuk kasus [' . $data['indikasi_id'] . '] berhasil disimpan.');
     }
 
     /**
