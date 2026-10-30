@@ -67,4 +67,52 @@ class Sop09ChainOfCustody extends Model
     {
         return $this->attributes['petugas_custodian'] ?? ($this->attributes['diperoleh_oleh'] ?? '-');
     }
+
+    /**
+     * Mutator Kategori Bukti -> kolom fisik 'jenis_bukti'
+     */
+    public function setKategoriBuktiAttribute($value)
+    {
+        $this->attributes['jenis_bukti'] = $value;
+    }
+
+    /**
+     * Mutator Deskripsi Bukti -> kolom fisik 'deskripsi_relevansi'
+     */
+    public function setDeskripsiBuktiAttribute($value)
+    {
+        $this->attributes['deskripsi_relevansi'] = $value;
+    }
+
+    /**
+     * Mutator Kondisi Bukti -> kolom fisik 'status_integritas'
+     */
+    public function setKondisiBuktiAttribute($value)
+    {
+        $this->attributes['status_integritas'] = $value;
+    }
+
+    /**
+     * Mutator Status Penguasaan -> kolom fisik 'pemegang_saat_ini'
+     */
+    public function setStatusPenguasaanAttribute($value)
+    {
+        $this->attributes['pemegang_saat_ini'] = $value;
+    }
+
+    /**
+     * Mutator Sumber Bukti -> kolom fisik 'sumber_perolehan'
+     */
+    public function setSumberBuktiAttribute($value)
+    {
+        $this->attributes['sumber_perolehan'] = $value;
+    }
+
+    /**
+     * Mutator Petugas Custodian -> kolom fisik 'diperoleh_oleh'
+     */
+    public function setPetugasCustodianAttribute($value)
+    {
+        $this->attributes['diperoleh_oleh'] = $value;
+    }
 }

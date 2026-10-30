@@ -220,3 +220,4 @@ class Sop09IndikasiSeeder extends Seeder
         }
     }
 }
+
