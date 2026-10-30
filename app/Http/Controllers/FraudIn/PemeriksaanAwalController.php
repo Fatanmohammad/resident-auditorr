@@ -64,7 +64,7 @@ class PemeriksaanAwalController extends Controller
         $this->ensureStarterDataIfEmpty();
 
         $indikasis = Sop09RegisterIndikasi::orderBy('id', 'desc')->get();
-        $units = Unit::orderBy('nama_unit')->get();
+        $units = Unit::orderBy('unit_name')->get();
         return view('pemeriksaan_awal.register', compact('indikasis', 'units'));
     }
 

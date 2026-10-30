@@ -35,4 +35,14 @@ public function coverageSetup() { return $this->hasOne(CoverageSetup::class); }
     {
         return $this->criticalOverrides()->where('status', 'Aktif')->exists();
     }
+
+    public function getNamaUnitAttribute()
+    {
+        return $this->unit_name;
+    }
+
+    public function getKodeUnitAttribute()
+    {
+        return $this->unit_code;
+    }
 }

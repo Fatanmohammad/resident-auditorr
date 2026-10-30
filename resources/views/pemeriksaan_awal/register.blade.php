@@ -149,8 +149,8 @@
                         <select id="select_unit_register" class="form-select form-select-sm" onchange="var opt = this.options[this.selectedIndex]; if(this.value){ document.getElementById('reg_kode_unit').value = this.value; document.getElementById('reg_nama_unit').value = opt.getAttribute('data-nama'); }">
                             <option value="">-- Pilih dari Daftar Unit --</option>
                             @foreach($units ?? [] as $u)
-                                <option value="{{ $u->kode_unit }}" data-nama="{{ $u->nama_unit }}">
-                                    [{{ $u->kode_unit }}] {{ $u->nama_unit }}
+                                <option value="{{ $u->unit_code ?? $u->kode_unit }}" data-nama="{{ $u->unit_name ?? $u->nama_unit }}">
+                                    [{{ $u->unit_code ?? $u->kode_unit }}] {{ $u->unit_name ?? $u->nama_unit }}
                                 </option>
                             @endforeach
                         </select>
