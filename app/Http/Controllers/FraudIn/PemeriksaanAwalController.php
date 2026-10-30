@@ -317,12 +317,30 @@ class PemeriksaanAwalController extends Controller
     /**
      * WP-RA-09-G: Keputusan & Eskalasi
      */
-    public function eskalasi()
+    public function eskalasi(Request $request)
     {
         $this->ensureStarterDataIfEmpty();
 
         $indikasis = Sop09RegisterIndikasi::orderBy('id', 'desc')->get();
-        $eskalasis = Sop09KeputusanEskalasi::orderBy('id', 'desc')->get();
+        $query = Sop09KeputusanEskalasi::with('registerIndikasi')->orderBy('id', 'desc');
+
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function($w) use ($q) {
+                $w->where('decision_id', 'like', "%{$q}%")
+                  ->orWhere('indikasi_id', 'like', "%{$q}%")
+                  ->orWhere('unit', 'like', "%{$q}%")
+                  ->orWhere('keputusan_final', 'like', "%{$q}%")
+                  ->orWhere('arahan_tindakan_segera', 'like', "%{$q}%");
+            });
+        }
+
+        if ($request->filled('keputusan')) {
+            $query->where('keputusan_final', $request->keputusan);
+        }
+
+        $eskalasis = $query->get();
+
         return view('pemeriksaan_awal.eskalasi', compact('indikasis', 'eskalasis'));
     }
 
@@ -331,14 +349,46 @@ class PemeriksaanAwalController extends Controller
         $request->validate([
             'indikasi_id' => 'required',
             'tanggal_keputusan' => 'required|date',
-            'fakta_utama' => 'required',
-            'estimasi_kerugian' => 'required|numeric',
             'keputusan_final' => 'required',
         ]);
 
-        Sop09KeputusanEskalasi::create($request->all());
+        $decisionId = 'DEC-' . date('Ymd') . '-' . rand(1000, 9999);
+        $indikasi = Sop09RegisterIndikasi::where('indikasi_id', $request->indikasi_id)->first();
+        $unitName = $indikasi ? ($indikasi->nama_unit ?? $indikasi->kode_unit) : ($request->unit ?? 'Kantor Cabang / Unit');
 
-        return redirect()->route('pemeriksaan_awal.eskalasi')->with('success', 'Keputusan & Eskalasi kasus berhasil disimpan.');
+        $recordData = [
+            'decision_id' => $decisionId,
+            'indikasi_id' => $request->indikasi_id,
+            'unit' => $unitName,
+            'saran_sistem' => $request->rekomendasi_tim ?? 'PENGESAHAN KEPUTUSAN KADIV SKAI',
+            'keputusan_final' => $request->keputusan_final,
+            'tanggal_keputusan' => $request->tanggal_keputusan ?? date('Y-m-d'),
+            'diputuskan_oleh' => auth()->user()->name ?? 'Budi (Kadiv SKAI)',
+            'jabatan' => 'Kepala Divisi SKAI',
+            'arahan_tindakan_segera' => $request->fakta_utama ?? $request->arahan_tindakan_segera,
+            'laporan_insidentil_id' => $request->nomor_nota_dinas ?? ('ND/' . date('Ymd') . '/' . rand(100, 999)),
+            'status_keputusan' => 'FINAL',
+            'catatan_review' => $request->catatan_review ?? $request->fakta_utama,
+        ];
+
+        Sop09KeputusanEskalasi::create($recordData);
+
+        // Update status_kasus di register indikasi jika kasus terdaftar
+        if ($indikasi) {
+            $newStatus = match($request->keputusan_final) {
+                'TUTUP_KASUS' => 'CLOSED',
+                'ESKALASI_INVESTIGASI' => 'INVESTIGASI',
+                default => 'PEMBINAAN',
+            };
+            $indikasi->update([
+                'status_kasus' => $newStatus,
+                'keputusan_final' => $request->keputusan_final,
+                'nominal_awal' => $request->estimasi_kerugian ?? $indikasi->nominal_awal,
+            ]);
+        }
+
+        return redirect()->route('pemeriksaan_awal.eskalasi')
+            ->with('success', 'Keputusan Final & Eskalasi dengan kode [' . $decisionId . '] berhasil disimpan.');
     }
 
     /**
