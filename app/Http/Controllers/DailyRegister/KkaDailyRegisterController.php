@@ -145,7 +145,9 @@ class KkaDailyRegisterController extends Controller
             if ($kc) $selectedCabangId = $kc->cabang_id;
         }
 
-        return view('daily_register.index', compact('defaultTab', 'defaultTabName', 'isSubmenu', 'kcUnits', 'selectedKodeUnit', 'selectedCabangId'));
+        $allChecklists = \App\Models\DailyRegister\DailyRegisterChecklist::orderBy('sort_order')->get()->groupBy('source_sheet');
+
+        return view('daily_register.index', compact('defaultTab', 'defaultTabName', 'isSubmenu', 'kcUnits', 'selectedKodeUnit', 'selectedCabangId', 'allChecklists'));
     }
 
     /**
@@ -248,6 +250,13 @@ class KkaDailyRegisterController extends Controller
             // JALANKAN MESIN SAMPLING OTOMATIS KHUSUS DAILY REGISTER
             $samplingResult = $samplingService->runSampling($kodeUnitDipilih, $periode);
 
+            // OTOMATIS SINKRONKAN TEMUAN KE MODUL RISK TRIGGER (SOP 06)
+            try {
+                app(\App\Services\RiskTrigger\RiskTriggerService::class)->syncAll($user, $kodeUnitDipilih);
+            } catch (\Throwable $e) {
+                \Log::warning("Auto-sync Risk Trigger gagal: " . $e->getMessage());
+            }
+
             $msgExtra = isset($samplingResult['total_sampel']) 
                 ? ' (' . $samplingResult['total_sampel'] . ' sampel KKA otomatis terpilih melalui sampling engine)' 
                 : '';
@@ -344,7 +353,7 @@ class KkaDailyRegisterController extends Controller
         $highRiskCount = (clone $summaryQuery)->where('risk_awal', 'High')->count();
         $selesaiReviewCount = (clone $summaryQuery)->where('status_review', 'Approved')->count();
 
-        $findings = $query->latest('tanggal_data')->paginate(15);
+        $findings = $query->with('checklistAnswers')->latest('tanggal_data')->paginate(15);
 
         $tabCounts = [
             'KKA_Teller_Kas' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Teller_Kas')->count(),
@@ -369,7 +378,78 @@ class KkaDailyRegisterController extends Controller
     }
 
     /**
-     * Update Inputan RA
+     * Mengambil master checklist per sheet (AJAX)
+     */
+    public function getChecklists(Request $request)
+    {
+        $sheet = $request->input('source_sheet');
+        $query = \App\Models\DailyRegister\DailyRegisterChecklist::orderBy('sort_order');
+        if ($sheet) {
+            $query->where('source_sheet', $sheet);
+        }
+        return response()->json([
+            'status' => 'success',
+            'data'   => $query->get()
+        ]);
+    }
+
+    /**
+     * Hitung otomatis jumlah kejadian exception/temuan sebelumnya pada unit & sheet yang sama (termasuk saat ini)
+     */
+    protected function calculateRecurringCount(DailyRegisterFinding $finding): int
+    {
+        $unit = (string)$finding->kode_unit;
+        $cleanUnit = str_replace('BS-', '', $unit);
+        $targetUnits = array_values(array_unique(array_filter([$unit, $cleanUnit, 'BS-' . $cleanUnit])));
+
+        $historyCount = DailyRegisterFinding::whereIn('kode_unit', $targetUnits)
+            ->where('source_sheet', $finding->source_sheet)
+            ->where('id', '!=', $finding->id)
+            ->where(function ($q) {
+                $q->whereHas('checklistAnswers', function ($qa) {
+                    $qa->where('jawaban', 'Tidak');
+                })
+                ->orWhereIn('risk_final', ['Moderate', 'Moderate to High', 'High', 'Critical'])
+                ->orWhere(function ($sub) {
+                    $sub->whereNull('risk_final')
+                        ->whereIn('risk_awal', ['Moderate', 'High', 'Critical']);
+                });
+            })
+            ->count();
+
+        return $historyCount + 1;
+    }
+
+    /**
+     * Mengambil detail KKA lengkap dengan checklist answers & hitungan kejadian berulang
+     */
+    public function getReviewData($id)
+    {
+        $finding = DailyRegisterFinding::with(['checklistAnswers'])->findOrFail($id);
+
+        // Kunci Otomatis Tanggal Ditemukan / Diuji: Saat RA pertama kali membuka KKA
+        if (empty($finding->tanggal_ditemukan)) {
+            $finding->tanggal_ditemukan = now()->format('Y-m-d');
+            $finding->save();
+        }
+
+        // Hitung kejadian berulang di unit & source_sheet yang sama
+        $recurringCount = $this->calculateRecurringCount($finding);
+
+        $checklists = \App\Models\DailyRegister\DailyRegisterChecklist::where('source_sheet', $finding->source_sheet)
+            ->orderBy('sort_order')
+            ->get();
+
+        return response()->json([
+            'status'          => 'success',
+            'finding'         => $finding,
+            'recurring_count' => $recurringCount,
+            'checklists'      => $checklists,
+        ]);
+    }
+
+    /**
+     * Update Inputan RA dengan Otomasi Penuh Skor Risiko & Checklist
      */
     public function updateRa(UpdateKkaRaRequest $request, $id)
     {
@@ -392,12 +472,184 @@ class KkaDailyRegisterController extends Controller
             }
         }
 
-        $finding->update($request->validated());
+        // Ambil checklist answers
+        $rawChecklist = $request->input('checklist_answers');
+        if (is_string($rawChecklist)) {
+            $rawChecklist = json_decode($rawChecklist, true) ?: [];
+        }
+
+        $tidakCount = 0;
+        if (is_array($rawChecklist)) {
+            foreach ($rawChecklist as $ans) {
+                if (($ans['jawaban'] ?? 'Ya') === 'Tidak') {
+                    $tidakCount++;
+                }
+            }
+        }
+
+        // Validasi kemunculan kondisional
+        if ($tidakCount >= 1) {
+            if (empty($request->input('jenis_exception_ra')) || empty($request->input('hasil_uji')) || empty($request->input('klarifikasi_unit'))) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Validasi Gagal: Terdapat ' . $tidakCount . ' item checklist bernilai Tidak. Jenis Exception, Hasil Pengujian Lapangan, dan Klarifikasi Unit Kerja wajib diisi!'
+                ], 422);
+            }
+            $jenisExceptionRa = $request->input('jenis_exception_ra');
+            $hasilUji = $request->input('hasil_uji');
+            $klarifikasiUnit = $request->input('klarifikasi_unit');
+        } else {
+            // Jika semua bernilai Ya, kosongkan kembali field exception
+            $jenisExceptionRa = null;
+            $hasilUji = null;
+            $klarifikasiUnit = null;
+        }
+
+        // Kunci Tanggal Ditemukan / Diuji: Otomatis hari itu jika kosong, lalu dikunci
+        $tanggalDitemukan = $finding->tanggal_ditemukan ?: now()->format('Y-m-d');
+
+        // File Bukti PDF
+        $fileBuktiPath = $finding->file_bukti;
+        if ($request->hasFile('file_bukti')) {
+            $file = $request->file('file_bukti');
+            $fileBuktiPath = $file->storeAs('daily_register_evidence', time() . '_' . $file->getClientOriginalName(), 'public');
+        }
+
+        // Otomasi Penuh & Penguncian Skor Risiko (Matriks 5x5)
+        $criticalTrigger = $request->input('critical_trigger', 'Tidak') === 'Ya' ? 'Ya' : 'Tidak';
+        $nominal = (float)($finding->nominal_terkait ?? 0);
+
+        if ($tidakCount === 0 && $criticalTrigger === 'Tidak') {
+            $skorDampak = 1;
+            $skorKemungkinan = 1;
+            $skorFinal = 1;
+            $riskFinal = 'Low';
+            $perluOnsite = 'Tidak Perlu';
+        } else {
+            // Skor Dampak (1-5)
+            if ($criticalTrigger === 'Ya' || $nominal >= 500000000) {
+                $skorDampak = 5;
+            } else {
+                $hasNominal = ($finding->nominal_terkait !== null && $nominal > 0);
+
+                $chkScore = 1;
+                if ($tidakCount >= 5) {
+                    $chkScore = 4;
+                } elseif ($tidakCount >= 3) {
+                    $chkScore = 3;
+                } elseif ($tidakCount >= 2) {
+                    $chkScore = 2;
+                } elseif ($tidakCount === 1) {
+                    $chkScore = $hasNominal ? 1 : 2;
+                }
+
+                $nomScore = 0;
+                if ($hasNominal) {
+                    if ($nominal >= 100000000) {
+                        $nomScore = 4;
+                    } elseif ($nominal >= 50000000) {
+                        $nomScore = 3;
+                    } elseif ($nominal >= 10000000) {
+                        $nomScore = 2;
+                    } else {
+                        $nomScore = 1;
+                    }
+                }
+
+                $skorDampak = max($chkScore, $nomScore);
+                if (!$hasNominal && $tidakCount >= 1 && $skorDampak < 2) {
+                    $skorDampak = 2;
+                }
+                $skorDampak = min(max($skorDampak, 1), 5);
+            }
+
+            // Skor Kemungkinan (1-5) Berdasarkan Kejadian Berulang di Database
+            $kejadianKe = $this->calculateRecurringCount($finding);
+
+            if ($kejadianKe >= 7) {
+                $skorKemungkinan = 5;
+            } elseif ($kejadianKe >= 5) {
+                $skorKemungkinan = 4;
+            } elseif ($kejadianKe >= 3) {
+                $skorKemungkinan = 3;
+            } elseif ($kejadianKe == 2) {
+                $skorKemungkinan = 2;
+            } else {
+                $skorKemungkinan = ($tidakCount >= 2) ? 2 : 1;
+            }
+
+            // Skor & Risk Final
+            $skorFinal = $skorDampak * $skorKemungkinan;
+
+            if ($criticalTrigger === 'Ya') {
+                $riskFinal = 'Critical';
+                if ($skorFinal < 16) $skorFinal = 16;
+            } elseif ($skorFinal >= 16) {
+                $riskFinal = 'Critical';
+            } elseif ($skorFinal >= 10) {
+                $riskFinal = 'High';
+            } elseif ($skorFinal >= 8) {
+                $riskFinal = 'Moderate to High';
+            } elseif ($skorFinal >= 5) {
+                $riskFinal = 'Moderate';
+            } else {
+                $riskFinal = 'Low';
+            }
+
+            // Perlu Onsite Inspection?
+            if (in_array($riskFinal, ['Moderate to High', 'High', 'Critical']) || $skorFinal >= 8 || $criticalTrigger === 'Ya') {
+                $perluOnsite = 'Perlu';
+            } else {
+                $perluOnsite = 'Tidak Perlu';
+            }
+        }
+
+        // Update finding
+        $finding->bukti_referensi = $request->input('bukti_referensi');
+        $finding->critical_trigger = $criticalTrigger;
+        $finding->jenis_exception_ra = $jenisExceptionRa;
+        $finding->hasil_uji = $hasilUji;
+        $finding->klarifikasi_unit = $klarifikasiUnit;
+        $finding->skor_dampak = $skorDampak;
+        $finding->skor_kemungkinan = $skorKemungkinan;
+        $finding->skor_final = $skorFinal;
+        $finding->risk_final = $riskFinal;
+        $finding->risk_awal = $riskFinal;
+        $finding->perlu_onsite = $perluOnsite;
+        $finding->tanggal_ditemukan = $tanggalDitemukan;
+        $finding->file_bukti = $fileBuktiPath;
+        $finding->save();
+
+        // Simpan jawaban checklist
+        if (is_array($rawChecklist)) {
+            foreach ($rawChecklist as $ans) {
+                $chkId = $ans['checklist_id'] ?? null;
+                if ($chkId) {
+                    \App\Models\DailyRegister\DailyRegisterChecklistAnswer::updateOrCreate(
+                        [
+                            'daily_register_finding_id' => $finding->id,
+                            'checklist_id'              => $chkId,
+                        ],
+                        [
+                            'jawaban'    => ($ans['jawaban'] ?? 'Ya') === 'Tidak' ? 'Tidak' : 'Ya',
+                            'keterangan' => $ans['keterangan'] ?? null,
+                        ]
+                    );
+                }
+            }
+        }
+
+        // Sinkronisasi otomatis ke modul Risk Trigger (SOP 06)
+        try {
+            app(\App\Services\RiskTrigger\RiskTriggerService::class)->syncAll($user, $finding->kode_unit);
+        } catch (\Throwable $e) {
+            \Log::warning("Auto-sync Risk Trigger gagal di updateRa: " . $e->getMessage());
+        }
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Data KKA berhasil diperbarui oleh RA.',
-            'data'    => $finding
+            'message' => 'Review RA dan checklist berhasil disimpan.',
+            'data'    => $finding->load('checklistAnswers')
         ]);
     }
 

@@ -102,6 +102,8 @@ class DatabaseSeeder extends Seeder
             RiskTriggerMasterParameterSeeder::class,
             // Starter Master Data SOP 09 Pemeriksaan Awal Fraud & Chain of Custody
             Sop09IndikasiSeeder::class,
+            // Master Checklist 6 Tab KKA Daily Register
+            DailyRegisterChecklistSeeder::class,
         ]);
     }
 }

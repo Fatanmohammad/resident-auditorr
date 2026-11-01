@@ -318,7 +318,8 @@ class CbsOnsiteParser
     private function parseDate(string $raw): ?string
     {
         if (empty($raw)) return null;
-        $ts = strtotime($raw);
+        $clean = str_replace('/', '-', trim($raw));
+        $ts = strtotime($clean);
         return $ts ? date('Y-m-d', $ts) : null;
     }
 }

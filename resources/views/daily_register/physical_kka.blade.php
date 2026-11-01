@@ -443,35 +443,42 @@
                 <li class="nav-item" role="presentation">
                     <button class="kka-tab-btn active" id="cash-tab" data-bs-toggle="tab" data-bs-target="#cash" type="button" role="tab" aria-selected="true">
                         <i class="bi bi-cash-stack"></i>
-                        <span>1. Cash Opname</span>
+                        <span>1. Cash Opname (Khasanah)</span>
+                        {!! $renderTabPill($cashSched->calculated_status ?? null) !!}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="kka-tab-btn" id="cash-atm-tab" data-bs-toggle="tab" data-bs-target="#cash-atm" type="button" role="tab" aria-selected="false">
+                        <i class="bi bi-wallet2"></i>
+                        <span>2. Cash Opname (Kas ATM)</span>
                         {!! $renderTabPill($cashSched->calculated_status ?? null) !!}
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="kka-tab-btn" id="obs-tab" data-bs-toggle="tab" data-bs-target="#obs" type="button" role="tab" aria-selected="false">
                         <i class="bi bi-eye"></i>
-                        <span>2. Observasi Lingkungan</span>
+                        <span>3. Observasi Lingkungan</span>
                         {!! $renderTabPill($obsSched->calculated_status ?? null) !!}
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="kka-tab-btn" id="stok-tab" data-bs-toggle="tab" data-bs-target="#stok" type="button" role="tab" aria-selected="false">
                         <i class="bi bi-journal-check"></i>
-                        <span>3. Rekon Stok Cek/BG</span>
+                        <span>4. Rekon Stok Cek/BG</span>
                         {!! $renderTabPill($stokSched->calculated_status ?? null) !!}
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="kka-tab-btn" id="atm-tab" data-bs-toggle="tab" data-bs-target="#atm" type="button" role="tab" aria-selected="false">
                         <i class="bi bi-credit-card-2-front"></i>
-                        <span>4. Rekon Kartu ATM</span>
+                        <span>5. Rekon Kartu ATM</span>
                         {!! $renderTabPill($atmSched->calculated_status ?? null) !!}
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="kka-tab-btn" id="cetakan-tab" data-bs-toggle="tab" data-bs-target="#cetakan" type="button" role="tab" aria-selected="false">
                         <i class="bi bi-printer"></i>
-                        <span>5. Rekon Barang Cetakan</span>
+                        <span>6. Rekon Barang Cetakan</span>
                         {!! $renderTabPill($bctSched->calculated_status ?? null) !!}
                     </button>
                 </li>
@@ -487,13 +494,16 @@
             
                 <div class="tab-content" id="physicalKkaTabContent">
                     
-                    <!-- TAB 1: CASH OPNAME -->
+                    <!-- TAB 1: CASH OPNAME KHASANAH -->
                     <div class="tab-pane fade show active p-3" id="cash" role="tabpanel">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <h6 class="fw-bold mb-1"><i class="bi bi-cash-stack me-2 text-primary"></i>KKA_Cash_Opname (Pemeriksaan Kas &amp; Fisik Khasanah)</h6>
+                                <h6 class="fw-bold mb-1"><i class="bi bi-cash-stack me-2 text-primary"></i>KKA_Cash_Opname_Khasanah (Pemeriksaan Kas &amp; Fisik Khasanah)</h6>
                                 <small class="text-muted">Pemeriksaan fisik saldo uang tunai layak edar, uang logam, dan uang lusuh di khasanah.</small>
                             </div>
+                            <span class="badge-soft badge-soft-primary">
+                                <i class="bi bi-safe2 me-1"></i> Fisik Brankas Khasanah
+                            </span>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-bordered table-excel">
@@ -523,52 +533,176 @@
                                 </thead>
                                 <tbody>
                                     @foreach($cashItems as $index => $item)
+                                    @if(($item['sub_area'] ?? '') !== 'ATM')
                                     <tr class="data-row" data-type="cash">
                                         <td>
-                                            @if(empty($item['objek']))
-                                                <input type="text" name="cash_details[{{ $index }}][objek_persediaan]" class="form-control" placeholder="Ketik ID/lokasi ATM..." required>
-                                            @else
-                                                {{ $item['objek'] }}
-                                                <input type="hidden" name="cash_details[{{ $index }}][objek_persediaan]" value="{{ $item['objek'] }}">
-                                            @endif
-                                            <input type="hidden" name="cash_details[{{ $index }}][sub_area]" value="{{ $item['sub_area'] }}">
+                                            {{ $item['objek'] }}
+                                            <input type="hidden" name="cash_details[{{ $index }}][objek_persediaan]" value="{{ $item['objek'] }}">
+                                            <input type="hidden" name="cash_details[{{ $index }}][sub_area]" value="{{ $item['sub_area'] ?? 'Khasanah' }}">
                                         </td>
                                         <td>
                                             {{ $item['pecahan'] }}
                                             <input type="hidden" name="cash_details[{{ $index }}][pecahan]" value="{{ $item['pecahan'] }}">
                                         </td>
-                                        <td><input type="number" name="cash_details[{{ $index }}][saldo_sistem]" class="form-control saldo-sistem border-0 bg-transparent text-end" value="50000000" readonly></td>
-                                        <td><input type="number" name="cash_details[{{ $index }}][hasil_fisik]" class="form-control hasil-fisik text-end" placeholder="0" required></td>
-                                        <td><input type="text" class="form-control selisih-display border-0 bg-transparent text-end fw-bold" readonly></td>
-                                        <td><input type="text" class="form-control status-uji border-0 bg-transparent fw-bold text-center" value="BELUM DIUJI" readonly></td>
+                                        <td><input type="number" name="cash_details[{{ $index }}][saldo_sistem]" class="form-control saldo-sistem border-0 bg-transparent text-end" value="{{ $item['saldo_sistem'] ?? 50000000 }}" readonly></td>
+                                        <td><input type="number" name="cash_details[{{ $index }}][hasil_fisik]" class="form-control hasil-fisik text-end" placeholder="0" value="{{ $item['hasil_fisik'] ?? '' }}" required></td>
+                                        <td><input type="text" class="form-control selisih-display border-0 bg-transparent text-end fw-bold" readonly value="{{ isset($item['saldo_sistem'], $item['hasil_fisik']) && $item['hasil_fisik'] !== '' ? ((float)$item['saldo_sistem'] - (float)$item['hasil_fisik']) : '' }}"></td>
+                                        <td><input type="text" class="form-control status-uji border-0 bg-transparent fw-bold text-center" value="{{ $item['status_uji'] ?? 'BELUM DIUJI' }}" readonly></td>
                                         
                                         <!-- Exception Fields (Disabled by default) -->
-                                        <td><input type="text" name="cash_details[{{ $index }}][penyebab]" class="form-control exc-field" disabled></td>
-                                        <td><select name="cash_details[{{ $index }}][impact]" class="form-select exc-field impact-sel" disabled><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></td>
-                                        <td><select name="cash_details[{{ $index }}][likelihood]" class="form-select exc-field likelihood-sel" disabled><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></td>
-                                        <td><select name="cash_details[{{ $index }}][critical_trigger]" class="form-select exc-field critical-sel" disabled><option value="Tidak">Tidak</option><option value="Ya">Ya</option></select></td>
+                                        <td><input type="text" name="cash_details[{{ $index }}][penyebab]" class="form-control exc-field" placeholder="Keterangan..." value="{{ $item['penyebab'] ?? '' }}" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
+                                        <td>
+                                            <select name="cash_details[{{ $index }}][impact]" class="form-select exc-field impact-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
+                                                @for($val=1; $val<=5; $val++)
+                                                    <option value="{{ $val }}" {{ ($item['impact'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
+                                                @endfor
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="cash_details[{{ $index }}][likelihood]" class="form-select exc-field likelihood-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
+                                                @for($val=1; $val<=5; $val++)
+                                                    <option value="{{ $val }}" {{ ($item['likelihood'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
+                                                @endfor
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="cash_details[{{ $index }}][critical_trigger]" class="form-select exc-field critical-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
+                                                <option value="Tidak" {{ ($item['critical_trigger'] ?? 'Tidak') === 'Tidak' ? 'selected' : '' }}>Tidak</option>
+                                                <option value="Ya" {{ ($item['critical_trigger'] ?? '') === 'Ya' ? 'selected' : '' }}>Ya</option>
+                                            </select>
+                                        </td>
                                         
                                         <!-- Auto calculated -->
-                                        <td><input type="text" class="form-control risk-score border-0 bg-transparent text-center" readonly></td>
-                                        <td><input type="text" class="form-control risk-level border-0 bg-transparent text-center" readonly></td>
+                                        <td><input type="text" class="form-control risk-score border-0 bg-transparent text-center" readonly value="{{ $item['risk_score'] ?? '' }}"></td>
+                                        <td><input type="text" class="form-control risk-level border-0 bg-transparent text-center" readonly value="{{ $item['severity_level'] ?? '' }}"></td>
                                         
-                                        <td><input type="text" name="cash_details[{{ $index }}][simpulan_ra]" class="form-control exc-field" disabled></td>
-                                        <td><input type="file" class="form-control exc-field" disabled></td>
-                                        <td><input type="date" name="cash_details[{{ $index }}][tanggal_uji]" class="form-control" value="{{ date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : 'required' }}></td>
+                                        <td><input type="text" name="cash_details[{{ $index }}][simpulan_ra]" class="form-control exc-field" placeholder="Simpulan..." value="{{ $item['simpulan_ra'] ?? '' }}" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
+                                        <td><input type="file" class="form-control exc-field" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
+                                        <td><input type="date" name="cash_details[{{ $index }}][tanggal_uji]" class="form-control" value="{{ $item['tanggal_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : 'required' }}></td>
                                         
                                         @if($isAdmin)
                                         @php $fakeId = $index + 1; @endphp
                                         <td><input type="text" class="form-control bg-light" value="{{ auth()->user()->name ?? 'Admin' }}" readonly></td>
                                         <td>
                                             <select name="cash_review[{{ $fakeId }}][status_review]" class="form-select border-warning">
-                                                <option value="Pending">Pending</option>
-                                                <option value="Approved">Approved</option>
-                                                <option value="Revisi">Revisi</option>
+                                                <option value="Pending" {{ ($item['status_review'] ?? '') === 'Pending' ? 'selected' : '' }}>Pending</option>
+                                                <option value="Approved" {{ ($item['status_review'] ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
+                                                <option value="Revisi" {{ ($item['status_review'] ?? '') === 'Revisi' ? 'selected' : '' }}>Revisi</option>
                                             </select>
                                         </td>
-                                        <td><input type="text" name="cash_review[{{ $fakeId }}][catatan_reviewer]" class="form-control border-warning" placeholder="Ketik catatan review..."></td>
+                                        <td><input type="text" name="cash_review[{{ $fakeId }}][catatan_reviewer]" class="form-control border-warning" placeholder="Ketik catatan review..." value="{{ $item['catatan_reviewer'] ?? '' }}"></td>
                                         @endif
                                     </tr>
+                                    @endif
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: CASH OPNAME KAS ATM -->
+                    <div class="tab-pane fade p-3" id="cash-atm" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-1"><i class="bi bi-wallet2 me-2 text-primary"></i>KKA_Cash_Opname_ATM (Pemeriksaan Kas Kaset Mesin ATM &amp; CRM)</h6>
+                                <small class="text-muted">Pemeriksaan fisik saldo uang tunai pada kaset mesin ATM/CRM terhadap saldo buku/sistem (maksimal 4 kaset + reject/retain per mesin).</small>
+                            </div>
+                            <span class="badge-soft badge-soft-info">
+                                <i class="bi bi-link-45deg me-1"></i> Terhubung dengan KKA Cash Opname
+                            </span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-excel">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 220px;">ID / Lokasi Mesin ATM</th>
+                                        <th style="min-width: 200px;">Rincian Kaset / Keterangan</th>
+                                        <th style="min-width: 130px;">Saldo Buku (Rp)</th>
+                                        <th style="min-width: 130px;">Hasil Fisik (Rp)</th>
+                                        <th style="min-width: 110px;">Selisih</th>
+                                        <th style="min-width: 120px;">Status Uji</th>
+                                        <th style="min-width: 180px;">Kondisi / Sebab</th>
+                                        <th>Impact</th>
+                                        <th>Likelihood</th>
+                                        <th>Critical?</th>
+                                        <th>Risk Score</th>
+                                        <th>Risk Level</th>
+                                        <th style="min-width: 160px;">Simpulan RA</th>
+                                        <th style="min-width: 150px;">Bukti</th>
+                                        <th style="min-width: 130px;">Tgl Uji</th>
+                                        @if($isAdmin)
+                                        <th class="bg-warning text-dark">Reviewer ID</th>
+                                        <th class="bg-warning text-dark" style="min-width: 150px;">Status Review</th>
+                                        <th class="bg-warning text-dark" style="min-width: 200px;">Catatan Admin</th>
+                                        @endif
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($cashItems as $index => $item)
+                                    @if(($item['sub_area'] ?? '') === 'ATM')
+                                    <tr class="data-row" data-type="cash">
+                                        <td>
+                                            @if(empty($item['objek']))
+                                                <input type="text" name="cash_details[{{ $index }}][objek_persediaan]" class="form-control" placeholder="Ketik ID/lokasi ATM..." value="{{ $item['objek'] ?? '' }}">
+                                            @else
+                                                <div class="fw-bold">{{ $item['objek'] }}</div>
+                                                <input type="hidden" name="cash_details[{{ $index }}][objek_persediaan]" value="{{ $item['objek'] }}">
+                                            @endif
+                                            <input type="hidden" name="cash_details[{{ $index }}][sub_area]" value="ATM">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="cash_details[{{ $index }}][pecahan]" class="form-control" value="{{ $item['pecahan'] ?? 'Isi ID/lokasi ATM; maksimal 4 kaset + reject/retain' }}">
+                                        </td>
+                                        <td><input type="number" name="cash_details[{{ $index }}][saldo_sistem]" class="form-control saldo-sistem border-0 bg-transparent text-end" value="{{ $item['saldo_sistem'] ?? 50000000 }}" readonly></td>
+                                        <td><input type="number" name="cash_details[{{ $index }}][hasil_fisik]" class="form-control hasil-fisik text-end" placeholder="0" value="{{ $item['hasil_fisik'] ?? '' }}"></td>
+                                        <td><input type="text" class="form-control selisih-display border-0 bg-transparent text-end fw-bold" readonly value="{{ isset($item['saldo_sistem'], $item['hasil_fisik']) && $item['hasil_fisik'] !== '' ? ((float)$item['saldo_sistem'] - (float)$item['hasil_fisik']) : '' }}"></td>
+                                        <td><input type="text" class="form-control status-uji border-0 bg-transparent fw-bold text-center" value="{{ $item['status_uji'] ?? 'BELUM DIUJI' }}" readonly></td>
+                                        
+                                        <!-- Exception Fields -->
+                                        <td><input type="text" name="cash_details[{{ $index }}][penyebab]" class="form-control exc-field" placeholder="Keterangan..." value="{{ $item['penyebab'] ?? '' }}" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
+                                        <td>
+                                            <select name="cash_details[{{ $index }}][impact]" class="form-select exc-field impact-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
+                                                @for($val=1; $val<=5; $val++)
+                                                    <option value="{{ $val }}" {{ ($item['impact'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
+                                                @endfor
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="cash_details[{{ $index }}][likelihood]" class="form-select exc-field likelihood-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
+                                                @for($val=1; $val<=5; $val++)
+                                                    <option value="{{ $val }}" {{ ($item['likelihood'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
+                                                @endfor
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="cash_details[{{ $index }}][critical_trigger]" class="form-select exc-field critical-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
+                                                <option value="Tidak" {{ ($item['critical_trigger'] ?? 'Tidak') === 'Tidak' ? 'selected' : '' }}>Tidak</option>
+                                                <option value="Ya" {{ ($item['critical_trigger'] ?? '') === 'Ya' ? 'selected' : '' }}>Ya</option>
+                                            </select>
+                                        </td>
+                                        
+                                        <!-- Auto calculated -->
+                                        <td><input type="text" class="form-control risk-score border-0 bg-transparent text-center" readonly value="{{ $item['risk_score'] ?? '' }}"></td>
+                                        <td><input type="text" class="form-control risk-level border-0 bg-transparent text-center" readonly value="{{ $item['severity_level'] ?? '' }}"></td>
+                                        
+                                        <td><input type="text" name="cash_details[{{ $index }}][simpulan_ra]" class="form-control exc-field" placeholder="Simpulan..." value="{{ $item['simpulan_ra'] ?? '' }}" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
+                                        <td><input type="file" class="form-control exc-field" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
+                                        <td><input type="date" name="cash_details[{{ $index }}][tanggal_uji]" class="form-control" value="{{ $item['tanggal_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : 'required' }}></td>
+                                        
+                                        @if($isAdmin)
+                                        @php $fakeId = $index + 1; @endphp
+                                        <td><input type="text" class="form-control bg-light" value="{{ auth()->user()->name ?? 'Admin' }}" readonly></td>
+                                        <td>
+                                            <select name="cash_review[{{ $fakeId }}][status_review]" class="form-select border-warning">
+                                                <option value="Pending" {{ ($item['status_review'] ?? '') === 'Pending' ? 'selected' : '' }}>Pending</option>
+                                                <option value="Approved" {{ ($item['status_review'] ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
+                                                <option value="Revisi" {{ ($item['status_review'] ?? '') === 'Revisi' ? 'selected' : '' }}>Revisi</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" name="cash_review[{{ $fakeId }}][catatan_reviewer]" class="form-control border-warning" placeholder="Ketik catatan review..." value="{{ $item['catatan_reviewer'] ?? '' }}"></td>
+                                        @endif
+                                    </tr>
+                                    @endif
                                     @endforeach
                                 </tbody>
                             </table>
@@ -688,6 +822,7 @@
                                         <th>Likelihood</th>
                                         <th>Critical?</th>
                                         <th>Risk Score</th>
+                                        <th>Risk Level</th>
                                         <th style="min-width:150px;">Simpulan RA</th>
                                         <th style="min-width:150px;">Bukti</th>
                                         <th style="min-width:130px;">Tgl Uji</th>

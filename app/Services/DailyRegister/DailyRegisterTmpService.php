@@ -69,8 +69,13 @@ class DailyRegisterTmpService
             }
         }
 
-        // 2. Bersihkan sisa data low-risk lama di tabel daily_register_findings
-        DailyRegisterFinding::where('risk_awal', 'Low')->delete();
+        // 2. Bersihkan sisa data unreviewed low-risk lama di tabel daily_register_findings (hanya data mentah dump yang belum pernah di-review)
+        DailyRegisterFinding::where('risk_awal', 'Low')
+            ->whereDoesntHave('checklistAnswers')
+            ->whereNull('status_review')
+            ->whereNull('tanggal_ditemukan')
+            ->whereNull('risk_final')
+            ->delete();
     }
 
     /**

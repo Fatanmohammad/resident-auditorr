@@ -249,7 +249,7 @@ class RiskTriggerService
         $existingId = null;
         if ($sourceWpId && isset($existingMap[$sourceWpId])) {
             $existingId = $existingMap[$sourceWpId];
-        } elseif (isset($existingDupKeyMap[$computedDupKey])) {
+        } elseif (!$sourceWpId && isset($existingDupKeyMap[$computedDupKey])) {
             $existingId = $existingDupKeyMap[$computedDupKey];
         }
 
@@ -334,6 +334,27 @@ class RiskTriggerService
             return ['new' => 0, 'updated' => 0];
         }
 
+        // 1. Bersihkan trigger Daily Review (DRF-*) yang sumber datanya sudah dihapus / di-reset
+        $activeFindingsQuery = DB::table('daily_register_findings');
+        if (!empty($targetUnits)) {
+            $activeFindingsQuery->whereIn('kode_unit', $targetUnits);
+        }
+        $validWpIds = $activeFindingsQuery->pluck('id')->map(fn($id) => "DRF-{$id}")->toArray();
+
+        $orphanQuery = RegisterTrigger::where('sumber', 'Daily Review')
+            ->where('source_wp_id', 'LIKE', 'DRF-%');
+        if (!empty($targetUnits)) {
+            $orphanQuery->whereIn('kode_unit', $targetUnits);
+        }
+        if (!empty($validWpIds)) {
+            $orphanQuery->whereNotIn('source_wp_id', $validWpIds);
+        }
+        $orphanQuery->delete();
+
+        // Refresh mapping setelah orphan dibersihkan
+        $existingMap = RegisterTrigger::whereNotNull('source_wp_id')->pluck('id', 'source_wp_id')->toArray();
+        $existingDupKeyMap = RegisterTrigger::whereNotNull('duplicate_key')->pluck('id', 'duplicate_key')->toArray();
+
         $query = DB::table('daily_register_findings');
 
         // Isolasi Cabang jika targetUnits didefinisikan (khusus RA atau filter Admin)
@@ -344,7 +365,9 @@ class RiskTriggerService
         // Tarik temuan dengan risk score >= 5 atau severity Sedang/Tinggi/Kritis
         $query->where(function ($q) {
             $q->whereIn(DB::raw('LOWER(COALESCE(risk_awal, ""))'), ['high', 'critical', 'tinggi', 'kritis', 'moderate', 'moderate to high', 'sedang'])
+                ->orWhereIn(DB::raw('LOWER(COALESCE(risk_final, ""))'), ['high', 'critical', 'tinggi', 'kritis', 'moderate', 'moderate to high', 'sedang'])
                 ->orWhere('risk_awal', '>=', 5)
+                ->orWhere('skor_final', '>=', 5)
                 ->orWhereRaw('(COALESCE(skor_dampak, 1) * COALESCE(skor_kemungkinan, 1)) >= 5')
                 ->orWhereIn(DB::raw('LOWER(COALESCE(kategori, ""))'), ['kritis', 'tinggi', 'sedang', 'critical', 'high', 'moderate']);
         });
@@ -355,11 +378,11 @@ class RiskTriggerService
             $sourceWpId = "DRF-{$f->id}";
             $tanggal = $f->tanggal_data ?: ($f->tanggal_ditemukan ?: Carbon::today()->toDateString());
             $area = static::mapSourceSheetToArea($f->source_sheet ?? $f->kategori ?? '');
-            [$riskScore, $riskLevel] = static::parseRiskScoreAndLevel($f->risk_awal, $f->skor_dampak, $f->skor_kemungkinan);
+            [$riskScore, $riskLevel] = static::parseRiskScoreAndLevel($f->risk_final ?? $f->risk_awal, $f->skor_dampak, $f->skor_kemungkinan);
 
             $deskripsi = $f->rincian ?: ($f->deskripsi ?: $f->jenis_exception_awal ?: 'Temuan Daily Register');
             $fraudIndicator = str_contains(strtolower($deskripsi), 'fraud') || str_contains(strtolower($f->kategori ?? ''), 'fraud') ? 'Ya' : 'Tidak';
-            $perluLap = (!empty($f->perlu_onsite) && in_array(strtolower((string)$f->perlu_onsite), ['1', 'ya', 'true', 'yes'])) ? 'Ya' : 'Tidak';
+            $perluLap = (!empty($f->perlu_onsite) && in_array(strtolower((string)$f->perlu_onsite), ['1', 'ya', 'true', 'yes', 'perlu'])) ? 'Ya' : 'Tidak';
 
             $res = $this->upsertTriggerRecord([
                 'sumber' => 'Daily Review',
@@ -513,6 +536,27 @@ class RiskTriggerService
         if (!Schema::hasTable('kka_findings')) {
             return ['new' => 0, 'updated' => 0];
         }
+
+        // 1. Bersihkan trigger Offsite (OFF-*) yang sumber datanya sudah dihapus / di-reset
+        $activeOffsiteQuery = DB::table('kka_findings');
+        if (!empty($targetUnits)) {
+            $activeOffsiteQuery->whereIn('kode_unit', $targetUnits);
+        }
+        $validOffsiteWpIds = $activeOffsiteQuery->pluck('id')->map(fn($id) => "OFF-{$id}")->toArray();
+
+        $orphanOffsiteQuery = RegisterTrigger::where('sumber', 'Offsite')
+            ->where('source_wp_id', 'LIKE', 'OFF-%');
+        if (!empty($targetUnits)) {
+            $orphanOffsiteQuery->whereIn('kode_unit', $targetUnits);
+        }
+        if (!empty($validOffsiteWpIds)) {
+            $orphanOffsiteQuery->whereNotIn('source_wp_id', $validOffsiteWpIds);
+        }
+        $orphanOffsiteQuery->delete();
+
+        // Refresh mapping
+        $existingMap = RegisterTrigger::whereNotNull('source_wp_id')->pluck('id', 'source_wp_id')->toArray();
+        $existingDupKeyMap = RegisterTrigger::whereNotNull('duplicate_key')->pluck('id', 'duplicate_key')->toArray();
 
         $query = DB::table('kka_findings')
             ->where(function ($q) {

@@ -412,8 +412,8 @@ class Sop08Service
                         'nama_unit' => $kalender->nama_unit,
                         'resident_auditor' => $kalender->resident_auditor,
                         'area' => $df->kategori ?? 'Teller Kas',
-                        'jenis_isu' => strtoupper($df->jenis_exception_ra ?? 'EXCEPTION'),
-                        'risk_level' => strtoupper($df->risk_awal ?? 'MEDIUM'),
+                        'jenis_isu' => strtoupper($df->jenis_exception_ra ?? $df->jenis_exception_awal ?? 'EXCEPTION'),
+                        'risk_level' => strtoupper($df->risk_final ?? $df->risk_awal ?? 'MEDIUM'),
                         'uraian_isu' => $df->deskripsi ?? ($df->rincian ?? 'Temuan Register Harian SOP 03'),
                         'sebab_awal' => 'Kelemahan kontrol register harian',
                         'dampak_risiko' => 'Risiko ketidaksesuaian kas / transaksi harian',
@@ -421,7 +421,7 @@ class Sop08Service
                         'pic' => 'Kepala Layanan / Operasional',
                         'target_tl' => Carbon::parse($endMonth)->addDays(14)->format('Y-m-d'),
                         'status_tl' => 'OPEN',
-                        'berulang' => 'TIDAK',
+                        'berulang' => ((int)($df->skor_kemungkinan ?? 1) >= 2) ? 'YA' : 'TIDAK',
                         'nilai_dampak' => $df->nominal_terkait ?? 0,
                     ]
                 );

@@ -41,7 +41,13 @@ class PhysicalKkaController extends Controller
                 $namaKC = $kcUnit ? $kcUnit->unit_name : $induk->nama_cabang;
 
                 // Ambil pengajuan KKA Fisik terbaru untuk kode unit ini
-                $latestKka = PhysicalKka::with('user')->where('kode_unit', $kodeKC)->orderBy('created_at', 'desc')->first();
+                $latestKka = PhysicalKka::with('user')->where(function($q) use ($kodeKC, $induk) {
+                    $clean = str_replace('BS-', '', $kodeKC);
+                    $q->where('kode_unit', $kodeKC)
+                      ->orWhere('kode_unit', $clean)
+                      ->orWhere('kode_unit', 'BS-' . $clean)
+                      ->orWhere('kode_unit', $induk->kode_cabang);
+                })->orderBy('created_at', 'desc')->first();
 
                 // Ambil nama RA yang ditugaskan ke unit ini
                 $raUser = $latestKka ? $latestKka->user : \App\Models\User::where('cabang_id', $induk->id)->where('role', 'ra')->first();
@@ -319,8 +325,15 @@ class PhysicalKkaController extends Controller
         $catatanSurat = '';
         
         $kodeUnit = '000';
-        if ($user && $user->cabang && $user->cabang->kode_cabang) {
-            $kodeUnit = $user->cabang->kode_cabang;
+        if ($user && $user->cabang_id) {
+            $kcUnit = \App\Models\Unit::where('cabang_id', $user->cabang_id)
+                ->whereIn('unit_type', ['KC', 'KCU', 'KP'])
+                ->first();
+            if ($kcUnit) {
+                $kodeUnit = $kcUnit->unit_code;
+            } elseif ($user->cabang && $user->cabang->kode_cabang) {
+                $kodeUnit = str_replace('BS-', '', $user->cabang->kode_cabang);
+            }
         } elseif ($user && !empty($user->unit_code)) {
             $kodeUnit = $user->unit_code;
         }
@@ -332,10 +345,15 @@ class PhysicalKkaController extends Controller
         // Untuk minggu kalender yang sama (Senin–Jumat yang sama), data 5 KKA Fisik yang sudah diisi
         // pada hari sebelumnya tetap bertahan/terbawa (carry-forward) sehingga RA tidak perlu menginput ulang.
         if (!$id && !$isAdmin) {
-            $existingWeeklyKka = PhysicalKka::where('kode_unit', $kodeUnit)
-                ->whereBetween('tanggal_pemeriksaan', [$monday, $friday])
-                ->latest('id')
-                ->first();
+            $existingWeeklyKka = PhysicalKka::where(function($q) use ($kodeUnit) {
+                $clean = str_replace('BS-', '', $kodeUnit);
+                $q->where('kode_unit', $kodeUnit)
+                  ->orWhere('kode_unit', $clean)
+                  ->orWhere('kode_unit', 'BS-' . $clean);
+            })
+            ->whereBetween('tanggal_pemeriksaan', [$monday, $friday])
+            ->latest('id')
+            ->first();
             if ($existingWeeklyKka) {
                 $id = $existingWeeklyKka->id;
             }
@@ -374,6 +392,21 @@ class PhysicalKkaController extends Controller
                         'catatan_reviewer' => $detail->catatan_reviewer,
                     ];
                 })->toArray();
+
+                // Pastikan selalu ada slot ATM kosong di tab Cash Opname ATM
+                $atmCount = collect($cashItems)->where('sub_area', 'ATM')->count();
+                if ($atmCount < 10) {
+                    for ($i = $atmCount + 1; $i <= 10; $i++) {
+                        $cashItems[] = [
+                            'objek' => '', 
+                            'pecahan' => 'Isi ID/lokasi ATM; maksimal 4 kaset + reject/retain', 
+                            'sub_area' => 'ATM',
+                            'saldo_sistem' => 50000000,
+                            'hasil_fisik' => '',
+                            'status_uji' => 'BELUM DIUJI',
+                        ];
+                    }
+                }
             }
 
             // Mapping Obs
@@ -544,8 +577,15 @@ class PhysicalKkaController extends Controller
         try {
             $user = Auth::user();
             $kodeUnit = '000';
-            if ($user && $user->cabang && $user->cabang->kode_cabang) {
-                $kodeUnit = $user->cabang->kode_cabang;
+            if ($user && $user->cabang_id) {
+                $kcUnit = \App\Models\Unit::where('cabang_id', $user->cabang_id)
+                    ->whereIn('unit_type', ['KC', 'KCU', 'KP'])
+                    ->first();
+                if ($kcUnit) {
+                    $kodeUnit = $kcUnit->unit_code;
+                } elseif ($user->cabang && $user->cabang->kode_cabang) {
+                    $kodeUnit = str_replace('BS-', '', $user->cabang->kode_cabang);
+                }
             } elseif ($user && !empty($user->unit_code)) {
                 $kodeUnit = $user->unit_code;
             }
@@ -565,10 +605,15 @@ class PhysicalKkaController extends Controller
                 $physicalKka = PhysicalKka::find($request->physical_kka_id);
             }
             if (!$physicalKka) {
-                $physicalKka = PhysicalKka::where('kode_unit', $kodeUnit)
-                    ->whereBetween('tanggal_pemeriksaan', [$monday, $friday])
-                    ->latest('id')
-                    ->first();
+                $physicalKka = PhysicalKka::where(function($q) use ($kodeUnit) {
+                    $clean = str_replace('BS-', '', $kodeUnit);
+                    $q->where('kode_unit', $kodeUnit)
+                      ->orWhere('kode_unit', $clean)
+                      ->orWhere('kode_unit', 'BS-' . $clean);
+                })
+                ->whereBetween('tanggal_pemeriksaan', [$monday, $friday])
+                ->latest('id')
+                ->first();
             }
 
             if ($physicalKka) {

@@ -398,6 +398,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/stok-opname', [KkaDailyRegisterController::class, 'index'])->name('daily-register.stok-opname');
         
         Route::get('/data', [KkaDailyRegisterController::class, 'data'])->name('daily-register.data');
+        Route::get('/checklists', [KkaDailyRegisterController::class, 'getChecklists'])->name('daily-register.checklists');
+        Route::get('/{id}/review-data', [KkaDailyRegisterController::class, 'getReviewData'])->name('daily-register.review-data');
         Route::post('/{id}/ra', [KkaDailyRegisterController::class, 'updateRa'])->name('daily-register.update.ra')->middleware('role:ra,admin');
         Route::put('/{id}/admin', [KkaDailyRegisterController::class, 'updateAdmin'])->name('daily-register.update.admin')->middleware('role:admin,kabag_ra,kadiv_skai');
         Route::post('/{id}/konfirmasi', [KkaDailyRegisterController::class, 'konfirmasiCabang'])->name('daily-register.konfirmasi')->middleware('role:ra,admin,kabag_ra');

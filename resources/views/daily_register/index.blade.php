@@ -857,90 +857,91 @@
             <form id="formKkaRa" enctype="multipart/form-data">
                 <input type="hidden" id="ra_kka_id">
 
-                <div class="custom-grid-2">
+                <!-- 1. TABEL / ACCORDION CHECKLIST KKA (YA / TIDAK) -->
+                <div id="checklistAccordionContainer" style="margin-bottom: 1.5rem;">
+                    <div class="text-center py-3 text-muted" style="font-size:0.85rem;">
+                        <i class="bi bi-hourglass-split me-1"></i> Memuat daftar checklist pengujian...
+                    </div>
+                </div>
+
+                <!-- 2. KEMUNCULAN KONDISIONAL (HANYA MUNCUL JIKA MINIMAL 1 CHECKLIST TIDAK) -->
+                <div id="containerExceptionFields" class="p-3 mb-3" style="display:none; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px;">
+                    <div class="d-flex align-items-center mb-2" style="color:#be123c; font-weight:700; font-size:0.85rem;">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Temuan Pengujian Lapangan Terdeteksi (Checklist Bernilai "Tidak")
+                    </div>
+                    <div class="custom-grid-2 mb-2">
+                        <div>
+                            <label class="custom-form-label">Jenis Exception (Versi RA) <span class="text-danger">*</span></label>
+                            <input type="text" class="custom-form-control field-ra" id="jenis_exception_ra" placeholder="Klasifikasi penyimpangan hasil pengujian...">
+                        </div>
+                        <div>
+                            <label class="custom-form-label">Klarifikasi Unit Kerja / Cabang <span class="text-danger">*</span></label>
+                            <textarea class="custom-form-control field-ra" id="klarifikasi_unit" rows="2" placeholder="Tanggapan dari pihak cabang..."></textarea>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="custom-form-label">Hasil Pengujian Lapangan <span class="text-danger">*</span></label>
+                        <textarea class="custom-form-control field-ra" id="hasil_uji" rows="3" placeholder="Rincian fakta temuan hasil konfirmasi &amp; pengujian lapangan..."></textarea>
+                    </div>
+                </div>
+
+                <!-- 3. FIELD BUKTI, CRITICAL TRIGGER & TANGGAL TERKUNCI -->
+                <div class="custom-grid-3 mb-3">
                     <div>
                         <label class="custom-form-label">Bukti / Referensi Dokumen</label>
-                        <input type="text" class="custom-form-control field-ra" id="bukti_referensi" placeholder="Misal: Surat No. 123/LHA/2026" @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif>
-                    </div>
-                    <div>
-                        <label class="custom-form-label">Jenis Exception (Versi RA)</label>
-                        <input type="text" class="custom-form-control field-ra" id="jenis_exception_ra" placeholder="Klasifikasi penyimpangan hasil pengujian" @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif>
-                    </div>
-                </div>
-
-                <div class="custom-grid-2">
-                    <div>
-                        <label class="custom-form-label">Hasil Pengujian Lapangan</label>
-                        <textarea class="custom-form-control field-ra" id="hasil_uji" rows="3" placeholder="Rincian fakta temuan hasil konfirmasi..." @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif></textarea>
-                    </div>
-                    <div>
-                        <label class="custom-form-label">Klarifikasi Unit Kerja / Cabang</label>
-                        <textarea class="custom-form-control field-ra" id="klarifikasi_unit" rows="3" placeholder="Tanggapan dari pihak cabang..." @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif></textarea>
-                    </div>
-                </div>
-
-                <div class="custom-grid-4">
-                    <div>
-                        <label class="custom-form-label">Skor Dampak (1–5)</label>
-                        <select class="custom-form-control field-ra" id="skor_dampak" onchange="hitungSkorRisiko()" @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif>
-                            <option value="1">1 - Sangat Rendah</option>
-                            <option value="2">2 - Rendah</option>
-                            <option value="3">3 - Sedang</option>
-                            <option value="4">4 - Tinggi</option>
-                            <option value="5">5 - Sangat Tinggi</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="custom-form-label">Skor Kemungkinan (1–5)</label>
-                        <select class="custom-form-control field-ra" id="skor_kemungkinan" onchange="hitungSkorRisiko()" @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif>
-                            <option value="1">1 - Sangat Jarang</option>
-                            <option value="2">2 - Jarang</option>
-                            <option value="3">3 - Kadang-Kadang</option>
-                            <option value="4">4 - Sering</option>
-                            <option value="5">5 - Sangat Sering</option>
-                        </select>
+                        <input type="text" class="custom-form-control field-ra" id="bukti_referensi" placeholder="Misal: Surat No. 123/LHA/2026">
                     </div>
                     <div>
                         <label class="custom-form-label">Critical Trigger</label>
-                        <select class="custom-form-control field-ra" id="critical_trigger" onchange="hitungSkorRisiko()" @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif>
+                        <select class="custom-form-control field-ra" id="critical_trigger" onchange="onChecklistChange()">
                             <option value="Tidak">Tidak</option>
-                            <option value="Ya">Ya (Otomatis High)</option>
+                            <option value="Ya">Ya (Otomatis Critical/High)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="custom-form-label">Skor &amp; Risk Final</label>
+                        <label class="custom-form-label">Upload Bukti Transaksi (PDF)</label>
+                        <input type="file" class="custom-form-control field-ra" id="file_bukti" accept=".pdf">
+                        <div id="file_bukti_info" style="font-size:0.72rem; color:var(--text-muted); margin-top:0.2rem;"></div>
+                    </div>
+                </div>
+
+                <div class="custom-grid-2 mb-3">
+                    <div>
+                        <label class="custom-form-label">Tanggal Ditemukan / Diuji <i class="bi bi-lock-fill text-muted" title="Terkunci otomatis pada tanggal RA membuka KKA"></i></label>
+                        <input type="date" class="custom-form-control" id="tanggal_ditemukan" readonly style="background:#f1f5f9; cursor:not-allowed;">
+                    </div>
+                    <div>
+                        <label class="custom-form-label">Perlu Onsite Inspection? <i class="bi bi-lock-fill text-muted" title="Otomatis terhitung dari skor risiko"></i></label>
+                        <input type="hidden" id="perlu_onsite" value="Tidak Perlu">
+                        <div class="custom-form-control" style="background:#f8fafc; font-weight:600; color:var(--text-dark); height: calc(1.5em + 1.2rem + 2px); display:flex; align-items:center;" id="display_perlu_onsite">Tidak Perlu</div>
+                    </div>
+                </div>
+
+                <!-- 4. OTOMASI PENUH & PENGUNCIAN (READ-ONLY) SKOR RISIKO -->
+                <div class="custom-grid-3 mb-3">
+                    <div>
+                        <label class="custom-form-label">Skor Dampak (1–5) <i class="bi bi-lock-fill text-muted" title="Terkunci otomatis matriks 5x5"></i></label>
+                        <input type="hidden" id="skor_dampak" value="1">
+                        <div class="custom-form-control" style="background:#f8fafc; font-weight:600; color:var(--text-dark);" id="display_skor_dampak">1 — Sangat Rendah</div>
+                    </div>
+                    <div>
+                        <label class="custom-form-label">Skor Kemungkinan (1–5) <i class="bi bi-lock-fill text-muted" title="Terkunci otomatis berbasis kejadian berulang"></i></label>
+                        <input type="hidden" id="skor_kemungkinan" value="1">
+                        <div class="custom-form-control" style="background:#f8fafc; font-weight:600; color:var(--text-dark);" id="display_skor_kemungkinan">1 — Sangat Jarang</div>
+                    </div>
+                    <div>
+                        <label class="custom-form-label">Skor &amp; Risk Final <i class="bi bi-lock-fill text-muted" title="Terkunci otomatis (Dampak x Kemungkinan)"></i></label>
+                        <input type="hidden" id="skor_final" value="1">
+                        <input type="hidden" id="risk_final" value="Low">
                         <div class="custom-form-control" style="background:#f8fafc; display:flex; align-items:center; gap:0.5rem; height: calc(1.5em + 1.2rem + 2px);">
-                            <span style="font-weight:700; font-size:1.1rem;" id="text_skor_final">0</span> 
+                            <span style="font-weight:700; font-size:1.1rem;" id="text_skor_final">1</span> 
                             <span style="color:var(--text-muted);">—</span> 
                             <span id="badge_risk_final" style="padding:0.3rem 0.6rem; border-radius:6px; font-weight:600; font-size:0.8rem; background:#dcfce7; color:#16a34a; border:1px solid #bbf7d0;">Low</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="custom-grid-3">
-                    <div>
-                        <label class="custom-form-label">Perlu Onsite Inspection?</label>
-                        <select class="custom-form-control field-ra" id="perlu_onsite" @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif>
-                            <option value="0">Tidak Perlu</option>
-                            <option value="1">Perlu Pemeriksaan Onsite</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="custom-form-label">Upload Bukti Transaksi (PDF)</label>
-                        <input type="file" class="custom-form-control field-ra" id="file_bukti" accept=".pdf" @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif>
-                    </div>
-                    <div>
-                        <label class="custom-form-label">Tanggal Ditemukan / Diuji</label>
-                        <input type="date" class="custom-form-control field-ra" id="tanggal_ditemukan" @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 1.5rem;">
-                    <label class="custom-form-label">Simpulan RA</label>
-                    <textarea class="custom-form-control field-ra" id="simpulan_ra" rows="2" placeholder="Simpulan akhir pemeriksaan offsite..." @if(strtolower(auth()->user()->role) !== 'ra') disabled @endif></textarea>
-                </div>
-
-                @if(strtolower(auth()->user()->role) === 'ra')
+                @if(strtolower(auth()->user()->role) === 'ra' || strtolower(auth()->user()->role) === 'admin')
                 <div style="display:flex; justify-content:flex-end; gap:0.8rem; border-top:1px solid var(--border-color); padding-top:1rem;">
                     <button type="button" class="btn-back" onclick="closeDetailView()">Batal</button>
                     <button type="button" style="background:#f59e0b; color:#fff; border:none; padding:0.4rem 1.5rem; border-radius:6px; font-weight:600; cursor:pointer;" onclick="submitRaForm()">
@@ -1041,6 +1042,11 @@
     let currentActiveSheetCode = '{{ $defaultTab }}';
     let currentActiveSheet = '{{ $defaultTabName }}';
     let isShowingRiwayat = false;
+
+    let currentItem = null;
+    let currentChecklists = [];
+    let currentRecurringCount = 1;
+    const allMasterChecklists = @json($allChecklists ?? []);
 
     function changeAdminCabang(unitCode) {
         const selectElem = document.getElementById('selectAdminCabang');
@@ -1259,8 +1265,21 @@
         }
 
         data.forEach((item, index) => {
-            let riskClass = (item.risk_awal || '').toLowerCase() === 'high' ? 'bg-danger text-white' : 'bg-warning text-dark';
-            let riskBadge = `<span class="badge ${riskClass}" style="border-radius:12px; padding:0.25rem 0.55rem; font-size:0.72rem;">${item.risk_awal || 'Moderate'}</span>`;
+            let riskVal = item.risk_final || item.risk_awal || 'Moderate';
+            let riskLower = riskVal.toLowerCase();
+            let riskBadgeStyle = 'background-color:#fffbeb; color:#b45309; border:1px solid #fde68a;';
+            if (riskLower === 'critical') {
+                riskBadgeStyle = 'background-color:#7f1d1d; color:#ffffff; border:1px solid #991b1b;';
+            } else if (riskLower === 'high') {
+                riskBadgeStyle = 'background-color:#fee2e2; color:#dc2626; border:1px solid #fca5a5;';
+            } else if (riskLower === 'moderate to high') {
+                riskBadgeStyle = 'background-color:#ffedd5; color:#c2410c; border:1px solid #fed7aa;';
+            } else if (riskLower === 'moderate') {
+                riskBadgeStyle = 'background-color:#fffbeb; color:#b45309; border:1px solid #fde68a;';
+            } else if (riskLower === 'low') {
+                riskBadgeStyle = 'background-color:#dcfce7; color:#16a34a; border:1px solid #bbf7d0;';
+            }
+            let riskBadge = `<span class="badge" style="border-radius:12px; padding:0.25rem 0.55rem; font-size:0.72rem; ${riskBadgeStyle}">${riskVal}</span>`;
             let nominalStr = item.nominal_terkait > 0 ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.nominal_terkait) : '-';
             
             // Pengecekan agar user_maker yang kosong atau strip (-) otomatis tertulis "Sistem / Tidak Tercatat"
@@ -1294,23 +1313,23 @@
         });
     }
 
-    // FUNGSI TOGGLE KE FULL PAGE DETAIL VIEW (DIPERBARUI AGAR SELALU AMBIL DATA FRESH)
+    // FUNGSI TOGGLE KE FULL PAGE DETAIL VIEW (MENGAMBIL DATA REVIEW LENGKAP & CHECKLIST DARI SERVER)
     function openDetailView(id) {
-        let item = globalFindings.find(x => x.id == id);
-        if(!item) return;
-
-        // Ambil data terbaru langsung dari server berdasarkan ID untuk memastikan data Admin ikut termuat
-        axios.get(`${baseUrl}/data?source_sheet=${currentActiveSheetCode}`)
+        axios.get(`${baseUrl}/${id}/review-data`)
             .then(response => {
-                const freshData = response.data.data.data;
-                const freshItem = freshData.find(x => x.id == id);
-                if(freshItem) {
-                    item = freshItem;
-                }
-                populateDetailForm(item);
+                currentItem = response.data.finding;
+                currentChecklists = response.data.checklists || [];
+                currentRecurringCount = response.data.recurring_count || 1;
+                populateDetailForm(currentItem);
             })
             .catch(() => {
-                populateDetailForm(item);
+                let item = globalFindings.find(x => x.id == id);
+                if (item) {
+                    currentItem = item;
+                    currentChecklists = allMasterChecklists[item.source_sheet] || [];
+                    currentRecurringCount = 1;
+                    populateDetailForm(item);
+                }
             });
     }
 
@@ -1326,12 +1345,24 @@
         document.getElementById('sum_nominal').innerText = item.nominal_terkait > 0 ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(item.nominal_terkait) : 'Rp 0';
         
         // Custom Badge Generator
-        let riskValue = (item.risk_awal || 'Moderate').toLowerCase();
-        let badgeBgColor = riskValue === 'high' ? '#fef2f2' : '#fffbeb';
-        let badgeBorderColor = riskValue === 'high' ? '#fecaca' : '#fde68a';
-        let badgeTextColor = riskValue === 'high' ? '#dc2626' : '#b45309';
+        let riskValue = (item.risk_final || item.risk_awal || 'Moderate').toLowerCase();
+        let badgeBgColor = '#fffbeb';
+        let badgeBorderColor = '#fde68a';
+        let badgeTextColor = '#b45309';
 
-        document.getElementById('sum_risk_badge').innerHTML = `<span style="background-color:${badgeBgColor}; color:${badgeTextColor}; border:1px solid ${badgeBorderColor}; border-radius:12px; padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;">${item.risk_awal || 'Moderate Risk'}</span>`;
+        if (riskValue === 'critical') {
+            badgeBgColor = '#7f1d1d'; badgeBorderColor = '#991b1b'; badgeTextColor = '#ffffff';
+        } else if (riskValue === 'high') {
+            badgeBgColor = '#fee2e2'; badgeBorderColor = '#fca5a5'; badgeTextColor = '#dc2626';
+        } else if (riskValue === 'moderate to high') {
+            badgeBgColor = '#ffedd5'; badgeBorderColor = '#fed7aa'; badgeTextColor = '#c2410c';
+        } else if (riskValue === 'moderate') {
+            badgeBgColor = '#fffbeb'; badgeBorderColor = '#fde68a'; badgeTextColor = '#b45309';
+        } else if (riskValue === 'low') {
+            badgeBgColor = '#dcfce7'; badgeBorderColor = '#bbf7d0'; badgeTextColor = '#16a34a';
+        }
+
+        document.getElementById('sum_risk_badge').innerHTML = `<span style="background-color:${badgeBgColor}; color:${badgeTextColor}; border:1px solid ${badgeBorderColor}; border-radius:12px; padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;">${item.risk_final || item.risk_awal || 'Moderate'}</span>`;
         document.getElementById('sum_deskripsi').innerText = item.deskripsi || item.rincian || '-';
 
         // Populate Section 1 (System)
@@ -1349,15 +1380,31 @@
         // Populate Section 2 (RA)
         document.getElementById('ra_kka_id').value = item.id;
         document.getElementById('bukti_referensi').value = item.bukti_referensi || '';
+        document.getElementById('critical_trigger').value = item.critical_trigger || 'Tidak';
         document.getElementById('jenis_exception_ra').value = item.jenis_exception_ra || '';
         document.getElementById('hasil_uji').value = item.hasil_uji || '';
         document.getElementById('klarifikasi_unit').value = item.klarifikasi_unit || '';
-        document.getElementById('skor_dampak').value = item.skor_dampak || 1;
-        document.getElementById('skor_kemungkinan').value = item.skor_kemungkinan || 1;
-        document.getElementById('critical_trigger').value = item.critical_trigger || 'Tidak';
-        document.getElementById('perlu_onsite').value = item.perlu_onsite ? 1 : 0;
-        document.getElementById('tanggal_ditemukan').value = item.tanggal_ditemukan || '';
-        document.getElementById('simpulan_ra').value = item.simpulan_ra || '';
+        
+        // Kunci Tanggal Ditemukan / Diuji: Otomatis terkunci saat RA membuka KKA
+        const d = new Date();
+        const localTodayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const tanggalVal = item.tanggal_ditemukan ? item.tanggal_ditemukan.split('T')[0].split(' ')[0] : localTodayStr;
+        const tglInput = document.getElementById('tanggal_ditemukan');
+        tglInput.value = tanggalVal;
+        tglInput.readOnly = true;
+
+        // Info File Bukti
+        const fileInfoEl = document.getElementById('file_bukti_info');
+        if (fileInfoEl) {
+            if (item.file_bukti) {
+                fileInfoEl.innerHTML = `<a href="/storage/${item.file_bukti}" target="_blank" class="text-primary text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Lihat File Bukti Terunggah</a>`;
+            } else {
+                fileInfoEl.innerHTML = `Belum ada file bukti PDF diunggah.`;
+            }
+        }
+
+        // Render Accordion Checklist KKA
+        renderChecklistAccordion(currentChecklists, item.checklist_answers || []);
 
         // Populate Section 3 (Admin)
         document.getElementById('admin_kka_id').value = item.id;
@@ -1368,15 +1415,16 @@
         document.getElementById('keputusan_eskalasi').value = item.keputusan_eskalasi || 'Tidak';
         document.getElementById('catatan_reviewer').value = item.catatan_reviewer || '';
 
-        hitungSkorRisiko();
+        // Hitung otomasi skor risiko dan kendalikan visibilitas field exception
+        onChecklistChange();
 
         // Lock Logic based on Role
-        const isRa = userRole === 'ra';
+        const isRa = (userRole === 'ra' || userRole === 'admin');
         document.querySelectorAll('.field-ra').forEach(el => el.disabled = !isRa);
-        document.querySelectorAll('.field-admin').forEach(el => el.disabled = isRa);
+        document.querySelectorAll('.field-admin').forEach(el => el.disabled = (userRole === 'ra'));
         
         document.getElementById('badge_ra_lock').innerText = isRa ? "Mode Edit" : "Read Only";
-        document.getElementById('badge_admin_lock').innerText = isRa ? "Read Only" : "Mode Edit";
+        document.getElementById('badge_admin_lock').innerText = (userRole === 'ra') ? "Read Only" : "Mode Edit";
 
         // LAKUKAN TOGGLE TAMPILAN
         document.getElementById('dashboardView').style.display = 'none';
@@ -1390,46 +1438,418 @@
         document.getElementById('dashboardView').style.display = 'block';
     }
 
-    function hitungSkorRisiko() {
-        const dampak = parseInt(document.getElementById('skor_dampak').value) || 1;
-        const kemungkinan = parseInt(document.getElementById('skor_kemungkinan').value) || 1;
-        const critical = document.getElementById('critical_trigger').value;
-        const skor = dampak * kemungkinan;
-        let riskCategory = 'Low';
-        let badgeBgColor = '#dcfce7';
-        let badgeBorderColor = '#bbf7d0';
-        let badgeTextColor = '#16a34a';
+    // RENDER ACCORDION CHECKLIST KKA DENGAN KELOMPOK PER SUB-AREA
+    function renderChecklistAccordion(checklists, existingAnswers) {
+        const container = document.getElementById('checklistAccordionContainer');
+        if (!container) return;
 
-        if (critical === 'Ya' || skor >= 15) {
-            riskCategory = 'High'; 
-            badgeBgColor = '#fef2f2'; badgeBorderColor = '#fecaca'; badgeTextColor = '#dc2626';
-        } else if (skor >= 6) {
-            riskCategory = 'Moderate'; 
-            badgeBgColor = '#fffbeb'; badgeBorderColor = '#fde68a'; badgeTextColor = '#b45309';
+        if (!checklists || checklists.length === 0) {
+            container.innerHTML = `<div class="p-3 text-muted text-center" style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px;">Tidak ada master checklist untuk tab KKA ini.</div>`;
+            return;
         }
 
-        document.getElementById('text_skor_final').innerText = skor;
+        const answerMap = {};
+        if (Array.isArray(existingAnswers)) {
+            existingAnswers.forEach(ans => {
+                answerMap[ans.checklist_id] = {
+                    jawaban: ans.jawaban,
+                    keterangan: ans.keterangan || ''
+                };
+            });
+        }
+
+        const groups = {};
+        checklists.forEach(chk => {
+            const code = chk.sub_area_code;
+            if (!groups[code]) {
+                groups[code] = {
+                    code: code,
+                    name: chk.sub_area_name,
+                    items: []
+                };
+            }
+            groups[code].items.push(chk);
+        });
+
+        const isRa = (userRole === 'ra' || userRole === 'admin');
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background:#f1f5f9; border:1px solid var(--border-color);">
+                <div style="font-size:0.83rem; font-weight:700; color:var(--primary-blue, #1e3a8a);">
+                    <i class="bi bi-ui-checks me-1"></i> CHECKLIST PENGUJIAN AUDIT (${checklists.length} ITEM)
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="badge bg-success" id="badgeTotalYa" style="font-size:0.75rem;">0 Ya</span>
+                    <span class="badge bg-danger" id="badgeTotalTidak" style="font-size:0.75rem;">0 Tidak</span>
+                </div>
+            </div>
+            <div class="accordion" id="accordionChecklistKka">
+        `;
+
+        for (const code in groups) {
+            const grp = groups[code];
+            const collapseId = `collapseSubArea_${code}`;
+
+            html += `
+            <div class="accordion-item" style="border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.65rem; overflow:hidden;">
+                <h2 class="accordion-header" id="heading_${code}" style="background:#f8fafc;">
+                    <div class="d-flex justify-content-between align-items-center w-100 p-2 px-3" style="cursor:pointer;" onclick="toggleAccordionSubArea('${collapseId}')">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <i class="bi bi-chevron-down toggle-icon-${collapseId}" style="font-size:0.8rem; transition: transform 0.2s;"></i>
+                            <span class="fw-bold" style="font-size:0.82rem; color:var(--text-dark);">${grp.name}</span>
+                            <span class="badge bg-light text-secondary border" style="font-size:0.7rem;">${grp.items.length} Item</span>
+                            <span class="badge bg-danger text-white subarea-tidak-badge" id="subTidakBadge_${code}" style="display:none; font-size:0.7rem;">0 Temuan Tidak</span>
+                        </div>
+                        ${isRa ? `
+                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold" style="font-size:0.72rem; border-radius:4px;" onclick="setSubAreaAllYa('${code}', event)">
+                            <i class="bi bi-check-all"></i> Set Semua Ya
+                        </button>
+                        ` : ''}
+                    </div>
+                </h2>
+                <div id="${collapseId}" class="accordion-collapse" style="display: block;">
+                    <div class="accordion-body p-0" id="subAreaBody_${code}">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.78rem;">
+                                <thead class="table-light" style="font-size:0.72rem; text-transform:uppercase;">
+                                    <tr>
+                                        <th style="width: 5%; text-align:center;">No</th>
+                                        <th style="width: 25%;">Sub-Area / Objek</th>
+                                        <th style="width: 40%;">Item Checklist</th>
+                                        <th style="width: 14%; text-align:center;">Jawaban</th>
+                                        <th style="width: 16%;">Keterangan / Catatan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+
+            grp.items.forEach(chk => {
+                const saved = answerMap[chk.id];
+                const jawaban = saved ? saved.jawaban : 'Ya';
+                const ket = saved ? saved.keterangan : '';
+                const isYa = (jawaban === 'Ya');
+
+                html += `
+                    <tr id="row_chk_${chk.id}" class="${!isYa ? 'table-danger' : ''}">
+                        <td style="text-align:center; color:var(--text-muted);">${chk.item_no}</td>
+                        <td style="color:var(--text-dark); font-weight:500;">${chk.sub_area_name}</td>
+                        <td style="color:var(--text-dark);">${chk.item_checklist}</td>
+                        <td style="text-align:center;">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check chk-answer" name="chk_answer_${chk.id}" id="chk_ya_${chk.id}" value="Ya" data-subarea="${code}" autocomplete="off" onchange="onChecklistChange()" ${isYa ? 'checked' : ''} ${!isRa ? 'disabled' : ''}>
+                                <label class="btn btn-outline-success py-0 px-2" for="chk_ya_${chk.id}" style="font-size:0.72rem;">Ya</label>
+
+                                <input type="radio" class="btn-check chk-answer" name="chk_answer_${chk.id}" id="chk_tidak_${chk.id}" value="Tidak" data-subarea="${code}" autocomplete="off" onchange="onChecklistChange()" ${!isYa ? 'checked' : ''} ${!isRa ? 'disabled' : ''}>
+                                <label class="btn btn-outline-danger py-0 px-2" for="chk_tidak_${chk.id}" style="font-size:0.72rem;">Tidak</label>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm chk-keterangan" id="chk_ket_${chk.id}" data-checklist-id="${chk.id}" placeholder="Catatan opsional..." value="${ket.replace(/"/g, '&quot;')}" ${!isRa ? 'disabled' : ''} style="font-size:0.75rem;">
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        html += `</div>`;
+        container.innerHTML = html;
+    }
+
+    function toggleAccordionSubArea(collapseId) {
+        const el = document.getElementById(collapseId);
+        if (!el) return;
+        const isVisible = (el.style.display !== 'none');
+        el.style.display = isVisible ? 'none' : 'block';
+        const icon = document.querySelector(`.toggle-icon-${collapseId}`);
+        if (icon) {
+            icon.style.transform = isVisible ? 'rotate(-90deg)' : 'rotate(0deg)';
+        }
+    }
+
+    function setSubAreaAllYa(code, event) {
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        const body = document.getElementById(`subAreaBody_${code}`);
+        if (!body) return;
+        const yaRadios = body.querySelectorAll('.btn-check[value="Ya"]');
+        yaRadios.forEach(r => {
+            r.checked = true;
+        });
+        onChecklistChange();
+    }
+
+    // PENANGANAN REAKTIF CHECKLIST & OTOMASI SKOR RISIKO
+    function onChecklistChange() {
+        let yaCount = 0;
+        let tidakCount = 0;
+        const subAreaTidakMap = {};
+
+        document.querySelectorAll('.chk-answer:checked').forEach(r => {
+            const sub = r.getAttribute('data-subarea');
+            const chkId = r.name.replace('chk_answer_', '');
+            const row = document.getElementById(`row_chk_${chkId}`);
+
+            if (r.value === 'Tidak') {
+                tidakCount++;
+                subAreaTidakMap[sub] = (subAreaTidakMap[sub] || 0) + 1;
+                if (row) {
+                    row.classList.add('table-danger');
+                }
+            } else {
+                yaCount++;
+                if (row) {
+                    row.classList.remove('table-danger', 'table-danger-subtle');
+                }
+            }
+        });
+
+        // Update Badges
+        const badgeYa = document.getElementById('badgeTotalYa');
+        const badgeTidak = document.getElementById('badgeTotalTidak');
+        if (badgeYa) badgeYa.innerText = `${yaCount} Ya`;
+        if (badgeTidak) badgeTidak.innerText = `${tidakCount} Tidak`;
+
+        // Update SubArea Badges
+        document.querySelectorAll('.subarea-tidak-badge').forEach(b => {
+            const code = b.id.replace('subTidakBadge_', '');
+            const cnt = subAreaTidakMap[code] || 0;
+            if (cnt > 0) {
+                b.innerText = `${cnt} Temuan Tidak`;
+                b.style.display = 'inline-block';
+            } else {
+                b.style.display = 'none';
+            }
+        });
+
+        // 2. Kemunculan Kondisional (Jenis Exception, Hasil Pengujian, Klarifikasi Unit)
+        const containerExc = document.getElementById('containerExceptionFields');
+        const inputJenisExc = document.getElementById('jenis_exception_ra');
+        const inputHasilUji = document.getElementById('hasil_uji');
+        const inputKlarifikasi = document.getElementById('klarifikasi_unit');
+
+        if (tidakCount >= 1) {
+            if (containerExc) containerExc.style.display = 'block';
+            if (inputJenisExc) inputJenisExc.required = true;
+            if (inputHasilUji) inputHasilUji.required = true;
+            if (inputKlarifikasi) inputKlarifikasi.required = true;
+        } else {
+            if (containerExc) containerExc.style.display = 'none';
+            if (inputJenisExc) { inputJenisExc.required = false; inputJenisExc.value = ''; }
+            if (inputHasilUji) { inputHasilUji.required = false; inputHasilUji.value = ''; }
+            if (inputKlarifikasi) { inputKlarifikasi.required = false; inputKlarifikasi.value = ''; }
+        }
+
+        // 3. Otomasi Skor Risiko
+        hitungOtomatisSkorRisiko(tidakCount);
+    }
+
+    function hitungOtomatisSkorRisiko(tidakCount) {
+        const nominal = currentItem ? (parseFloat(currentItem.nominal_terkait) || 0) : 0;
+        const criticalTrigger = document.getElementById('critical_trigger').value;
+        const recurringCount = currentRecurringCount || 1;
+
+        let skorDampak = 1;
+        let labelDampak = '1 — Sangat Rendah';
+        let skorKemungkinan = 1;
+        let labelKemungkinan = '1 — Sangat Jarang';
+        let skorFinal = 1;
+        let riskFinal = 'Low';
+        let perluOnsite = 'Tidak Perlu';
+
+        if (tidakCount === 0 && criticalTrigger === 'Tidak') {
+            skorDampak = 1;
+            labelDampak = '1 — Sangat Rendah';
+            skorKemungkinan = 1;
+            labelKemungkinan = '1 — Sangat Jarang';
+            skorFinal = 1;
+            riskFinal = 'Low';
+            perluOnsite = 'Tidak Perlu';
+        } else {
+            // 1. Skor Dampak (1-5) Otomatis
+            if (criticalTrigger === 'Ya' || nominal >= 500000000) {
+                skorDampak = 5;
+                labelDampak = '5 — Sangat Tinggi';
+            } else {
+                const hasNominal = currentItem && currentItem.nominal_terkait !== null && nominal > 0;
+                let chkScore = 1;
+                if (tidakCount >= 5) chkScore = 4;
+                else if (tidakCount >= 3) chkScore = 3;
+                else if (tidakCount >= 2) chkScore = 2;
+                else if (tidakCount === 1) chkScore = hasNominal ? 1 : 2;
+
+                let nomScore = 0;
+                if (hasNominal) {
+                    if (nominal >= 100000000) nomScore = 4;
+                    else if (nominal >= 50000000) nomScore = 3;
+                    else if (nominal >= 10000000) nomScore = 2;
+                    else nomScore = 1;
+                }
+
+                skorDampak = Math.max(chkScore, nomScore);
+                if (!hasNominal && tidakCount >= 1 && skorDampak < 2) {
+                    skorDampak = 2;
+                }
+                skorDampak = Math.min(Math.max(skorDampak, 1), 5);
+
+                const dampakLabels = {
+                    1: '1 — Sangat Rendah',
+                    2: '2 — Rendah',
+                    3: '3 — Sedang',
+                    4: '4 — Tinggi',
+                    5: '5 — Sangat Tinggi'
+                };
+                labelDampak = dampakLabels[skorDampak] || `${skorDampak}`;
+            }
+
+            // 2. Skor Kemungkinan (1-5) Otomatis Berdasarkan Kejadian Berulang di Database
+            const k = recurringCount;
+            if (k >= 7) {
+                skorKemungkinan = 5;
+                labelKemungkinan = '5 — Sangat Sering';
+            } else if (k >= 5) {
+                skorKemungkinan = 4;
+                labelKemungkinan = '4 — Sering';
+            } else if (k >= 3) {
+                skorKemungkinan = 3;
+                labelKemungkinan = '3 — Cukup Sering';
+            } else if (k === 2) {
+                skorKemungkinan = 2;
+                labelKemungkinan = '2 — Jarang';
+            } else {
+                skorKemungkinan = (tidakCount >= 2) ? 2 : 1;
+                labelKemungkinan = (skorKemungkinan === 2) ? '2 — Jarang (Banyak Gagal)' : '1 — Sangat Jarang';
+            }
+
+            // 3. Skor & Risk Final Otomatis (Dampak x Kemungkinan)
+            skorFinal = skorDampak * skorKemungkinan;
+
+            if (criticalTrigger === 'Ya') {
+                riskFinal = 'Critical';
+                if (skorFinal < 16) skorFinal = 16;
+            } else if (skorFinal >= 16) {
+                riskFinal = 'Critical';
+            } else if (skorFinal >= 10) {
+                riskFinal = 'High';
+            } else if (skorFinal >= 8) {
+                riskFinal = 'Moderate to High';
+            } else if (skorFinal >= 5) {
+                riskFinal = 'Moderate';
+            } else {
+                riskFinal = 'Low';
+            }
+
+            // 4. Perlu Onsite Inspection?
+            if (['Moderate to High', 'High', 'Critical'].includes(riskFinal) || skorFinal >= 8 || criticalTrigger === 'Ya') {
+                perluOnsite = 'Perlu';
+            } else {
+                perluOnsite = 'Tidak Perlu';
+            }
+        }
+
+        // Update Hidden Inputs & Display Elements
+        document.getElementById('skor_dampak').value = skorDampak;
+        document.getElementById('display_skor_dampak').innerText = labelDampak;
+
+        document.getElementById('skor_kemungkinan').value = skorKemungkinan;
+        document.getElementById('display_skor_kemungkinan').innerHTML = `${labelKemungkinan} <span class="badge bg-light text-secondary border ms-1" style="font-size:0.7rem;">Kejadian ke-${recurringCount}</span>`;
+
+        document.getElementById('skor_final').value = skorFinal;
+        document.getElementById('risk_final').value = riskFinal;
+        document.getElementById('text_skor_final').innerText = skorFinal;
+
         const badgeEl = document.getElementById('badge_risk_final');
-        badgeEl.innerText = riskCategory;
-        badgeEl.style.backgroundColor = badgeBgColor;
-        badgeEl.style.color = badgeTextColor;
-        badgeEl.style.border = `1px solid ${badgeBorderColor}`;
+        badgeEl.innerText = riskFinal;
+
+        let badgeBg = '#dcfce7';
+        let badgeBorder = '#bbf7d0';
+        let badgeText = '#16a34a';
+
+        if (riskFinal === 'Critical') {
+            badgeBg = '#7f1d1d'; badgeBorder = '#991b1b'; badgeText = '#ffffff';
+        } else if (riskFinal === 'High') {
+            badgeBg = '#fee2e2'; badgeBorder = '#fca5a5'; badgeText = '#dc2626';
+        } else if (riskFinal === 'Moderate to High') {
+            badgeBg = '#ffedd5'; badgeBorder = '#fed7aa'; badgeText = '#c2410c';
+        } else if (riskFinal === 'Moderate') {
+            badgeBg = '#fffbeb'; badgeBorder = '#fde68a'; badgeText = '#b45309';
+        }
+
+        badgeEl.style.backgroundColor = badgeBg;
+        badgeEl.style.borderColor = badgeBorder;
+        badgeEl.style.color = badgeText;
+
+        document.getElementById('perlu_onsite').value = perluOnsite;
+        const onsiteEl = document.getElementById('display_perlu_onsite');
+        onsiteEl.innerText = (perluOnsite === 'Perlu') ? 'Perlu Pemeriksaan Onsite' : 'Tidak Perlu';
+        if (perluOnsite === 'Perlu') {
+            onsiteEl.style.color = '#dc2626';
+            onsiteEl.style.fontWeight = '700';
+        } else {
+            onsiteEl.style.color = 'var(--text-dark)';
+            onsiteEl.style.fontWeight = '600';
+        }
     }
 
     function submitRaForm() {
         const id = document.getElementById('ra_kka_id').value;
         
+        let tidakCount = 0;
+        const checklistAnswers = [];
+        currentChecklists.forEach(chk => {
+            const tidakRadio = document.getElementById(`chk_tidak_${chk.id}`);
+            const ketInput = document.getElementById(`chk_ket_${chk.id}`);
+            const jawaban = (tidakRadio && tidakRadio.checked) ? 'Tidak' : 'Ya';
+            if (jawaban === 'Tidak') tidakCount++;
+            const keterangan = ketInput ? ketInput.value.trim() : '';
+            checklistAnswers.push({
+                checklist_id: chk.id,
+                jawaban: jawaban,
+                keterangan: keterangan
+            });
+        });
+
+        const jenisExc = document.getElementById('jenis_exception_ra').value.trim();
+        const hasilUji = document.getElementById('hasil_uji').value.trim();
+        const klarifikasi = document.getElementById('klarifikasi_unit').value.trim();
+
+        if (tidakCount >= 1) {
+            if (!jenisExc) {
+                alert('Jenis Exception (Versi RA) wajib diisi karena terdapat item checklist bernilai Tidak!');
+                document.getElementById('jenis_exception_ra').focus();
+                return;
+            }
+            if (!hasilUji) {
+                alert('Hasil Pengujian Lapangan wajib diisi karena terdapat item checklist bernilai Tidak!');
+                document.getElementById('hasil_uji').focus();
+                return;
+            }
+            if (!klarifikasi) {
+                alert('Klarifikasi Unit Kerja / Cabang wajib diisi karena terdapat item checklist bernilai Tidak!');
+                document.getElementById('klarifikasi_unit').focus();
+                return;
+            }
+        }
+
         let formData = new FormData();
         formData.append('bukti_referensi', document.getElementById('bukti_referensi').value);
-        formData.append('jenis_exception_ra', document.getElementById('jenis_exception_ra').value);
-        formData.append('hasil_uji', document.getElementById('hasil_uji').value);
-        formData.append('klarifikasi_unit', document.getElementById('klarifikasi_unit').value);
-        formData.append('skor_dampak', document.getElementById('skor_dampak').value);
-        formData.append('skor_kemungkinan', document.getElementById('skor_kemungkinan').value);
         formData.append('critical_trigger', document.getElementById('critical_trigger').value);
+        formData.append('jenis_exception_ra', tidakCount >= 1 ? jenisExc : '');
+        formData.append('hasil_uji', tidakCount >= 1 ? hasilUji : '');
+        formData.append('klarifikasi_unit', tidakCount >= 1 ? klarifikasi : '');
         formData.append('perlu_onsite', document.getElementById('perlu_onsite').value);
         formData.append('tanggal_ditemukan', document.getElementById('tanggal_ditemukan').value);
-        formData.append('simpulan_ra', document.getElementById('simpulan_ra').value);
+        formData.append('checklist_answers', JSON.stringify(checklistAnswers));
 
         const fileInput = document.getElementById('file_bukti');
         if (fileInput.files.length > 0) {
