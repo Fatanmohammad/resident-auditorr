@@ -16,9 +16,55 @@
             <p class="text-muted mb-0">Kelola dan pantau pelaksanaan audit mendadak berdasarkan master template WP SOP 05</p>
         </div>
         <div>
-            <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill shadow-sm">
-                {{ $assignment->status_assignment ?? 'SIAP DILAKSANAKAN' }}
-            </span>
+            <div class="d-flex align-items-center gap-2">
+                @php
+                    $curStatus = strtoupper(trim($assignment->status_assignment ?? $assignment->status ?? 'SIAP DILAKSANAKAN'));
+                    $badgeBg = match($curStatus) {
+                        'SELESAI', 'SELESAI LENGKAP' => 'bg-success text-white',
+                        'DALAM PROSES', 'SEDANG BERJALAN' => 'bg-warning text-dark',
+                        'SIAP DILAKSANAKAN' => 'bg-primary text-white',
+                        default => 'bg-secondary text-white',
+                    };
+                    $curIcon = match($curStatus) {
+                        'SELESAI', 'SELESAI LENGKAP' => 'bi-check-circle-fill',
+                        'DALAM PROSES', 'SEDANG BERJALAN' => 'bi-hourglass-split',
+                        'SIAP DILAKSANAKAN' => 'bi-clock-history',
+                        default => 'bi-tag-fill',
+                    };
+                @endphp
+                <span class="badge {{ $badgeBg }} fs-6 px-3 py-2 rounded-pill shadow-sm">
+                    <i class="bi {{ $curIcon }} me-1"></i> {{ $assignment->status_assignment ?? 'SIAP DILAKSANAKAN' }}
+                </span>
+                
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill px-3 shadow-sm bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-pencil-square me-1"></i> Ubah Status
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <li>
+                            <form action="{{ route('surprise_audit.status.update', $assignment->id) }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="status_assignment" value="SIAP DILAKSANAKAN">
+                                <button type="submit" class="dropdown-item py-2"><span class="badge bg-primary me-2">&bull;</span> SIAP DILAKSANAKAN</button>
+                            </form>
+                        </li>
+                        <li>
+                            <form action="{{ route('surprise_audit.status.update', $assignment->id) }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="status_assignment" value="DALAM PROSES">
+                                <button type="submit" class="dropdown-item py-2"><span class="badge bg-warning text-dark me-2">&bull;</span> DALAM PROSES</button>
+                            </form>
+                        </li>
+                        <li>
+                            <form action="{{ route('surprise_audit.status.update', $assignment->id) }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="status_assignment" value="SELESAI">
+                                <button type="submit" class="dropdown-item py-2"><span class="badge bg-success me-2">&bull;</span> SELESAI</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 

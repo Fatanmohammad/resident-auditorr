@@ -20,7 +20,36 @@ class SurpriseAuditController extends Controller
     public function index()
     {
         $assignments = SurpriseAuditAssignment::latest()->get();
-        return view('surprise-audit.index', compact('assignments'));
+        $totalCount = $assignments->count();
+        $siapCount = $assignments->filter(function($a) {
+            $st = strtoupper(trim($a->status_assignment ?? $a->status ?? ''));
+            return $st === 'SIAP DILAKSANAKAN' || empty($st);
+        })->count();
+        $prosesCount = $assignments->filter(function($a) {
+            return in_array(strtoupper(trim($a->status_assignment ?? $a->status ?? '')), ['DALAM PROSES', 'SEDANG BERJALAN']);
+        })->count();
+        $selesaiCount = $assignments->filter(function($a) {
+            return in_array(strtoupper(trim($a->status_assignment ?? $a->status ?? '')), ['SELESAI', 'SELESAI LENGKAP']);
+        })->count();
+
+        return view('surprise-audit.index', compact('assignments', 'totalCount', 'siapCount', 'prosesCount', 'selesaiCount'));
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        $assignment = SurpriseAuditAssignment::where('visit_id', $id)
+            ->orWhere('id', $id)
+            ->firstOrFail();
+
+        $request->validate([
+            'status_assignment' => 'required|string',
+        ]);
+
+        $assignment->update([
+            'status_assignment' => $request->status_assignment,
+        ]);
+
+        return redirect()->back()->with('success', 'Status penugasan ' . $assignment->visit_id . ' berhasil diperbarui menjadi: ' . $request->status_assignment);
     }
 
     public function create()
@@ -758,5 +787,115 @@ class SurpriseAuditController extends Controller
 
         return redirect()->route('surprise_audit.lingkungan', $assignment->visit_id)
             ->with('success', 'Data KKA Lingkungan dan CCTV (WP-RA-05-J) berhasil diperbarui!');
+    }
+
+    // ==========================================
+    // MODUL: KKA DOKUMEN BERHARGA (WP-RA-05-G)
+    // ==========================================
+
+    public function showDokumenBerharga($id)
+    {
+        $assignment = SurpriseAuditAssignment::where('visit_id', $id)
+            ->orWhere('id', $id)
+            ->firstOrFail();
+
+        $dokumenData = Sop05KkaDokumenBerhargaDetail::where('surprise_audit_assignment_id', $assignment->id)->get();
+
+        if ($dokumenData->isEmpty()) {
+            $defaultItems = [
+                ['jenis_dokumen' => 'Cek', 'harga_per_lembar' => 5000],
+                ['jenis_dokumen' => 'Bilyet Giro', 'harga_per_lembar' => 5000],
+                ['jenis_dokumen' => 'Bilyet Deposito', 'harga_per_lembar' => 0],
+            ];
+            foreach ($defaultItems as $item) {
+                Sop05KkaDokumenBerhargaDetail::create([
+                    'surprise_audit_assignment_id' => $assignment->id,
+                    'jenis_dokumen' => $item['jenis_dokumen'],
+                    'persediaan_sistem_qty' => 0,
+                    'catatan_petugas_qty' => 0,
+                    'hasil_fisik_qty' => 0,
+                    'harga_per_lembar' => $item['harga_per_lembar'],
+                    'nilai_sistem' => 0,
+                    'nilai_fisik' => 0,
+                    'selisih_sistem_catatan' => 0,
+                    'selisih_sistem_fisik' => 0,
+                    'selisih_catatan_fisik' => 0,
+                    'selisih_nilai' => 0,
+                    'status_uji' => 'SESUAI',
+                    'validasi' => 'VALID',
+                    'exception_aktif' => 'Tidak',
+                ]);
+            }
+            $dokumenData = Sop05KkaDokumenBerhargaDetail::where('surprise_audit_assignment_id', $assignment->id)->get();
+        }
+
+        $qtySistemTotal = $dokumenData->sum('persediaan_sistem_qty');
+        $qtyCatatanTotal = $dokumenData->sum('catatan_petugas_qty');
+        $qtyFisikTotal = $dokumenData->sum('hasil_fisik_qty');
+        $exceptionAktifCount = $dokumenData->where('exception_aktif', 'Ya')->count();
+
+        return view('surprise-audit.dokumen-berharga', compact(
+            'assignment',
+            'dokumenData',
+            'qtySistemTotal',
+            'qtyCatatanTotal',
+            'qtyFisikTotal',
+            'exceptionAktifCount'
+        ));
+    }
+
+    public function storeDokumenBerharga(Request $request, $id)
+    {
+        $assignment = SurpriseAuditAssignment::where('visit_id', $id)
+            ->orWhere('id', $id)
+            ->firstOrFail();
+
+        foreach ($request->items ?? [] as $detailId => $data) {
+            $sistemQty = (int)($data['persediaan_sistem_qty'] ?? 0);
+            $catatanQty = (int)($data['catatan_petugas_qty'] ?? 0);
+            $fisikQty = (int)($data['hasil_fisik_qty'] ?? 0);
+            $harga = (float)($data['harga_per_lembar'] ?? 0);
+
+            $nilaiSistem = $sistemQty * $harga;
+            $nilaiFisik = $fisikQty * $harga;
+            $selisihSistemCatatan = $sistemQty - $catatanQty;
+            $selisihSistemFisik = $sistemQty - $fisikQty;
+            $selisihCatatanFisik = $catatanQty - $fisikQty;
+            $selisihNilai = $nilaiSistem - $nilaiFisik;
+
+            $statusUji = ($selisihSistemFisik == 0 && empty($data['nomor_hilang_lompat'])) ? 'SESUAI' : 'EXCEPTION';
+            $exceptionAktif = ($statusUji === 'EXCEPTION') ? 'Ya' : 'Tidak';
+
+            $validasi = 'VALID';
+            if ($exceptionAktif === 'Ya' && (empty($data['sebab']) || empty($data['dampak']))) {
+                $validasi = 'ANALISIS BELUM LENGKAP';
+            }
+
+            Sop05KkaDokumenBerhargaDetail::where('id', $detailId)
+                ->where('surprise_audit_assignment_id', $assignment->id)
+                ->update([
+                    'persediaan_sistem_qty' => $sistemQty,
+                    'catatan_petugas_qty' => $catatanQty,
+                    'hasil_fisik_qty' => $fisikQty,
+                    'harga_per_lembar' => $harga,
+                    'nilai_sistem' => $nilaiSistem,
+                    'nilai_fisik' => $nilaiFisik,
+                    'selisih_sistem_catatan' => $selisihSistemCatatan,
+                    'selisih_sistem_fisik' => $selisihSistemFisik,
+                    'selisih_catatan_fisik' => $selisihCatatanFisik,
+                    'selisih_nilai' => $selisihNilai,
+                    'range_nomor_seri' => $data['range_nomor_seri'] ?? null,
+                    'nomor_hilang_lompat' => $data['nomor_hilang_lompat'] ?? null,
+                    'status_uji' => $statusUji,
+                    'sebab' => $data['sebab'] ?? null,
+                    'dampak' => $data['dampak'] ?? null,
+                    'referensi_bukti' => $data['referensi_bukti'] ?? null,
+                    'validasi' => $validasi,
+                    'exception_aktif' => $exceptionAktif,
+                ]);
+        }
+
+        return redirect()->route('surprise_audit.dokumen_berharga', $assignment->visit_id)
+            ->with('success', 'Data KKA Dokumen Berharga (WP-RA-05-G) berhasil diperbarui!');
     }
 }

@@ -217,6 +217,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/create', [SurpriseAuditController::class, 'create'])->name('create');
         Route::post('/assignment', [SurpriseAuditController::class, 'storeAssignment'])->name('assignment.store');
         Route::get('/{id}', [SurpriseAuditController::class, 'show'])->name('show');
+        Route::post('/{id}/status', [SurpriseAuditController::class, 'updateStatus'])->name('status.update');
         
         // Rute KKA Kas (SOP 05)
         Route::get('/{id}/kas', [SurpriseAuditController::class, 'showKas'])->name('kas');
