@@ -19,7 +19,8 @@ class SurpriseAuditController extends Controller
 {
     public function index()
     {
-        $assignments = SurpriseAuditAssignment::latest()->get();
+        $user = auth()->user();
+        $assignments = SurpriseAuditAssignment::with(['raUser', 'creator'])->latest()->get();
         $totalCount = $assignments->count();
         $siapCount = $assignments->filter(function($a) {
             $st = strtoupper(trim($a->status_assignment ?? $a->status ?? ''));
@@ -32,17 +33,22 @@ class SurpriseAuditController extends Controller
             return in_array(strtoupper(trim($a->status_assignment ?? $a->status ?? '')), ['SELESAI', 'SELESAI LENGKAP']);
         })->count();
 
-        return view('surprise-audit.index', compact('assignments', 'totalCount', 'siapCount', 'prosesCount', 'selesaiCount'));
+        return view('surprise-audit.index', compact('assignments', 'totalCount', 'siapCount', 'prosesCount', 'selesaiCount', 'user'));
     }
 
     public function updateStatus(Request $request, $id)
     {
+        $user = auth()->user();
+        if (!$user || !in_array($user->role, ['admin', 'kabag_ra', 'kadiv_skai'])) {
+            return redirect()->back()->with('error', 'Akses ditolak: Hanya Admin / Supervisor yang berwenang mengubah status penugasan.');
+        }
+
         $assignment = SurpriseAuditAssignment::where('visit_id', $id)
             ->orWhere('id', $id)
             ->firstOrFail();
 
         $request->validate([
-            'status_assignment' => 'required|string',
+            'status_assignment' => 'required|string|in:SIAP DILAKSANAKAN,DALAM PROSES,SELESAI',
         ]);
 
         $assignment->update([
@@ -54,7 +60,11 @@ class SurpriseAuditController extends Controller
 
     public function create()
     {
-        return view('surprise-audit.create');
+        $units = \App\Models\Unit::orderBy('unit_code')->get();
+        $raUsers = \App\Models\User::where('role', 'ra')->orderBy('name')->get();
+        $reviewers = \App\Models\User::whereIn('role', ['kabag_ra', 'kadiv_skai', 'admin'])->orderBy('name')->get();
+
+        return view('surprise-audit.create', compact('units', 'raUsers', 'reviewers'));
     }
 
     public function storeAssignment(Request $request)
@@ -64,10 +74,25 @@ class SurpriseAuditController extends Controller
             'nama_unit' => 'required',
             'nomor_assignment' => 'required',
             'tanggal_rencana' => 'required',
-            'resident_auditor' => 'required',
-            'reviewer' => 'required',
             'ruang_lingkup' => 'required|array',
         ]);
+
+        $raUserId = $request->ra_user_id;
+        $residentAuditorName = $request->resident_auditor;
+        if ($raUserId) {
+            $raUser = \App\Models\User::find($raUserId);
+            if ($raUser) {
+                $residentAuditorName = $raUser->name;
+            }
+        }
+
+        $reviewerName = $request->reviewer;
+        if ($request->reviewer_user_id) {
+            $revUser = \App\Models\User::find($request->reviewer_user_id);
+            if ($revUser) {
+                $reviewerName = $revUser->name;
+            }
+        }
 
         $tanggalFormat = date('Ymd', strtotime($request->tanggal_rencana));
         $visitId = 'SA-' . $tanggalFormat . '-' . $request->kode_unit;
@@ -79,18 +104,20 @@ class SurpriseAuditController extends Controller
             'tanggal_rencana' => $request->tanggal_rencana,
             'tanggal_mulai_aktual' => $request->tanggal_mulai_aktual ?? null,
             'tanggal_selesai_aktual' => $request->tanggal_selesai_aktual ?? null,
-            'resident_auditor' => $request->resident_auditor,
-            'reviewer' => $request->reviewer,
-            'dasar_penugasan' => 'Informasi Khusus',
+            'resident_auditor' => $residentAuditorName ?? 'Resident Auditor',
+            'reviewer' => $reviewerName ?? 'Reviewer SKAI',
+            'ra_user_id' => $raUserId,
+            'created_by' => auth()->id(),
+            'dasar_penugasan' => $request->dasar_penugasan ?? 'Informasi Khusus',
             'nomor_assignment' => $request->nomor_assignment,
-            'pemberi_tugas' => 'Pimpinan SKAI',
+            'pemberi_tugas' => $request->pemberi_tugas ?? 'Pimpinan SKAI',
             'tujuan' => $request->tujuan ?? 'Memastikan kesesuaian saldo buku dengan kas fisik khasanah dan kas ATM secara mendadak.',
             'klasifikasi_kerahasiaan' => 'Rahasia - Need to Know',
             'ruang_lingkup_area' => $request->ruang_lingkup,
             'status_assignment' => 'SIAP DILAKSANAKAN',
         ]);
 
-        return redirect()->route('surprise_audit.index')->with('success', 'Penugasan Surprise Audit berhasil dibuat.');
+        return redirect()->route('surprise_audit.index')->with('success', 'Penugasan Surprise Audit berhasil dibuat dan dikoneksikan.');
     }
 
     public function show($id)

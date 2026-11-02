@@ -12,14 +12,34 @@
             </h2>
             <p class="text-muted mb-0">Register, Rekapitulasi & Kontrol Pelaksanaan Audit Fisik Mendadak Bank Sulteng</p>
         </div>
-        <a href="{{ route('surprise_audit.create') }}" class="btn btn-primary shadow-sm rounded-pill px-4">
-            <i class="bi bi-plus-circle me-1"></i> Buat Penugasan Baru
-        </a>
+        <div class="d-flex align-items-center gap-2">
+            @if(auth()->check())
+                @if(auth()->user()->role === 'admin')
+                    <span class="badge bg-danger-subtle text-danger border border-danger px-3 py-2 rounded-pill shadow-sm">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Mode: Admin (Kontrol Status)
+                    </span>
+                @else
+                    <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 rounded-pill shadow-sm">
+                        <i class="bi bi-person-workspace me-1"></i> Mode: Resident Auditor (Pelaksana)
+                    </span>
+                @endif
+            @endif
+            <a href="{{ route('surprise_audit.create') }}" class="btn btn-primary shadow-sm rounded-pill px-4">
+                <i class="bi bi-plus-circle me-1"></i> Buat Penugasan Baru
+            </a>
+        </div>
     </div>
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm mb-4" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-octagon-fill me-2"></i> {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
@@ -140,8 +160,18 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="text-dark small"><strong>RA:</strong> {{ $item->resident_auditor }}</div>
+                                    <div class="text-dark small">
+                                        <strong>RA:</strong> {{ $item->resident_auditor }}
+                                        @if(auth()->check() && (auth()->id() == $item->ra_user_id || auth()->user()->name == $item->resident_auditor))
+                                            <span class="badge bg-success-subtle text-success border border-success ms-1 small" style="font-size: 0.7rem;">
+                                                <i class="bi bi-person-check-fill"></i> Tugas Anda
+                                            </span>
+                                        @endif
+                                    </div>
                                     <div class="text-muted small"><strong>Rev:</strong> {{ $item->reviewer }}</div>
+                                    @if($item->creator)
+                                        <small class="text-muted d-block" style="font-size: 0.75rem;"><i class="bi bi-person-gear me-1"></i>Pembuat: {{ $item->creator->name }}</small>
+                                    @endif
                                 </td>
                                 <td class="text-center">
                                     <span class="badge {{ $badgeClass }} px-3 py-2 rounded-pill shadow-sm">

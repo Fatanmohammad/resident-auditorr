@@ -27,6 +27,8 @@ class SurpriseAuditAssignment extends Model
         'klasifikasi_kerahasiaan',
         'ruang_lingkup_area',
         'status_assignment',
+        'ra_user_id',
+        'created_by',
     ];
 
     protected $casts = [
@@ -50,6 +52,22 @@ class SurpriseAuditAssignment extends Model
     public function setStatusAttribute($value)
     {
         $this->attributes['status_assignment'] = $value;
+    }
+
+    /**
+     * User Resident Auditor (RA) yang ditugaskan
+     */
+    public function raUser()
+    {
+        return $this->belongsTo(User::class, 'ra_user_id');
+    }
+
+    /**
+     * User yang membuat penugasan (contoh: Admin)
+     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**

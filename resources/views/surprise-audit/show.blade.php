@@ -36,9 +36,10 @@
                     <i class="bi {{ $curIcon }} me-1"></i> {{ $assignment->status_assignment ?? 'SIAP DILAKSANAKAN' }}
                 </span>
                 
+                @if(auth()->check() && auth()->user()->role === 'admin')
                 <div class="dropdown">
                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill px-3 shadow-sm bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-pencil-square me-1"></i> Ubah Status
+                        <i class="bi bi-pencil-square me-1"></i> Ubah Status (Admin)
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                         <li>
@@ -64,14 +65,26 @@
                         </li>
                     </ul>
                 </div>
+                @else
+                <span class="badge bg-light text-muted border px-3 py-2 rounded-pill small" title="Status penugasan dikendalikan secara terpusat oleh Admin">
+                    <i class="bi bi-lock-fill me-1"></i> Status Terkunci (Khusus Admin)
+                </span>
+                @endif
             </div>
         </div>
     </div>
 
-    <!-- Alert Sukses -->
+    <!-- Alert Sukses / Error -->
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm mb-4" role="alert">
         <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-4" role="alert">
+        <i class="bi bi-exclamation-octagon-fill me-2"></i> {{ session('error') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     @endif
