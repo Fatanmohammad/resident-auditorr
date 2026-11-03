@@ -103,6 +103,8 @@ class DumpCbsParser
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
                         'jenis_exception_awal' => $isReversal ? 'Indikasi Reversal' : 'Nominal Melewati Limit',
+                        'deskripsi'            => $keterangan,
+                        'rincian'              => $keterangan,
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];
@@ -118,6 +120,7 @@ class DumpCbsParser
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
                         'jenis_exception_awal' => $isReversal ? 'Indikasi Reversal' : 'Nominal Melewati Limit',
+                        'deskripsi'            => $keterangan,
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];

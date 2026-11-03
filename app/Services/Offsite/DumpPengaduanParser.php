@@ -90,6 +90,7 @@ class DumpPengaduanParser
                     'nominal_terkait'      => 0,
                     'risk_awal'            => $riskLevel,
                     'jenis_exception_awal' => $isSangatTerlambat ? 'Penyelesaian SLA > 30 Hari' : 'Penyelesaian SLA Terlambat (> 14 Hari)',
+                    'deskripsi'            => "Pengaduan: {$jenisPengaduan} ({$hariPenyelesaian} hari)" . ($namaNasabah ? " - Nasabah: {$namaNasabah}" : ''),
                     'rincian'              => "Pengaduan: {$jenisPengaduan} ({$hariPenyelesaian} hari)",
                     'created_at'           => now(),
                     'updated_at'           => now(),

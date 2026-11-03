@@ -741,8 +741,8 @@
                 <td>${userMakerDisplay}</td>
                 <td>${item.kode_trx || '-'}</td>
                 <td style="font-weight:700; text-align:right;">${nominalStr}</td>
-                <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                    ${item.deskripsi || item.catatan_rule || item.rincian || '-'}
+                <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${item.deskripsi || item.catatan_rule || item.rincian || item.jenis_exception_awal || ''}">
+                    ${item.deskripsi || item.catatan_rule || item.rincian || item.jenis_exception_awal || '-'}
                 </td>
                 <td style="text-align:center;">${riskBadge}</td>
                 <td style="text-align:right;">
@@ -809,7 +809,8 @@
         }
 
         document.getElementById('sum_risk_badge').innerHTML = `<span style="background-color:${badgeBgColor}; color:${badgeTextColor}; border:1px solid ${badgeBorderColor}; border-radius:12px; padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;">${item.risk_final || item.risk_awal || 'Moderate'}</span>`;
-        document.getElementById('sum_deskripsi').innerText = item.deskripsi || item.rincian || '-';
+        const displayDeskripsi = item.deskripsi || item.rincian || item.catatan_rule || item.jenis_exception_awal || '-';
+        document.getElementById('sum_deskripsi').innerText = displayDeskripsi;
 
         // Populate Section 1 (System)
         document.getElementById('sys_offsite_id').innerText = item.offsite_id || item.staging_id || `KKA-${item.id}`;
@@ -820,7 +821,7 @@
         document.getElementById('sys_risk_awal').innerHTML = document.getElementById('sum_risk_badge').innerHTML;
         document.getElementById('sys_exception_awal').innerText = item.jenis_exception_awal || item.deskripsi || '-';
         
-        document.getElementById('sys_catatan_rule').innerText = item.deskripsi || item.catatan_rule || '-';
+        document.getElementById('sys_catatan_rule').innerText = displayDeskripsi;
         document.getElementById('sys_prosedur_uji').innerText = item.prosedur_uji || 'Uji Ketaatan & Keabsahan Dokumen Transaksi Offsite';
 
         // Populate Section 2 (RA)

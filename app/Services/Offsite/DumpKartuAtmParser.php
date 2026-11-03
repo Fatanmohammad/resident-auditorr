@@ -169,6 +169,7 @@ class DumpKartuAtmParser
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
                         'jenis_exception_awal' => $jenisException,
+                        'deskripsi'            => $deskripsiException,
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];

@@ -110,6 +110,7 @@ class DumpKreditParser
                     'nominal_terkait'      => $plafon,
                     'risk_awal'            => $riskLevel,
                     'jenis_exception_awal' => $isKolTurun ? 'Penurunan Kolektibilitas' : 'Pencairan Plafon Jumbo',
+                    'deskripsi'            => $rincian,
                     'rincian'              => $rincian,
                     'created_at'           => now(),
                     'updated_at'           => now(),

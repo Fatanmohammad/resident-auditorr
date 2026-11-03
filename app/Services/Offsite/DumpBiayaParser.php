@@ -128,6 +128,8 @@ class DumpBiayaParser
                     'nominal_terkait'      => $nominal,
                     'risk_awal'            => $riskLevel,
                     'jenis_exception_awal' => $isAkunSensitif ? 'Akun GL Sensitif' : 'Nominal Biaya Melebihi Toleransi',
+                    'deskripsi'            => 'Akun: ' . ($akunGl ?: 'Beban Operasional') . ($keterangan ? ' - ' . $keterangan : ''),
+                    'rincian'              => 'Akun: ' . ($akunGl ?: 'Beban Operasional'),
                     'created_at'           => now(),
                     'updated_at'           => now(),
                 ];
