@@ -15,4 +15,9 @@ class OnsiteKkaFinding extends Model
 
     public function visit()      { return $this->belongsTo(OnsiteVisit::class, 'onsite_visit_id'); }
     public function population() { return $this->belongsTo(OnsitePopulation::class, 'onsite_population_id'); }
+
+    public function checklistAnswers()
+    {
+        return $this->hasMany(OnsiteKkaChecklistAnswer::class, 'onsite_kka_finding_id');
+    }
 }

@@ -45,7 +45,7 @@ class UpdateKkaRaRequest extends FormRequest
 
         // Validasi penguncian Tanggal Ditemukan / Diuji
         $findingId = $this->route('id');
-        $finding = $findingId ? \App\Models\DailyRegister\DailyRegisterFinding::find($findingId) : null;
+        $finding = $findingId ? \App\Models\Offsite\KkaFinding::find($findingId) : null;
         if ($finding && !empty($finding->tanggal_ditemukan) && $this->filled('tanggal_ditemukan')) {
             $formattedInput = date('Y-m-d', strtotime((string)$this->input('tanggal_ditemukan')));
             $formattedFinding = date('Y-m-d', strtotime((string)$finding->tanggal_ditemukan));
