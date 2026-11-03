@@ -104,14 +104,23 @@
 <!-- 1. VIEW DASHBOARD & TABEL -->
 <!-- ========================================== -->
 <div id="dashboardView">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
         <div class="dashboard-header">
             <h4>Kertas Kerja Audit (KKA) Offsite</h4>
             <p>Review, verifikasi, dan tindak lanjuti indikasi temuan exception transaksi.</p>
         </div>
-        <button type="button" id="btnToggleRiwayat" onclick="toggleRiwayatMode()" class="btn-filter" style="background: #f1f5f9; color: #475569; border: 1px solid var(--border-color);">
-            <i class="bi bi-clock-history"></i> <span id="btnRiwayatText">Lihat Arsip Riwayat Selesai</span>
-        </button>
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; background: #fff; padding: 0.35rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <label for="filterPeriodeGlobal" style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin: 0; white-space: nowrap;">
+                    <i class="bi bi-calendar3 me-1 text-primary"></i> Periode:
+                </label>
+                <input type="month" id="filterPeriodeGlobal" class="form-control form-control-sm" style="font-size: 0.82rem; border-color: var(--border-color); width: 140px; height: 32px;" onchange="onPeriodeChange()" value="{{ request('periode') }}">
+                <button type="button" class="btn btn-sm btn-light text-muted p-0 px-1" style="height: 28px; line-height: 26px;" onclick="resetPeriodeFilter()" title="Tampilkan Semua Periode"><i class="bi bi-x-circle"></i></button>
+            </div>
+            <button type="button" id="btnToggleRiwayat" onclick="toggleRiwayatMode()" class="btn-filter" style="background: #f1f5f9; color: #475569; border: 1px solid var(--border-color);">
+                <i class="bi bi-clock-history"></i> <span id="btnRiwayatText">Lihat Arsip Riwayat Selesai</span>
+            </button>
+        </div>
     </div>
 
     <!-- 4 SUMMARY CARDS -->
@@ -566,6 +575,19 @@
         loadData();
     }
 
+    // Filter Periode
+    function onPeriodeChange() {
+        loadData(1);
+    }
+
+    function resetPeriodeFilter() {
+        const input = document.getElementById('filterPeriodeGlobal');
+        if (input) {
+            input.value = '';
+        }
+        loadData(1);
+    }
+
     // Ambil Data via API
     function loadData(page = 1) {
         const tbody = document.getElementById('kkaTableBody');
@@ -579,23 +601,28 @@
         url += `&cabang_id={{ request('cabang') }}`;
         @endif
 
+        const periodeVal = document.getElementById('filterPeriodeGlobal')?.value;
+        if (periodeVal) {
+            url += `&periode=${encodeURIComponent(periodeVal)}`;
+        }
+
         axios.get(url)
             .then(response => {
                 globalFindings = response.data.data.data;
+                const summary = response.data.summary || {};
+                const totalCount = response.data.data.total !== undefined ? response.data.data.total : globalFindings.length;
                 
-                document.getElementById('totalDataCount').innerText = globalFindings.length;
-                document.getElementById('statTotalException').innerText = globalFindings.length;
+                document.getElementById('totalDataCount').innerText = totalCount;
+                document.getElementById('statTotalException').innerText = summary.total_exception !== undefined ? summary.total_exception : totalCount;
                 
-                let totalNominal = globalFindings.reduce((acc, curr) => acc + (parseFloat(curr.nominal_terkait) || 0), 0);
+                let totalNominal = summary.total_nominal !== undefined ? summary.total_nominal : globalFindings.reduce((acc, curr) => acc + (parseFloat(curr.nominal_terkait) || 0), 0);
                 document.getElementById('statTotalNominal').innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalNominal);
                 
-                let highRiskCount = globalFindings.filter(x => (x.risk_awal || '').toLowerCase() === 'high').length;
+                let highRiskCount = summary.high_risk_count !== undefined ? summary.high_risk_count : globalFindings.filter(x => (x.risk_awal || '').toLowerCase() === 'high').length;
                 document.getElementById('statHighRisk').innerText = highRiskCount;
                 
-                let selesaiCount = globalFindings.filter(x => x.status_review === 'Approved').length;
+                let selesaiCount = summary.selesai_review_count !== undefined ? summary.selesai_review_count : globalFindings.filter(x => x.status_review === 'Approved').length;
                 document.getElementById('statSelesaiReview').innerText = selesaiCount;
-
-                const summary = response.data.summary || {};
                 const tabCounts = summary.tab_counts || {};
                 
                 // Update Badge di masing-masing Tab

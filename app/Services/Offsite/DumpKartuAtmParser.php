@@ -12,7 +12,7 @@ class DumpKartuAtmParser
      * Memproses file CSV DUMP 06 (Mutasi Persediaan & Biaya Kartu ATM)
      * Mengikuti parameter dan aturan bisnis SOP 04.2 (DUMP_Kartu_ATM)
      */
-    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null): array
+    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null, $periode = null): array
     {
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV Kartu ATM tidak ditemukan.");
@@ -134,7 +134,7 @@ class DumpKartuAtmParser
                 if ($riskLevel !== 'Low') {
                     $dailyRegisterData[] = [
                         'tanggal_data'         => $tanggal,
-                        'periode'              => date('Y-m-01', strtotime($tanggal)),
+                        'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'            => $kodeUnit,
                         'nama_unit'            => $namaUnit,
                         'source_sheet'         => 'KKA_Kartu_ATM',
@@ -148,6 +148,7 @@ class DumpKartuAtmParser
                 } else {
                     $lowRiskData[] = [
                         'tanggal_data'    => $tanggal,
+                        'periode'         => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'       => $kodeUnit,
                         'nama_unit'       => $namaUnit,
                         'source_sheet'    => 'DUMP_06_KARTU_ATM',
@@ -161,7 +162,7 @@ class DumpKartuAtmParser
                 if ($riskLevel !== 'Low') {
                     $moderateHighRiskData[] = [
                         'tanggal_data'         => $tanggal,
-                        'periode'              => date('Y-m-01', strtotime($tanggal)),
+                        'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'            => $kodeUnit,
                         'nama_unit'            => $namaUnit,
                         'source_sheet'         => 'KKA_Kartu_ATM',
@@ -174,11 +175,13 @@ class DumpKartuAtmParser
                 } else {
                     $lowRiskData[] = [
                         'tanggal_data'    => $tanggal,
+                        'periode'         => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'       => $kodeUnit,
                         'nama_unit'       => $namaUnit,
                         'source_sheet'    => 'DUMP_06_KARTU_ATM',
                         'kategori'        => 'Mutasi Kartu Wajar',
                         'nominal_terkait' => $nominal,
+                        'risk_awal'       => 'Low',
                         'rincian'         => "No Arsip: {$noArsip} | User: {$userId} | {$keterangan}",
                         'created_at'      => now(),
                         'updated_at'      => now(),

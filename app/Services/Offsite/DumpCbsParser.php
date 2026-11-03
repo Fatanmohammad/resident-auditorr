@@ -8,7 +8,7 @@ use App\Models\DailyRegister\DailyRegisterFinding;
 
 class DumpCbsParser
 {
-    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null): array
+    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null, $periode = null): array
     {
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV tidak ditemukan di folder staging.");
@@ -96,7 +96,7 @@ class DumpCbsParser
                 } else {
                     $dailyRegisterData[] = [
                         'tanggal_data'         => $tanggal,
-                        'periode'              => date('Y-m-01', strtotime($tanggal)),
+                        'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'            => $kodeUnit,
                         'nama_unit'            => $namaUnit,
                         'source_sheet'         => $sourceSheet,
@@ -111,7 +111,7 @@ class DumpCbsParser
                 if ($riskLevel === 'High' || $riskLevel === 'Moderate') {
                     $moderateHighRiskData[] = [
                         'tanggal_data'         => $tanggal,
-                        'periode'              => date('Y-m-01', strtotime($tanggal)),
+                        'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'            => $kodeUnit,
                         'nama_unit'            => $namaUnit,
                         'source_sheet'         => $sourceSheet,
@@ -124,6 +124,7 @@ class DumpCbsParser
                 } else {
                     $lowRiskData[] = [
                         'tanggal_data'    => $tanggal,
+                        'periode'         => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'       => $kodeUnit,
                         'nama_unit'       => $namaUnit,
                         'source_sheet'    => $sourceSheet,

@@ -51,7 +51,7 @@ class KkaController extends Controller
         // CLONE untuk menghitung tab counts sebelum filter spesifik UI
         $baseQueryForTabs = clone $query;
 
-        // 2. Filter Spesifik dari UI (Sheet KKA, Risk, Tanggal)
+        // 2. Filter Spesifik dari UI (Sheet KKA, Risk, Tanggal, Periode)
         if ($request->filled('source_sheet')) {
             $query->where('source_sheet', $request->source_sheet);
         }
@@ -60,6 +60,12 @@ class KkaController extends Controller
         }
         if ($request->filled('tanggal')) {
             $query->whereDate('tanggal_data', $request->tanggal);
+        }
+        if ($request->filled('periode')) {
+            $rawPeriode = $request->periode;
+            $periodeFormatted = date('Y-m-01', strtotime($rawPeriode . (strlen($rawPeriode) === 7 ? '-01' : '')));
+            $query->where('periode', $periodeFormatted);
+            $baseQueryForTabs->where('periode', $periodeFormatted);
         }
 
         // Hitung Summary Global (sebelum pagination)

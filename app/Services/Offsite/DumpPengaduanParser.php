@@ -8,7 +8,7 @@ use App\Models\DailyRegister\DailyRegisterFinding;
 
 class DumpPengaduanParser
 {
-    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null): array
+    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null, $periode = null): array
     {
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV Pengaduan tidak ditemukan.");
@@ -83,7 +83,7 @@ class DumpPengaduanParser
 
                 $itemException = [
                     'tanggal_data'         => $tanggalMasuk,
-                    'periode'              => date('Y-m-01', strtotime($tanggalMasuk)),
+                    'periode'              => $periode ?: date('Y-m-01', strtotime($tanggalMasuk)),
                     'kode_unit'            => $kodeUnit,
                     'nama_unit'            => $namaUnit,
                     'source_sheet'         => 'KKA_Pengaduan',
@@ -104,6 +104,7 @@ class DumpPengaduanParser
                 $countLow++;
                 $itemLow = [
                     'tanggal_data'    => $tanggalMasuk,
+                    'periode'         => $periode ?: date('Y-m-01', strtotime($tanggalMasuk)),
                     'kode_unit'       => $kodeUnit,
                     'nama_unit'       => $namaUnit,
                     'source_sheet'    => 'DUMP_05_PENGADUAN',

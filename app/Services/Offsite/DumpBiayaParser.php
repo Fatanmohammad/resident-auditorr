@@ -8,7 +8,7 @@ use App\Models\DailyRegister\DailyRegisterFinding;
 
 class DumpBiayaParser
 {
-    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null): array
+    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null, $periode = null): array
     {
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV Biaya tidak ditemukan.");
@@ -121,7 +121,7 @@ class DumpBiayaParser
 
                 $itemException = [
                     'tanggal_data'         => $tanggal,
-                    'periode'              => date('Y-m-01', strtotime($tanggal)),
+                    'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                     'kode_unit'            => $kodeUnit,
                     'nama_unit'            => $namaUnit,
                     'source_sheet'         => 'KKA_Biaya_Beban',
@@ -141,6 +141,7 @@ class DumpBiayaParser
                 $countLow++;
                 $itemLow = [
                     'tanggal_data'    => $tanggal,
+                    'periode'         => $periode ?: date('Y-m-01', strtotime($tanggal)),
                     'kode_unit'       => $kodeUnit,
                     'nama_unit'       => $namaUnit,
                     'source_sheet'    => 'DUMP_04_BIAYA',
