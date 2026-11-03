@@ -433,6 +433,14 @@ class KkaDailyRegisterController extends Controller
             $finding->save();
         }
 
+        // Auto-seed jika master checklist belum terisi di database
+        if (\App\Models\DailyRegister\DailyRegisterChecklist::count() === 0) {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', [
+                '--class' => 'Database\\Seeders\\DailyRegisterChecklistSeeder',
+                '--force' => true,
+            ]);
+        }
+
         // Hitung kejadian berulang di unit & source_sheet yang sama
         $recurringCount = $this->calculateRecurringCount($finding);
 

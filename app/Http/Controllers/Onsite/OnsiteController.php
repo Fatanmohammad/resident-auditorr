@@ -172,11 +172,16 @@ class OnsiteController extends Controller
     {
         $finding = OnsiteKkaFinding::with('checklistAnswers')->findOrFail($id);
 
+        if (DailyRegisterChecklist::count() === 0) {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', [
+                '--class' => 'Database\\Seeders\\DailyRegisterChecklistSeeder',
+                '--force' => true,
+            ]);
+        }
+
         $sheet = 'KKA_Teller_Kas';
-        $checklists = DailyRegisterChecklist::where('sheet_name', $sheet)
-            ->where('is_active', true)
-            ->orderBy('sub_area_code')
-            ->orderBy('item_no')
+        $checklists = DailyRegisterChecklist::where('source_sheet', $sheet)
+            ->orderBy('sort_order')
             ->get();
 
         $recurringCount = $this->calculateRecurringCount($finding);

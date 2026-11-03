@@ -112,14 +112,20 @@ class KkaController extends Controller
     {
         $map = [
             'KKA_Teller_Kas'      => 'KKA_Teller_Kas',
+            'DUMP_01_CBS'         => 'KKA_Teller_Kas',
             'KKA_Kredit'          => 'KKA_Kredit',
+            'DUMP_03_KREDIT'      => 'KKA_Kredit',
             'KKA_Biaya_Beban'     => 'KKA_Biaya_Beban',
             'KKA_Biaya_Internal'  => 'KKA_Biaya_Beban',
+            'DUMP_04_BIAYA'       => 'KKA_Biaya_Beban',
             'KKA_Pengaduan'       => 'KKA_Pengaduan',
+            'DUMP_05_PENGADUAN'   => 'KKA_Pengaduan',
             'KKA_Transaksi_Umum'  => 'KKA_DPK_Layanan',
             'KKA_Transfer_KU'     => 'KKA_DPK_Layanan',
             'KKA_DPK_Layanan'     => 'KKA_DPK_Layanan',
+            'DUMP_02_DPK'         => 'KKA_DPK_Layanan',
             'KKA_Kartu_ATM'       => 'KKA_Kartu_ATM',
+            'DUMP_06_KARTU_ATM'   => 'KKA_Kartu_ATM',
         ];
         return $map[$sheet] ?? 'KKA_Teller_Kas';
     }
@@ -162,6 +168,14 @@ class KkaController extends Controller
         if (empty($finding->tanggal_ditemukan)) {
             $finding->tanggal_ditemukan = now()->format('Y-m-d');
             $finding->save();
+        }
+
+        // Auto-seed jika master checklist belum terisi di database
+        if (DailyRegisterChecklist::count() === 0) {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', [
+                '--class' => 'Database\\Seeders\\DailyRegisterChecklistSeeder',
+                '--force' => true,
+            ]);
         }
 
         // Hitung kejadian berulang di unit & source_sheet yang sama
