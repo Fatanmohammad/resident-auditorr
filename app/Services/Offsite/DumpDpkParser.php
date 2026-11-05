@@ -8,7 +8,7 @@ use App\Models\DailyRegister\DailyRegisterFinding;
 
 class DumpDpkParser
 {
-    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null): array
+    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null, $periode = null): array
     {
         if (!file_exists($filePath)) throw new \Exception("File CSV DPK tidak ditemukan.");
 
@@ -84,7 +84,7 @@ class DumpDpkParser
                 } else {
                     $dailyRegisterData[] = [
                         'tanggal_data'         => $tanggal,
-                        'periode'              => date('Y-m-01', strtotime($tanggal)),
+                        'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'            => $kodeUnit,
                         'nama_unit'            => $namaUnit,
                         'source_sheet'         => 'KKA_DPK_Layanan',
@@ -100,7 +100,7 @@ class DumpDpkParser
                 if ($isDormantActive || $isNewHighValue) {
                     $moderateHighRiskData[] = [
                         'tanggal_data' => $tanggal,
-                        'periode' => date('Y-m-01', strtotime($tanggal)), // awal bulan sebagai penanda periode
+                        'periode' => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit' => $kodeUnit,
                         'nama_unit' => $namaUnit,
                         'source_sheet' => 'KKA_DPK_Layanan', 
@@ -114,6 +114,7 @@ class DumpDpkParser
                 } else {
                     $lowRiskData[] = [
                         'tanggal_data' => $tanggal,
+                        'periode' => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit' => $kodeUnit,
                         'nama_unit' => $namaUnit,
                         'source_sheet' => 'DUMP_02_DPK',

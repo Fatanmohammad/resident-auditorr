@@ -8,7 +8,7 @@ use App\Models\DailyRegister\DailyRegisterFinding;
 
 class DumpPengaduanParser
 {
-    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null): array
+    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null, $periode = null): array
     {
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV Pengaduan tidak ditemukan.");
@@ -83,13 +83,14 @@ class DumpPengaduanParser
 
                 $itemException = [
                     'tanggal_data'         => $tanggalMasuk,
-                    'periode'              => date('Y-m-01', strtotime($tanggalMasuk)),
+                    'periode'              => $periode ?: date('Y-m-01', strtotime($tanggalMasuk)),
                     'kode_unit'            => $kodeUnit,
                     'nama_unit'            => $namaUnit,
                     'source_sheet'         => 'KKA_Pengaduan',
                     'nominal_terkait'      => 0,
                     'risk_awal'            => $riskLevel,
                     'jenis_exception_awal' => $isSangatTerlambat ? 'Penyelesaian SLA > 30 Hari' : 'Penyelesaian SLA Terlambat (> 14 Hari)',
+                    'deskripsi'            => "Pengaduan: {$jenisPengaduan} ({$hariPenyelesaian} hari)" . ($namaNasabah ? " - Nasabah: {$namaNasabah}" : ''),
                     'rincian'              => "Pengaduan: {$jenisPengaduan} ({$hariPenyelesaian} hari)",
                     'created_at'           => now(),
                     'updated_at'           => now(),
@@ -104,6 +105,7 @@ class DumpPengaduanParser
                 $countLow++;
                 $itemLow = [
                     'tanggal_data'    => $tanggalMasuk,
+                    'periode'         => $periode ?: date('Y-m-01', strtotime($tanggalMasuk)),
                     'kode_unit'       => $kodeUnit,
                     'nama_unit'       => $namaUnit,
                     'source_sheet'    => 'DUMP_05_PENGADUAN',

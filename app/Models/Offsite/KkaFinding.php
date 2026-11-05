@@ -22,4 +22,12 @@ class KkaFinding extends Model
             get: fn ($value) => (empty($value) || $value === '-') ? 'Sistem / Tidak Tercatat' : $value
         );
     }
+
+    /**
+     * Relasi ke jawaban checklist KKA Offsite
+     */
+    public function checklistAnswers()
+    {
+        return $this->hasMany(OffsiteKkaChecklistAnswer::class, 'kka_finding_id');
+    }
 }

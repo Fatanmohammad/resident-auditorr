@@ -8,7 +8,7 @@ use App\Models\DailyRegister\DailyRegisterFinding;
 
 class DumpKreditParser
 {
-    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null): array
+    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null, $periode = null): array
     {
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV Kredit tidak ditemukan.");
@@ -103,13 +103,14 @@ class DumpKreditParser
 
                 $itemException = [
                     'tanggal_data'         => $tanggal,
-                    'periode'              => date('Y-m-01', strtotime($tanggal)),
+                    'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                     'kode_unit'            => $kodeUnit,
                     'nama_unit'            => $namaUnit,
                     'source_sheet'         => 'KKA_Kredit',
                     'nominal_terkait'      => $plafon,
                     'risk_awal'            => $riskLevel,
                     'jenis_exception_awal' => $isKolTurun ? 'Penurunan Kolektibilitas' : 'Pencairan Plafon Jumbo',
+                    'deskripsi'            => $rincian,
                     'rincian'              => $rincian,
                     'created_at'           => now(),
                     'updated_at'           => now(),
@@ -124,6 +125,7 @@ class DumpKreditParser
                 $countLow++;
                 $itemLow = [
                     'tanggal_data'    => $tanggal,
+                    'periode'         => $periode ?: date('Y-m-01', strtotime($tanggal)),
                     'kode_unit'       => $kodeUnit,
                     'nama_unit'       => $namaUnit,
                     'source_sheet'    => 'DUMP_03_KREDIT',

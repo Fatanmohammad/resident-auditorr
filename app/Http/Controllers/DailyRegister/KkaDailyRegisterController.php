@@ -596,6 +596,14 @@ class KkaDailyRegisterController extends Controller
             $finding->save();
         }
 
+        // Auto-seed jika master checklist belum terisi di database
+        if (\App\Models\DailyRegister\DailyRegisterChecklist::count() === 0) {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', [
+                '--class' => 'Database\\Seeders\\DailyRegisterChecklistSeeder',
+                '--force' => true,
+            ]);
+        }
+
         // Hitung kejadian berulang di unit & source_sheet yang sama
         $recurringCount = $this->calculateRecurringCount($finding);
 
@@ -675,6 +683,21 @@ class KkaDailyRegisterController extends Controller
                     'status'  => 'error',
                     'message' => 'Akses ditolak (403 Forbidden): KKA ini telah selesai dan dikonfirmasi oleh Admin (Read-Only).'
                 ], 403);
+            }
+        }
+
+        // Validasi Anti-Tamper: Tanggal ditemukan terkunci otomatis dan tidak boleh dimanipulasi
+        if ($request->has('tanggal_ditemukan') && !empty($finding->tanggal_ditemukan)) {
+            $inputTgl = date('Y-m-d', strtotime($request->input('tanggal_ditemukan')));
+            $lockedTgl = date('Y-m-d', strtotime($finding->tanggal_ditemukan));
+            if ($inputTgl !== $lockedTgl) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Tanggal ditemukan telah terkunci dan tidak dapat diubah.',
+                    'errors' => [
+                        'tanggal_ditemukan' => ['Tanggal ditemukan telah terkunci otomatis dan tidak dapat diubah secara manual.']
+                    ]
+                ], 422);
             }
         }
 

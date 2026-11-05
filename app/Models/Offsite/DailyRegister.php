@@ -11,10 +11,12 @@ class DailyRegister extends Model
 
     protected $fillable = [
         'tanggal_data', 
+        'periode',
         'kode_unit', 
         'nama_unit', 
         'source_sheet', 
         'kategori', 
+        'risk_awal',
         'rincian', 
         'nominal_terkait'
     ];

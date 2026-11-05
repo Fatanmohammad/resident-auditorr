@@ -264,8 +264,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/{visit}/upload', [OnsiteController::class, 'uploadProcess'])->name('upload.process');
         Route::get('/{visit}/kka', [OnsiteController::class, 'kka'])->name('kka');
         Route::get('/{visit}/kka/data', [OnsiteController::class, 'kkaData'])->name('kka.data');
-        Route::patch('/kka/{finding}', [OnsiteController::class, 'updateKka'])->name('kka.update');
-        Route::patch('/kka/{finding}/review', [OnsiteController::class, 'reviewKka'])->name('kka.review')->middleware('role:admin,kabag_ra,kadiv_skai');
+        Route::get('/kka/{id}/review-data', [OnsiteController::class, 'getReviewData'])->name('kka.review-data');
+        Route::match(['post', 'patch'], '/kka/{finding}', [OnsiteController::class, 'updateKka'])->name('kka.update');
+        Route::match(['post', 'patch'], '/kka/{finding}/review', [OnsiteController::class, 'reviewKka'])->name('kka.review')->middleware('role:admin,kabag_ra,kadiv_skai');
 
         // Modul KKA Control & Integrasi (11 Area SOP 04.1)
         Route::get('/{visit}/kka/integration', [KkaIntegrationController::class, 'index'])->name('kka.integration.index');
@@ -360,6 +361,7 @@ Route::middleware('auth')->group(function () {
         // 2. Halaman Kertas Kerja (KKA)
         Route::get('/kka', [OffsiteKkaController::class, 'index'])->name('offsite.kka.index');
         Route::get('/kka/data', [OffsiteKkaController::class, 'data'])->name('offsite.kka.data');
+        Route::get('/kka/{id}/review-data', [OffsiteKkaController::class, 'getReviewData'])->name('offsite.kka.review-data');
 
         // Update KKA oleh RA
         Route::post('/kka/{id}/ra', [OffsiteKkaController::class, 'updateRa'])

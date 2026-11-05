@@ -132,6 +132,9 @@ class OffsiteController extends Controller
     /**
      * Menampilkan Halaman Form Upload DUMP (Disesuaikan cakupan wilayah RA & Admin)
      */
+    /**
+     * Menampilkan Halaman Form Upload DUMP (Disesuaikan cakupan wilayah RA & Admin)
+     */
     public function create()
     {
         $user = auth()->user();
@@ -139,15 +142,15 @@ class OffsiteController extends Controller
         if (in_array(strtolower($user->role), ['admin', 'kabag_ra', 'kadiv_skai'])) {
             $cabangs = \App\Models\Unit::orderBy('unit_name', 'asc')->get();
         } else {
+            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses')
+                ? $user->cabangIdYangDapatDiakses()
+                : ($user->cabang_id ? [$user->cabang_id] : []);
 
-            // Memastikan RA (termasuk jika 1 wilayah ada 2 RA) hanya melihat cabang induk & anak cabangnya
-            $cabangs = \App\Models\Unit::where(function($query) use ($user) {
-                if ($user->cabang_id) {
-                    $query->where('cabang_id', $user->cabang_id)
-                          ->orWhereIn('cabang_id', function($sub) use ($user) {
-                              $sub->select('id')->from('cabangs')->where('parent_id', $user->cabang_id);
-                          });
-                }
+            $cabangs = \App\Models\Unit::where(function($query) use ($allowedCabangIds) {
+                $query->whereIn('cabang_id', $allowedCabangIds)
+                      ->orWhereIn('cabang_id', function($sub) use ($allowedCabangIds) {
+                          $sub->select('id')->from('cabangs')->whereIn('parent_id', $allowedCabangIds);
+                      });
             })->orderBy('unit_name', 'asc')->get();
         }
         
@@ -155,7 +158,7 @@ class OffsiteController extends Controller
     }
 
     /**
-     * Memproses upload file DUMP dari RA dengan validasi wilayah unit
+     * Memproses upload file DUMP dari RA dengan validasi wilayah unit dan periode
      */
     public function upload(
         UploadDumpRequest $request,
@@ -171,23 +174,26 @@ class OffsiteController extends Controller
         $file = $request->file('file_csv');
         $jenisFile = $request->jenis_file;
         $kodeUnitDipilih = $request->kode_unit;
-        $periode = $request->input('periode', date('Y-m-01')); // Awal bulan sebagai penanda periode sampling
 
+        // Normalisasi format Periode ke format tanggal awal bulan (YYYY-MM-01)
+        $rawPeriode = $request->input('periode', date('Y-m'));
+        $periode = date('Y-m-01', strtotime($rawPeriode . (strlen($rawPeriode) === 7 ? '-01' : '')));
 
-        // VALIDASI HAK AKSES
-        if (!in_array(strtolower($user->role), ['admin', 'kabag_ra', 'kadiv_skai', 'ra'])) {
-            $unitValid = \App\Models\Unit::where('unit_code', $kodeUnitDipilih)
-                ->where(function($query) use ($user) {
-                    if ($user->cabang_id) {
-                        $query->where('cabang_id', $user->cabang_id)
-                              ->orWhereIn('cabang_id', function($sub) use ($user) {
-                                  $sub->select('id')->from('cabangs')->where('parent_id', $user->cabang_id);
-                              });
-                    }
-                })->exists();
+        // 1. VALIDASI HAK AKSES KHUSUS RA
+        if (strtolower($user->role) === 'ra') {
+            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses')
+                ? $user->cabangIdYangDapatDiakses()
+                : ($user->cabang_id ? [$user->cabang_id] : []);
 
-            if (!$unitValid) {
-                return redirect()->back()->with('error', 'Akses ditolak! Anda tidak memiliki wewenang meng-upload data untuk unit/cabang tersebut.');
+            $allowedUnitCodes = \App\Models\Unit::where(function($query) use ($allowedCabangIds) {
+                $query->whereIn('cabang_id', $allowedCabangIds)
+                      ->orWhereIn('cabang_id', function($sub) use ($allowedCabangIds) {
+                          $sub->select('id')->from('cabangs')->whereIn('parent_id', $allowedCabangIds);
+                      });
+            })->pluck('unit_code')->toArray();
+
+            if (!in_array($kodeUnitDipilih, $allowedUnitCodes)) {
+                return redirect()->back()->with('error', 'Akses ditolak! Anda tidak memiliki wewenang meng-upload data untuk unit/cabang ' . $kodeUnitDipilih . '.');
             }
         }
 
@@ -228,17 +234,52 @@ class OffsiteController extends Controller
 
         DB::beginTransaction();
         try {
-            // Hasil parser sekarang berupa array ['total_low'=>.., 'total_moderate'=>.., 'total_high'=>..]
-            // Beberapa parser lama mungkin masih return true (belum diperbarui) -> ditangani aman di bawah.
+            // 2. ISOLASI DATA (CLEAN REPLACE):
+            // Hapus data temuan mentah yang belum direview untuk unit, periode, dan jenis file ini
+            // agar data tidak menumpuk, duplikat, atau bocor antar-upload.
+            $sheetMap = [
+                'DUMP_01' => ['KKA_Teller_Kas', 'KKA_Biaya_Beban', 'KKA_Kredit', 'DUMP_01_CBS'],
+                'DUMP_02' => ['KKA_DPK_Layanan', 'KKA_Transaksi_Umum', 'KKA_Transfer_KU', 'DUMP_02_DPK'],
+                'DUMP_03' => ['KKA_Kredit', 'DUMP_03_KREDIT'],
+                'DUMP_04' => ['KKA_Biaya_Beban', 'KKA_Biaya_Internal', 'DUMP_04_BIAYA'],
+                'DUMP_05' => ['KKA_Pengaduan', 'DUMP_05_PENGADUAN'],
+                'DUMP_06' => ['KKA_Kartu_ATM', 'KKA_Pengaduan', 'KKA_Transaksi_Umum', 'DUMP_06_KARTU_ATM'],
+            ];
+
+            if (isset($sheetMap[$jenisFile])) {
+                \App\Models\Offsite\KkaFinding::where('kode_unit', $kodeUnitDipilih)
+                    ->where('periode', $periode)
+                    ->whereIn('source_sheet', $sheetMap[$jenisFile])
+                    ->where(function($q) {
+                        $q->whereNull('status_review')
+                          ->orWhere('status_review', 'Belum Di-review')
+                          ->orWhere('status_review', 'Belum Direview')
+                          ->orWhere('status_review', '');
+                    })
+                    ->delete();
+
+                \App\Models\Offsite\DailyRegister::where('kode_unit', $kodeUnitDipilih)
+                    ->where(function($q) use ($periode) {
+                        $q->where('periode', $periode)
+                          ->orWhereBetween('tanggal_data', [
+                              date('Y-m-01', strtotime($periode)),
+                              date('Y-m-t', strtotime($periode))
+                          ]);
+                    })
+                    ->whereIn('source_sheet', $sheetMap[$jenisFile])
+                    ->delete();
+            }
+
+            // 3. PARSING DATA SESUAI PERIODE
             $parseResult = null;
 
             switch ($jenisFile) {
-                case 'DUMP_01': $parseResult = $cbsParser->parse($fullPath, $kodeUnitDipilih); break;
-                case 'DUMP_02': $parseResult = $dpkParser->parse($fullPath, $kodeUnitDipilih); break;
-                case 'DUMP_03': $parseResult = $kreditParser->parse($fullPath, $kodeUnitDipilih); break;
-                case 'DUMP_04': $parseResult = $biayaParser->parse($fullPath, $kodeUnitDipilih); break;
-                case 'DUMP_05': $parseResult = $pengaduanParser->parse($fullPath, $kodeUnitDipilih); break;
-                case 'DUMP_06': $parseResult = $kartuAtmParser->parse($fullPath, $kodeUnitDipilih); break;
+                case 'DUMP_01': $parseResult = $cbsParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
+                case 'DUMP_02': $parseResult = $dpkParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
+                case 'DUMP_03': $parseResult = $kreditParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
+                case 'DUMP_04': $parseResult = $biayaParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
+                case 'DUMP_05': $parseResult = $pengaduanParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
+                case 'DUMP_06': $parseResult = $kartuAtmParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
             }
 
             $totalLow      = is_array($parseResult) ? ($parseResult['total_low'] ?? 0) : 0;
@@ -248,6 +289,7 @@ class OffsiteController extends Controller
             $auditLog = AuditLog::create([
                 'user_id'        => $user->id,
                 'kode_unit'      => $kodeUnitDipilih,
+                'periode'        => $periode,
                 'jenis_file'     => $jenisFile,
                 'nama_file'      => $file->getClientOriginalName(),
                 'file_hash'      => $fileHash,
@@ -270,41 +312,44 @@ class OffsiteController extends Controller
                 }
             }
 
-            // JALANKAN MESIN SAMPLING OTOMATIS
+            // 4. JALANKAN MESIN SAMPLING OTOMATIS TEPAT PADA PERIODE TERPILIH
             $samplingResult = $samplingEngine->runSampling($kodeUnitDipilih, $periode);
 
             $msgExtra = isset($samplingResult['total_sampel']) 
                 ? ' (' . $samplingResult['total_sampel'] . ' sampel otomatis masuk antrean KKA)' 
                 : '';
 
-            return redirect()->back()->with('success', 'File ' . $jenisFile . ' untuk Unit ' . $kodeUnitDipilih . ' berhasil diproses.' . $msgExtra);
+            $periodeFormatted = date('M Y', strtotime($periode));
+
+            return redirect()->back()->with('success', 'File ' . $jenisFile . ' untuk Unit ' . $kodeUnitDipilih . ' (Periode ' . $periodeFormatted . ') berhasil diproses.' . $msgExtra);
 
         } catch (\Throwable $e) {
             DB::rollBack();
 
+            if (isset($fullPath) && file_exists($fullPath)) {
+                @unlink($fullPath);
+            }
+
+            \Illuminate\Support\Facades\Log::error('Offsite Upload Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            $cleanErrorMessage = $e instanceof \Illuminate\Database\QueryException
+                ? ($e->errorInfo[2] ?? $e->getMessage())
+                : $e->getMessage();
+
             $auditLog = AuditLog::create([
                 'user_id'     => $user->id,
                 'kode_unit'   => $kodeUnitDipilih,
+                'periode'     => $periode,
                 'jenis_file'  => $jenisFile,
                 'nama_file'   => $file->getClientOriginalName(),
                 'file_hash'   => $fileHash,
                 'status'      => 'Gagal',
-                'pesan_error' => \Illuminate\Support\Str::limit($e->getMessage(), 250),
+                'pesan_error' => \Illuminate\Support\Str::limit($cleanErrorMessage, 250),
             ]);
 
-            if (isset($fullPath) && file_exists($fullPath)) {
-                Storage::disk('local')->makeDirectory('offsite_staging');
-                $permanentFileName = $auditLog->id . '_' . $file->getClientOriginalName();
-                $permanentPath = Storage::disk('local')->path('offsite_staging/' . $permanentFileName);
-                if ($fullPath !== $permanentPath) {
-                    if (!@rename($fullPath, $permanentPath)) {
-                        copy($fullPath, $permanentPath);
-                        @unlink($fullPath);
-                    }
-                }
-            }
-
-            return redirect()->back()->with('error', 'Gagal memproses file: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal memproses file: ' . \Illuminate\Support\Str::limit($cleanErrorMessage, 300));
         }
     }
 }
