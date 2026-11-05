@@ -11,6 +11,11 @@ class AtmController extends Controller
 {
     public function index(Request $request, OnsiteVisit $visit)
     {
+        // Auto-distribusi sampel dari populasi CBS jika KKA ATM belum memiliki data sampel
+        if (OnsiteKkaAtm::where('onsite_visit_id', $visit->id)->count() === 0) {
+            app(\App\Services\Onsite\CbsOnsiteParser::class)->distributePopulationsToAllKka($visit);
+        }
+
         $query = OnsiteKkaAtm::where('onsite_visit_id', $visit->id);
 
         if ($request->filled('q')) {

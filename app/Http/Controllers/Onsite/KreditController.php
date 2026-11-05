@@ -11,6 +11,11 @@ class KreditController extends Controller
 {
     public function index(Request $request, OnsiteVisit $visit)
     {
+        // Auto-distribusi sampel dari populasi CBS jika KKA Kredit belum memiliki data sampel
+        if (OnsiteKkaKredit::where('onsite_visit_id', $visit->id)->count() === 0) {
+            app(\App\Services\Onsite\CbsOnsiteParser::class)->distributePopulationsToAllKka($visit);
+        }
+
         $query = OnsiteKkaKredit::where('onsite_visit_id', $visit->id);
 
         if ($request->filled('q')) {

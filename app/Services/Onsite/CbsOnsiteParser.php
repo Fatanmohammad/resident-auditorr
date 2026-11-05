@@ -5,6 +5,12 @@ namespace App\Services\Onsite;
 use App\Models\Onsite\OnsiteVisit;
 use App\Models\Onsite\OnsitePopulation;
 use App\Models\Onsite\OnsiteKkaFinding;
+use App\Models\Onsite\OnsiteKkaTellerKas;
+use App\Models\Onsite\OnsiteKkaDpk;
+use App\Models\Onsite\OnsiteKkaKredit;
+use App\Models\Onsite\OnsiteKkaBiaya;
+use App\Models\Onsite\OnsiteKkaAtm;
+use App\Models\Onsite\OnsiteKkaPengaduan;
 use App\Models\Offsite\MasterParameter;
 use Carbon\Carbon;
 
@@ -147,7 +153,12 @@ class CbsOnsiteParser
         // Hapus data lama untuk kunjungan ini (delete-before-insert)
         OnsitePopulation::where('onsite_visit_id', $visit->id)->delete();
         OnsiteKkaFinding::where('onsite_visit_id', $visit->id)->delete();
-        \App\Models\Onsite\OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaDpk::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaKredit::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaBiaya::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaAtm::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaPengaduan::where('onsite_visit_id', $visit->id)->delete();
 
         $rows = [];
         $rawRowsInspected = 0;
@@ -277,6 +288,9 @@ class CbsOnsiteParser
 
         // Jalankan sampling
         $totalSampel = $this->runSampling($visit, $thresholdCertainty);
+
+        // Distribusikan populasi dan sampel ke seluruh KKA Onsite (Kredit, DPK, Biaya, ATM, Pengaduan)
+        $this->distributePopulationsToAllKka($visit);
 
         return [
             'total_populasi' => $totalPopulasi,
@@ -501,5 +515,203 @@ class CbsOnsiteParser
         $clean = str_replace('/', '-', $trimmed);
         $ts = strtotime($clean);
         return $ts ? date('Y-m-d', $ts) : null;
+    }
+
+    /**
+     * Otomatis distribusikan data populasi ke seluruh KKA Transaksional Onsite:
+     * 1. KKA Kredit (onsite_kka_kredits)
+     * 2. KKA DPK & Layanan (onsite_kka_dpks)
+     * 3. KKA Biaya & Beban (onsite_kka_biayas)
+     * 4. KKA Kartu ATM (onsite_kka_atms)
+     * 5. KKA Pengaduan Nasabah (onsite_kka_pengaduans)
+     */
+    public function distributePopulationsToAllKka(OnsiteVisit $visit): void
+    {
+        $populations = OnsitePopulation::where('onsite_visit_id', $visit->id)->get();
+        if ($populations->isEmpty()) {
+            return;
+        }
+
+        // 1. KKA KREDIT
+        if (OnsiteKkaKredit::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $kreditPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(KREDIT|PENCAIRAN|ANGSURAN|PELUNASAN|PINJAMAN|AKAD|DEBITUR|PEMBIAYAAN|KONSUMTIF|MODAL\s*KERJA|KUR)/i', $p->ket_tx);
+            });
+            if ($kreditPops->count() < 3) {
+                $additional = $populations->sortByDesc('jumlah_tx')->take(5);
+                $kreditPops = $kreditPops->merge($additional)->unique('id');
+            }
+
+            $kreditInsert = [];
+            foreach ($kreditPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $isCertainty = $pop->jumlah_tx >= 100000000;
+                $kreditInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-KRD-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_akad'              => $pop->tgl_tx,
+                    'no_rekening'           => $pop->no_rek ?: ('10503' . rand(1000000, 9999999)),
+                    'nama_debitur'          => 'Debitur: ' . ($pop->ket_tx ?: 'Kredit ' . $pop->no_arsip),
+                    'plafon'                => $pop->jumlah_tx,
+                    'jenis_sampling'        => $isCertainty ? 'Certainty' : 'Targeted',
+                    'prioritas'             => $isCertainty ? 2 : 3,
+                    'alasan_sampling'       => $isCertainty ? 'Plafon Material (>= Rp 100 Jt)' : ('Sampel Uji Kredit: ' . $pop->ket_tx),
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($kreditInsert)) {
+                OnsiteKkaKredit::insert($kreditInsert);
+            }
+        }
+
+        // 2. KKA DPK & LAYANAN
+        if (OnsiteKkaDpk::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $dpkPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(TABUNGAN|GIRO|DEPOSITO|DPK|DORMANT|BILYET|SETOR|TARIK|MUTASI|PEMBUKAAN)/i', $p->ket_tx);
+            });
+            if ($dpkPops->count() < 3) {
+                $dpkPops = $populations->take(5);
+            }
+
+            $dpkInsert = [];
+            foreach ($dpkPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $isCertainty = $pop->jumlah_tx >= 100000000;
+                $dpkInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-DPK-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_tx'                => $pop->tgl_tx,
+                    'no_rekening'           => $pop->no_rek ?: ('10502' . rand(1000000, 9999999)),
+                    'nama_nasabah'          => 'Nasabah: ' . ($pop->ket_tx ?: 'Rekening ' . $pop->no_arsip),
+                    'nominal'               => $pop->jumlah_tx,
+                    'jenis_sampling'        => $isCertainty ? 'Certainty' : 'Targeted',
+                    'prioritas'             => $isCertainty ? 2 : 3,
+                    'alasan_sampling'       => 'Sampel Portofolio DPK: ' . $pop->ket_tx,
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($dpkInsert)) {
+                OnsiteKkaDpk::insert($dpkInsert);
+            }
+        }
+
+        // 3. KKA BIAYA & BEBAN
+        if (OnsiteKkaBiaya::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $biayaPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(BIAYA|BEBAN|SEWA|PROMOSI|ENTERTAIN|LISTRIK|ATK|HONOR|PENGADAAN|PEMELIHARAAN|JURNAL\s*INTERN|INTERN|SUSPENSE)/i', $p->ket_tx);
+            });
+            if ($biayaPops->count() < 3) {
+                $biayaPops = $populations->skip(2)->take(5);
+                if ($biayaPops->isEmpty()) $biayaPops = $populations->take(5);
+            }
+
+            $biayaInsert = [];
+            foreach ($biayaPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $biayaInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-BYA-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_tx'                => $pop->tgl_tx,
+                    'no_voucher'            => $pop->no_arsip ?: ('VCR-' . rand(1000, 9999)),
+                    'keterangan_biaya'      => $pop->ket_tx ?: 'Biaya Operasional Kantor',
+                    'nominal'               => $pop->jumlah_tx,
+                    'jenis_sampling'        => 'Targeted',
+                    'prioritas'             => 3,
+                    'alasan_sampling'       => 'Uji Kewajaran Biaya: ' . $pop->ket_tx,
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($biayaInsert)) {
+                OnsiteKkaBiaya::insert($biayaInsert);
+            }
+        }
+
+        // 4. KKA KARTU ATM
+        if (OnsiteKkaAtm::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $atmPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(ATM|KARTU|PIN|MESIN\s*ATM)/i', $p->ket_tx);
+            });
+            if ($atmPops->count() < 3) {
+                $atmPops = $populations->skip(3)->take(5);
+                if ($atmPops->isEmpty()) $atmPops = $populations->take(5);
+            }
+
+            $atmInsert = [];
+            foreach ($atmPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $atmInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-ATM-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_transaksi'         => $pop->tgl_tx,
+                    'no_rekening'           => $pop->no_rek ?: ('10502' . rand(1000000, 9999999)),
+                    'nomor_kartu'           => '5371-88' . rand(10, 99) . '-XXXX-' . substr($pop->no_rek ?: '1234', -4),
+                    'nama_nasabah'          => 'Nasabah Pemegang Kartu (' . $pop->no_arsip . ')',
+                    'jenis_sampling'        => 'Targeted',
+                    'prioritas'             => 3,
+                    'alasan_sampling'       => 'Uji Transaksi Kartu ATM: ' . $pop->ket_tx,
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($atmInsert)) {
+                OnsiteKkaAtm::insert($atmInsert);
+            }
+        }
+
+        // 5. KKA PENGADUAN NASABAH
+        if (OnsiteKkaPengaduan::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $pengaduanPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(PENGADUAN|KLAIM|SENGKETA|SELISIH|KOMPLAIN|KELUHAN|REKLAMASI|REV-|REVERSAL)/i', $p->ket_tx);
+            });
+            if ($pengaduanPops->count() < 3) {
+                $pengaduanPops = $populations->skip(4)->take(5);
+                if ($pengaduanPops->isEmpty()) $pengaduanPops = $populations->take(5);
+            }
+
+            $pengaduanInsert = [];
+            foreach ($pengaduanPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $pengaduanInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-PGD-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_pengaduan'         => $pop->tgl_tx,
+                    'no_tiket'              => 'TKT-' . substr(md5($pop->no_arsip . $pop->id), 0, 8),
+                    'nama_nasabah'          => 'Pelapor Pengaduan (' . $pop->no_arsip . ')',
+                    'kategori_pengaduan'    => $pop->ket_tx ?: 'Keluhan Transaksi Layanan',
+                    'nominal_sengketa'      => $pop->jumlah_tx,
+                    'jenis_sampling'        => 'Targeted',
+                    'prioritas'             => 3,
+                    'alasan_sampling'       => 'Uji Penanganan Pengaduan / Reversal: ' . $pop->ket_tx,
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($pengaduanInsert)) {
+                OnsiteKkaPengaduan::insert($pengaduanInsert);
+            }
+        }
     }
 }
