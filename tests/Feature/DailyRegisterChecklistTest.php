@@ -24,14 +24,10 @@ class DailyRegisterChecklistTest extends TestCase
     {
         parent::setUp();
 
-        config([
-            'database.default' => 'mysql',
-            'database.connections.mysql.database' => 'resident-auditorr',
-        ]);
 
         $cabang = Cabang::firstOrCreate(['kode_cabang' => 'BS-003'], [
             'nama_cabang' => 'Cabang Luwuk',
-            'tipe' => 'kc',
+            'tipe' => 'cabang_a',
         ]);
 
         $this->unit = Unit::firstOrCreate(['unit_code' => '003'], [
@@ -70,68 +66,45 @@ class DailyRegisterChecklistTest extends TestCase
     }
 
     /**
-     * Test 1: Verifikasi 218 item checklist ter-seed lengkap sesuai 6 Tab KKA
+     * Test 1: Verifikasi 189 item checklist ter-seed lengkap sesuai 6 Tab KKA (Pemisahan Teller, Kas Kecil, Khasanah dalam KKA_Teller_Kas)
      */
-    public function test_218_checklist_items_seeded_across_6_tabs(): void
+    public function test_189_checklist_items_seeded_across_6_tabs(): void
     {
         $this->artisan('db:seed', ['--class' => 'DailyRegisterChecklistSeeder', '--force' => true]);
 
         $totalCount = DailyRegisterChecklist::count();
-        $this->assertEquals(218, $totalCount, "Total checklist items must be exactly 218");
+        $this->assertEquals(189, $totalCount, "Total checklist items must be exactly 189");
 
-        // TAB 1: KKA Teller & Kas (30 Item)
-        $tab1 = DailyRegisterChecklist::where('source_sheet', 'KKA_Teller_Kas')->get();
-        $this->assertCount(30, $tab1);
-        $this->assertCount(10, $tab1->where('sub_area_code', 'A1'));
-        $this->assertCount(5, $tab1->where('sub_area_code', 'A2'));
-        $this->assertCount(10, $tab1->where('sub_area_code', 'A3'));
-        $this->assertCount(5, $tab1->where('sub_area_code', 'A4'));
-        $this->assertEquals('Voucher/slip setoran tunai', $tab1->firstWhere('item_no', 1)->item_checklist);
-        $this->assertEquals('Prosedur buka-tutup khasanah (jam buka, jam tutup, saksi)', $tab1->firstWhere('item_no', 30)->item_checklist);
+        // TAB 1: KKA Teller & Kas (13 Item: A1 Transaksi Teller (6 item), A2 Kas Kecil (5 item), A3 Kas / Khasanah (2 item))
+        $tabTellerKas = DailyRegisterChecklist::where('source_sheet', 'KKA_Teller_Kas')->get();
+        $this->assertCount(13, $tabTellerKas);
+        $this->assertCount(6, $tabTellerKas->where('sub_area_code', 'A1'));
+        $this->assertCount(5, $tabTellerKas->where('sub_area_code', 'A2'));
+        $this->assertCount(2, $tabTellerKas->where('sub_area_code', 'A3'));
+        $this->assertEquals('Voucher slip setoran / slip penarikan / pemindahbukuan (nota debet/kredit)', $tabTellerKas->firstWhere('item_no', 1)->item_checklist);
 
         // TAB 2: KKA DPK & Layanan (29 Item)
-        $tab2 = DailyRegisterChecklist::where('source_sheet', 'KKA_DPK_Layanan')->get();
-        $this->assertCount(29, $tab2);
-        $this->assertCount(10, $tab2->where('sub_area_code', 'D1'));
-        $this->assertCount(7, $tab2->where('sub_area_code', 'D2'));
-        $this->assertCount(5, $tab2->where('sub_area_code', 'D3'));
-        $this->assertCount(7, $tab2->where('sub_area_code', 'D4'));
-        $this->assertEquals("Status rekening berubah 'Closed' di sistem", $tab2->firstWhere('item_no', 29)->item_checklist);
+        $tabDpk = DailyRegisterChecklist::where('source_sheet', 'KKA_DPK_Layanan')->get();
+        $this->assertCount(29, $tabDpk);
 
-        // TAB 3: KKA Kredit (99 Item)
-        $tab3 = DailyRegisterChecklist::where('source_sheet', 'KKA_Kredit')->get();
-        $this->assertCount(99, $tab3);
-        $this->assertCount(18, $tab3->where('sub_area_code', 'C1'));
-        $this->assertCount(16, $tab3->where('sub_area_code', 'C2'));
-        $this->assertCount(16, $tab3->where('sub_area_code', 'C3'));
-        $this->assertCount(13, $tab3->where('sub_area_code', 'C4'));
-        $this->assertCount(7, $tab3->where('sub_area_code', 'C5'));
-        $this->assertCount(7, $tab3->where('sub_area_code', 'C6'));
-        $this->assertCount(15, $tab3->where('sub_area_code', 'C7'));
-        $this->assertCount(7, $tab3->where('sub_area_code', 'C8'));
-        $this->assertEquals('Register klaim asuransi (tanggal ajuan, status, jumlah)', $tab3->firstWhere('item_no', 99)->item_checklist);
+        // TAB 3: KKA Kredit (83 Item: PNS/ASN 20 + FLPP 41 + Konstruksi 22)
+        $tabKredit = DailyRegisterChecklist::where('source_sheet', 'KKA_Kredit')->get();
+        $this->assertCount(83, $tabKredit);
+        $this->assertCount(20, $tabKredit->where('sub_area_code', 'C1'));
+        $this->assertCount(41, $tabKredit->where('sub_area_code', 'C2'));
+        $this->assertCount(22, $tabKredit->where('sub_area_code', 'C3'));
 
-        // TAB 4: KKA Biaya & Beban (22 Item)
-        $tab4 = DailyRegisterChecklist::where('source_sheet', 'KKA_Biaya_Beban')->get();
-        $this->assertCount(22, $tab4);
-        $this->assertCount(7, $tab4->where('sub_area_code', 'E1'));
-        $this->assertCount(5, $tab4->where('sub_area_code', 'E2'));
-        $this->assertCount(6, $tab4->where('sub_area_code', 'E3'));
-        $this->assertCount(4, $tab4->where('sub_area_code', 'E4'));
+        // TAB 4: KKA Biaya & Beban (25 Item)
+        $tabBiaya = DailyRegisterChecklist::where('source_sheet', 'KKA_Biaya_Beban')->get();
+        $this->assertCount(25, $tabBiaya);
 
         // TAB 5: KKA Kartu ATM (30 Item)
-        $tab5 = DailyRegisterChecklist::where('source_sheet', 'KKA_Kartu_ATM')->get();
-        $this->assertCount(30, $tab5);
-        $this->assertCount(7, $tab5->where('sub_area_code', 'B1'));
-        $this->assertCount(9, $tab5->where('sub_area_code', 'B2'));
-        $this->assertCount(8, $tab5->where('sub_area_code', 'B3'));
-        $this->assertCount(6, $tab5->where('sub_area_code', 'B4'));
+        $tabAtm = DailyRegisterChecklist::where('source_sheet', 'KKA_Kartu_ATM')->get();
+        $this->assertCount(30, $tabAtm);
 
-        // TAB 6: KKA Pengaduan (8 Item)
-        $tab6 = DailyRegisterChecklist::where('source_sheet', 'KKA_Pengaduan')->get();
-        $this->assertCount(8, $tab6);
-        $this->assertCount(8, $tab6->where('sub_area_code', 'D5'));
-        $this->assertEquals('Bukti penyelesaian (pengembalian dana, koreksi, dll)', $tab6->firstWhere('item_no', 8)->item_checklist);
+        // TAB 6: KKA Pengaduan (9 Item sesuai acuan E.4.5 KELUHAN NASABAH.xls)
+        $tabPengaduan = DailyRegisterChecklist::where('source_sheet', 'KKA_Pengaduan')->get();
+        $this->assertCount(9, $tabPengaduan);
     }
 
     /**
@@ -170,6 +143,7 @@ class DailyRegisterChecklistTest extends TestCase
             'nominal_terkait' => 25000000,
             'risk_awal' => 'Moderate',
             'jenis_exception_awal' => 'Selisih Kas',
+            'deskripsi' => 'Transaksi Kliring Cek BG',
         ]);
 
         $response = $this->actingAs($this->raUser)->get(route('daily-register.review-data', $finding->id));
@@ -178,12 +152,15 @@ class DailyRegisterChecklistTest extends TestCase
             'status',
             'finding' => ['id', 'kode_unit', 'source_sheet'],
             'recurring_count',
-            'checklists'
+            'checklists',
+            'has_cek'
         ]);
 
         $data = $response->json();
         $this->assertEquals(1, $data['recurring_count'], "First incident count should be 1");
-        $this->assertCount(30, $data['checklists'], "Teller Kas should have 30 checklist items");
+        $this->assertCount(13, $data['checklists'], "Teller & Kas should have 13 checklist items across A1, A2, and A3");
+        $this->assertTrue($data['has_cek']);
+        $this->assertStringContainsString('Terdapat Cek', $data['checklists'][0]['item_checklist']);
     }
 
     /**
@@ -506,12 +483,15 @@ class DailyRegisterChecklistTest extends TestCase
     {
         $unit10 = $this->createIsolatedUnit('U10');
         $tabs = [
-            'KKA_Teller_Kas' => 30,
+            'KKA_Teller_Kas' => 13,
+            'KKA_Teller' => 13, // Backward compatibility alias
+            'KKA_Kas_Kecil' => 13, // Legacy alias mapped to KKA_Teller_Kas
+            'KKA_Kas_Khasanah' => 13, // Legacy alias mapped to KKA_Teller_Kas
             'KKA_DPK_Layanan' => 29,
-            'KKA_Kredit' => 99,
-            'KKA_Biaya_Beban' => 22,
+            'KKA_Kredit' => 83,
+            'KKA_Biaya_Beban' => 25,
             'KKA_Kartu_ATM' => 30,
-            'KKA_Pengaduan' => 8,
+            'KKA_Pengaduan' => 9,
         ];
 
         foreach ($tabs as $sheetCode => $expectedItemCount) {
@@ -641,6 +621,345 @@ class DailyRegisterChecklistTest extends TestCase
             'id' => $reviewedFinding->id,
             'risk_final' => 'Low',
         ]);
+    }
+
+    /**
+     * Test 14: Aturan Backlog Kehadiran RA: Jika RA cuti/absen beberapa hari,
+     * transaksi low-risk dari tanggal-tanggal tersebut tetap wajib muncul saat getTodayData() dipanggil tanpa filter tanggal.
+     */
+    public function test_backlog_presence_during_ra_absence_via_tmp_service(): void
+    {
+        $unitCode = '003';
+        $pastDate1 = now()->subDays(2)->format('Y-m-d');
+        $pastDate2 = now()->subDay()->format('Y-m-d');
+        $todayDate = now()->format('Y-m-d');
+
+        // Simpan low-risk record di file tmp untuk tanggal lampau saat RA absen
+        \App\Services\DailyRegister\DailyRegisterTmpService::storeLowRisk($unitCode, [
+            ['kode_unit' => $unitCode, 'tanggal_data' => $pastDate1, 'rincian' => 'Backlog Absen H-2']
+        ], $pastDate1);
+
+        \App\Services\DailyRegister\DailyRegisterTmpService::storeLowRisk($unitCode, [
+            ['kode_unit' => $unitCode, 'tanggal_data' => $pastDate2, 'rincian' => 'Backlog Absen H-1']
+        ], $pastDate2);
+
+        \App\Services\DailyRegister\DailyRegisterTmpService::storeLowRisk($unitCode, [
+            ['kode_unit' => $unitCode, 'tanggal_data' => $todayDate, 'rincian' => 'Transaksi Hari Ini']
+        ], $todayDate);
+
+        // RA masuk kembali dan membuka modul tanpa filter tanggal spesifik -> Seluruh backlog harus muncul
+        $allActive = \App\Services\DailyRegister\DailyRegisterTmpService::getTodayData([$unitCode], $unitCode, null);
+
+        $this->assertGreaterThanOrEqual(3, $allActive->count());
+        $rincianList = $allActive->pluck('rincian')->toArray();
+        $this->assertContains('Backlog Absen H-2', $rincianList);
+        $this->assertContains('Backlog Absen H-1', $rincianList);
+        $this->assertContains('Transaksi Hari Ini', $rincianList);
+
+        // Jika RA memfilter tanggal tertentu secara eksplisit, hanya tampil tanggal tersebut
+        $filtered = \App\Services\DailyRegister\DailyRegisterTmpService::getTodayData([$unitCode], $unitCode, $pastDate1);
+        $this->assertTrue($filtered->every(fn($item) => $item['tanggal_data'] === $pastDate1));
+
+        // Bersihkan file tmp testing
+        $dir = \App\Services\DailyRegister\DailyRegisterTmpService::getDirectoryPath();
+        foreach ([$pastDate1, $pastDate2, $todayDate] as $d) {
+            $f = $dir . DIRECTORY_SEPARATOR . "low_risk_{$unitCode}_{$d}.json";
+            if (\Illuminate\Support\Facades\File::exists($f)) {
+                \Illuminate\Support\Facades\File::delete($f);
+            }
+        }
+    }
+
+    /**
+     * Test 15: Pemisahan KKA: CBS Parser Mengklasifikasikan Kas Kecil dan Kas / Khasanah ke KKA_Teller_Kas dengan selected_sub_areas
+     */
+    public function test_cbs_parser_classifies_kas_kecil_and_khasanah(): void
+    {
+        $cbsParser = app(\App\Services\Offsite\DumpCbsParser::class);
+
+        // Buat file CSV simulasi di memori/tmp
+        $csvContent = "TANGGAL,KETERANGAN,NOMINAL\n" .
+                      now()->format('d/m/Y') . ",PENGISIAN KAS KECIL OPERASIONAL,55000000\n" .
+                      now()->format('d/m/Y') . ",MUTASI FISIK BRANKAS KHASANAH,85000000\n" .
+                      now()->format('d/m/Y') . ",SETORAN TUNAI TELLER 01,60000000\n";
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'csv_test_');
+        file_put_contents($tmpFile, $csvContent);
+
+        $result = $cbsParser->parse($tmpFile, $this->unit->unit_code, true, $this->unit->unit_name);
+        if (file_exists($tmpFile)) unlink($tmpFile);
+
+        $this->assertIsArray($result);
+
+        // Cek database daily_register_findings untuk unit ini
+        $findingsKasKecil = DailyRegisterFinding::where('kode_unit', $this->unit->unit_code)
+            ->where('source_sheet', 'KKA_Teller_Kas')
+            ->whereJsonContains('selected_sub_areas', 'A2')
+            ->first();
+        $this->assertNotNull($findingsKasKecil, "KKA Kas Kecil harus terpetakan ke KKA_Teller_Kas dengan selected_sub_areas A2");
+
+        $findingsKhasanah = DailyRegisterFinding::where('kode_unit', $this->unit->unit_code)
+            ->where('source_sheet', 'KKA_Teller_Kas')
+            ->whereJsonContains('selected_sub_areas', 'A3')
+            ->first();
+        $this->assertNotNull($findingsKhasanah, "KKA Kas / Khasanah harus terpetakan ke KKA_Teller_Kas dengan selected_sub_areas A3");
+
+        $findingsTeller = DailyRegisterFinding::where('kode_unit', $this->unit->unit_code)
+            ->where('source_sheet', 'KKA_Teller_Kas')
+            ->whereJsonContains('selected_sub_areas', 'A1')
+            ->first();
+        $this->assertNotNull($findingsTeller, "Transaksi Teller harus terpetakan ke KKA_Teller_Kas dengan selected_sub_areas A1");
+    }
+
+    /**
+     * Test 16: Auto-generate No. Arsip saat disimpan final jika tidak diisi
+     */
+    public function test_auto_generate_no_arsip_when_omitted(): void
+    {
+        $unit16 = $this->createIsolatedUnit('U16');
+        $finding = DailyRegisterFinding::create([
+            'kode_unit' => $unit16->unit_code,
+            'tanggal_data' => now()->toDateString(),
+            'source_sheet' => 'KKA_Teller_Kas',
+            'nominal_terkait' => 10000000,
+            'risk_awal' => 'Moderate',
+            'no_arsip' => null,
+        ]);
+
+        $checklists = DailyRegisterChecklist::where('source_sheet', 'KKA_Teller_Kas')->get();
+        $answers = $checklists->map(fn($c) => ['checklist_id' => $c->id, 'jawaban' => 'Ya'])->toArray();
+
+        $response = $this->actingAs($this->raUser)->postJson(route('daily-register.update.ra', $finding->id), [
+            'critical_trigger' => 'Tidak',
+            'checklist_answers' => $answers,
+            // no_arsip sengaja dikosongkan
+            'no_arsip' => '',
+        ]);
+
+        $response->assertStatus(200);
+        $fresh = $finding->fresh();
+        $this->assertNotNull($fresh->no_arsip);
+        $this->assertStringStartsWith('ARSIP-', $fresh->no_arsip);
+    }
+
+    /**
+     * Test 17: Mekanisme Checkbox [✓] Sub-Area: Validasi minimal 1 grup dicentang,
+     * dan hanya item dalam sub-area tercentang yang dievaluasi untuk penilaian & disimpan.
+     */
+    public function test_sub_area_checkbox_selection_and_validation(): void
+    {
+        $unit17 = $this->createIsolatedUnit('U17');
+        $finding = DailyRegisterFinding::create([
+            'kode_unit' => $unit17->unit_code,
+            'tanggal_data' => now()->toDateString(),
+            'source_sheet' => 'KKA_Teller_Kas',
+            'nominal_terkait' => 15000000,
+            'risk_awal' => 'Moderate',
+        ]);
+
+        $checklistsA1 = DailyRegisterChecklist::where('source_sheet', 'KKA_Teller_Kas')->where('sub_area_code', 'A1')->get();
+        $checklistsA2 = DailyRegisterChecklist::where('source_sheet', 'KKA_Teller_Kas')->where('sub_area_code', 'A2')->get();
+
+        // Kasus A: Kirim selected_sub_areas kosong -> Validasi gagal 422
+        $responseEmptySubAreas = $this->actingAs($this->raUser)->postJson(route('daily-register.update.ra', $finding->id), [
+            'selected_sub_areas' => [],
+            'checklist_answers' => [
+                ['checklist_id' => $checklistsA1->first()->id, 'jawaban' => 'Ya']
+            ],
+        ]);
+        $responseEmptySubAreas->assertStatus(422);
+
+        // Kasus B: Centang hanya sub-area A1. Semua item di A1 dijawab Ya.
+        // Jika ada jawaban 'Tidak' di sub-area A2 (yang tidak dicentang), jawaban A2 diabaikan,
+        // tidak mewajibkan exception fields, dan tidak menaikkan risk_final!
+        $answers = [];
+        foreach ($checklistsA1 as $c) {
+            $answers[] = ['checklist_id' => $c->id, 'jawaban' => 'Ya'];
+        }
+        foreach ($checklistsA2 as $c) {
+            $answers[] = ['checklist_id' => $c->id, 'jawaban' => 'Tidak', 'keterangan' => 'Harus diabaikan'];
+        }
+
+        $payload = [
+            'selected_sub_areas' => ['A1'],
+            'checklist_answers' => $answers,
+            'critical_trigger' => 'Tidak',
+        ];
+
+        $responseSuccess = $this->actingAs($this->raUser)->postJson(route('daily-register.update.ra', $finding->id), $payload);
+        $responseSuccess->assertStatus(200);
+
+        $fresh = $finding->fresh();
+        $this->assertEquals(['A1'], $fresh->selected_sub_areas);
+        $this->assertEquals('Low', $fresh->risk_final, "Jawaban 'Tidak' di grup A2 yang tidak dicentang tidak boleh memicu status exception");
+        $this->assertEquals(1, $fresh->skor_final);
+
+        // Pastikan hanya jawaban dari sub-area A1 yang tersimpan di daily_register_checklist_answers
+        $savedAnswers = DailyRegisterChecklistAnswer::where('daily_register_finding_id', $finding->id)->get();
+        $savedChecklistIds = $savedAnswers->pluck('checklist_id')->toArray();
+        foreach ($checklistsA2 as $c2) {
+            $this->assertNotContains($c2->id, $savedChecklistIds, "Item A2 tidak boleh tersimpan karena sub-area A2 tidak dicentang");
+        }
+        foreach ($checklistsA1 as $c1) {
+            $this->assertContains($c1->id, $savedChecklistIds, "Item A1 harus tersimpan karena sub-area A1 dicentang");
+        }
+    }
+
+    /**
+     * Test 18: Deselected sub-area membersihkan jawaban lama dari database
+     * sehingga temuan 'Tidak' dari sub-area yang dinonaktifkan tidak tertinggal.
+     */
+    public function test_deselected_sub_area_cleans_up_old_answers_and_does_not_persist_orphaned_tidak(): void
+    {
+        $unit18 = $this->createIsolatedUnit('U18');
+        $finding = DailyRegisterFinding::create([
+            'kode_unit' => $unit18->unit_code,
+            'tanggal_data' => now()->toDateString(),
+            'source_sheet' => 'KKA_Teller_Kas',
+            'nominal_terkait' => 20000000,
+            'risk_awal' => 'Moderate',
+        ]);
+
+        $checklistsA1 = DailyRegisterChecklist::where('source_sheet', 'KKA_Teller_Kas')->where('sub_area_code', 'A1')->get();
+        $checklistsA2 = DailyRegisterChecklist::where('source_sheet', 'KKA_Teller_Kas')->where('sub_area_code', 'A2')->get();
+
+        // 1. Simpan pertama kali dengan mencentang A1 dan A2, di mana A2 memiliki 1 'Tidak'
+        $initialAnswers = [];
+        foreach ($checklistsA1 as $c) {
+            $initialAnswers[] = ['checklist_id' => $c->id, 'jawaban' => 'Ya'];
+        }
+        foreach ($checklistsA2 as $c) {
+            $initialAnswers[] = ['checklist_id' => $c->id, 'jawaban' => 'Tidak', 'keterangan' => 'Temuan A2'];
+        }
+
+        $res1 = $this->actingAs($this->raUser)->postJson(route('daily-register.update.ra', $finding->id), [
+            'selected_sub_areas' => ['A1', 'A2'],
+            'checklist_answers' => $initialAnswers,
+            'critical_trigger' => 'Tidak',
+            'jenis_exception_ra' => 'Exception Kas Kecil',
+            'hasil_uji' => 'Pengeluaran tanpa otorisasi',
+            'klarifikasi_unit' => 'Akan diselesaikan',
+        ]);
+        $res1->assertStatus(200);
+
+        // Pastikan jawaban A2 tersimpan
+        $countA2Saved = DailyRegisterChecklistAnswer::where('daily_register_finding_id', $finding->id)
+            ->whereIn('checklist_id', $checklistsA2->pluck('id'))
+            ->count();
+        $this->assertEquals($checklistsA2->count(), $countA2Saved);
+
+        // Simulasi Reviewer meminta perbaikan (Status PERLU_REVISI), membuka kunci form bagi RA
+        $finding->review_status = DailyRegisterFinding::STATUS_PERLU_REVISI;
+        $finding->status_review = 'Revisi';
+        $finding->save();
+
+        // 2. Sekarang RA mengedit: melepas centang A2 (hanya mencentang A1 dengan seluruh Ya)
+        $updatedAnswers = [];
+        foreach ($checklistsA1 as $c) {
+            $updatedAnswers[] = ['checklist_id' => $c->id, 'jawaban' => 'Ya'];
+        }
+
+        $res2 = $this->actingAs($this->raUser)->postJson(route('daily-register.update.ra', $finding->id), [
+            'selected_sub_areas' => ['A1'],
+            'checklist_answers' => $updatedAnswers,
+            'critical_trigger' => 'Tidak',
+        ]);
+        $res2->assertStatus(200);
+
+        $fresh = $finding->fresh();
+        $this->assertEquals(['A1'], $fresh->selected_sub_areas);
+        $this->assertEquals('Low', $fresh->risk_final);
+        $this->assertNull($fresh->jenis_exception_ra);
+
+        // Verifikasi bahwa seluruh jawaban lama di A2 TELAH DIHAPUS bersih
+        $countA2After = DailyRegisterChecklistAnswer::where('daily_register_finding_id', $finding->id)
+            ->whereIn('checklist_id', $checklistsA2->pluck('id'))
+            ->count();
+        $this->assertEquals(0, $countA2After, "Jawaban checklist untuk sub-area yang dilepas/dinonaktifkan harus dihapus bersih dari database");
+    }
+
+    /**
+     * Test 19: Endpoint Cetak Arsip Matriks (Print/PDF) dan Export Excel
+     * Memverifikasi pemisahan tabel arsip per sub-area yang dicentang.
+     */
+    public function test_print_arsip_matriks_and_export_excel_landscape_view(): void
+    {
+        $unit19 = $this->createIsolatedUnit('U19');
+        $findingTeller = DailyRegisterFinding::create([
+            'kode_unit' => $unit19->unit_code,
+            'tanggal_data' => now()->toDateString(),
+            'source_sheet' => 'KKA_Teller_Kas',
+            'nominal_terkait' => 15000000,
+            'risk_awal' => 'Moderate',
+            'selected_sub_areas' => ['A1'],
+            'review_status' => DailyRegisterFinding::STATUS_SELESAI,
+            'status_review' => 'Approved',
+            'no_arsip' => 'ARSIP-TELLER-001',
+        ]);
+
+        $findingKasKecil = DailyRegisterFinding::create([
+            'kode_unit' => $unit19->unit_code,
+            'tanggal_data' => now()->toDateString(),
+            'source_sheet' => 'KKA_Teller_Kas',
+            'nominal_terkait' => 2500000,
+            'risk_awal' => 'Moderate',
+            'selected_sub_areas' => ['A2'],
+            'review_status' => DailyRegisterFinding::STATUS_SELESAI,
+            'status_review' => 'Approved',
+            'no_arsip' => 'ARSIP-KECIL-002',
+        ]);
+
+        // 1. Panggil Print View tanpa filter sub_area (harus merender seluruh sub-area terpisah)
+        $printResponse = $this->actingAs($this->raUser)->get(route('daily-register.arsip-matriks.print', [
+            'source_sheet' => 'KKA_Teller_Kas',
+            'kode_unit' => $unit19->unit_code,
+        ]));
+        $printResponse->assertStatus(200);
+        $printResponse->assertSee('Sub-Area: Transaksi Teller', false);
+        $printResponse->assertSee('Sub-Area: Kas Kecil', false);
+        $printResponse->assertSee('ARSIP-TELLER-001');
+        $printResponse->assertSee('ARSIP-KECIL-002');
+        $printResponse->assertSee('MATRIKS CHECKLIST PENGUJIAN', false);
+
+        // 2. Panggil Print View dengan filter sub_area=A2 (Kas Kecil saja)
+        $printFiltered = $this->actingAs($this->raUser)->get(route('daily-register.arsip-matriks.print', [
+            'source_sheet' => 'KKA_Teller_Kas',
+            'kode_unit' => $unit19->unit_code,
+            'sub_area' => 'A2',
+        ]));
+        $printFiltered->assertStatus(200);
+        $printFiltered->assertSee('Sub-Area: Kas Kecil', false);
+        $printFiltered->assertDontSee('Sub-Area: Transaksi Teller', false);
+        $printFiltered->assertSee('ARSIP-KECIL-002');
+
+        // 3. Panggil Export Excel
+        $excelResponse = $this->actingAs($this->raUser)->get(route('daily-register.arsip-matriks.export-excel', [
+            'source_sheet' => 'KKA_Teller_Kas',
+            'kode_unit' => $unit19->unit_code,
+        ]));
+        $excelResponse->assertStatus(200);
+        $this->assertStringContainsString('application/vnd.ms-excel', $excelResponse->headers->get('Content-Type'));
+        $this->assertStringContainsString('Arsip_Matriks_KKA_Teller_Kas', $excelResponse->headers->get('Content-Disposition'));
+    }
+
+    protected function tearDown(): void
+    {
+        DailyRegisterChecklistAnswer::whereNotIn('daily_register_finding_id', DailyRegisterFinding::where('id', '<=', 26)->pluck('id'))->delete();
+        DailyRegisterFinding::where('id', '>=', 27)->delete();
+        RegisterTrigger::where('sumber', 'Daily Review')
+            ->where(function($q) {
+                $q->where('kode_unit', 'like', 'U%')
+                  ->orWhere('kode_unit', '999')
+                  ->orWhereNotIn('source_wp_id', DailyRegisterFinding::pluck('id')->map(fn($id) => 'DRF-' . $id));
+            })->delete();
+        Unit::where('unit_code', 'like', 'U%')->orWhere('unit_code', '999')->delete();
+        Cabang::where('kode_cabang', 'BS-999')->delete();
+        User::whereIn('email', [
+            'ra_test_luwuk@banksulteng.co.id',
+            'admin_test_checker@banksulteng.co.id',
+        ])->delete();
+
+        parent::tearDown();
     }
 }
 

@@ -73,11 +73,11 @@
             <span class="text-dark fw-semibold">Override Keputusan</span>
         </div>
         <h4 class="rtv-title">
-            <i class="bi bi-sliders text-warning"></i> Override Keputusan Profesional RA / Reviewer
+            <i class="bi bi-sliders text-warning"></i> Override Keputusan RA / Reviewer
             <span class="badge-wp">{{ $trigger->trigger_id }}</span>
         </h4>
         <p class="rtv-subtitle">
-            Penetapan keputusan berdasarkan pertimbangan keahlian auditor terhadap trigger <strong>{{ $trigger->trigger_id }}</strong>
+            Penetapan keputusan berdasarkan pertimbangan auditor terhadap trigger <strong>{{ $trigger->trigger_id }}</strong>
         </p>
     </div>
     <div class="d-flex align-items-center gap-2">
@@ -163,7 +163,7 @@
             <i class="bi bi-shield-lock-fill me-2"></i>Formulir Penetapan Keputusan Override
         </h5>
         <div class="text-muted" style="font-size: 0.84rem;">
-            Setiap perubahan keputusan wajib didukung justifikasi profesional yang dapat dipertanggungjawabkan saat audit trail.
+            Setiap perubahan keputusan wajib didukung justifikasi yang dapat dipertanggungjawabkan saat audit trail.
         </div>
     </div>
     <div class="override-body">
@@ -190,14 +190,14 @@
             </div>
         @endif
 
-        <form action="{{ route('risk-trigger.override', $trigger->id) }}" method="POST">
+        <form action="{{ route('risk-trigger.override', $trigger->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             <div class="mb-4">
                 <label class="form-label">
-                    Pilih Keputusan Override <span class="text-danger">*</span>
+                    Pilih Keputusan Override
                 </label>
-                <select name="override_keputusan" class="form-select" {{ $isFraud ? 'disabled' : '' }} required>
+                <select name="override_keputusan" id="selectOverrideKeputusan" class="form-select" {{ $isFraud ? 'disabled' : '' }}>
                     <option value="">-- Gunakan Keputusan Otomatis Sistem (Reset / Hapus Override) --</option>
                     @foreach($standarKeputusan as $kep)
                         <option value="{{ $kep }}" {{ (old('override_keputusan', $trigger->override_keputusan) == $kep) || ($isFraud && $kep == 'SOP 09 - PEMERIKSAAN AWAL FRAUD') ? 'selected' : '' }}>
@@ -214,22 +214,42 @@
             </div>
 
             <div class="mb-4">
-                <label class="form-label">
-                    Alasan Profesional &amp; Dokumen Pendukung Override <span class="text-danger">*</span>
-                </label>
-                <textarea name="alasan_override" class="form-control" rows="3" placeholder="Tuliskan alasan mengapa keputusan ini di-override, pertimbangan profesional auditor, nomor memo/klarifikasi pendukung, atau disposisi manajemen..." required>{{ old('alasan_override', $trigger->alasan_override) }}</textarea>
-                <div class="text-muted mt-2" style="font-size: 0.8rem;">
-                    Alasan ini akan disimpan secara permanen pada log audit trail Kolom 29 (Kolom AC) Excel SOP 06.
-                </div>
-            </div>
+                <h6 class="fw-bold text-dark mb-3">
+                    <i class="bi bi-file-earmark-medical text-primary me-2"></i>Alasan dan Dokumen Pendukung Override
+                </h6>
 
-            <div class="mb-4">
-                <label class="form-label">
-                    Catatan Review Supervisor / Reviewer (Kolom 37 / Kolom AK Excel)
-                </label>
-                <textarea name="catatan_review" class="form-control" rows="3" placeholder="Instruksi tambahan, arahan perluasan sampling, atau catatan supervisi bagi tim auditor lapangan...">{{ old('catatan_review', $trigger->catatan_review) }}</textarea>
-                <div class="text-muted mt-2" style="font-size: 0.8rem;">
-                    Catatan ini akan disimpan pada Kolom 37 (Kolom AK) Excel SOP 06 dan otomatis tercatat atas nama Reviewer: <strong>{{ auth()->user()->name }}</strong>.
+                <div class="mb-3">
+                    <label class="form-label">
+                        Alasan Override <span class="text-muted fw-normal">(Wajib jika override diaktifkan)</span>
+                    </label>
+                    <textarea name="alasan_override" id="textareaAlasanOverride" class="form-control" rows="3" placeholder="Tuliskan alasan mengapa keputusan ini di-override, nomor memo/klarifikasi pendukung, atau disposisi manajemen...">{{ old('alasan_override', $trigger->alasan_override) }}</textarea>
+                    <div class="text-muted mt-1 small">
+                        Alasan ini akan disimpan secara permanen pada log audit trail Kolom 29 (Kolom AC) Excel SOP 06.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Dokumen Pendukung Override (Opsional)
+                    </label>
+                    <input type="file" name="dokumen_override" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx">
+                    <div class="text-muted mt-1 small">
+                        Mendukung format file: PDF, JPG, PNG, DOCX, XLSX (Maksimal 10 MB).
+                    </div>
+                    @if($trigger->dokumen_override)
+                        <div class="mt-2 p-2.5 bg-light rounded border d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-paperclip text-primary fs-5"></i>
+                                <div>
+                                    <div class="fw-bold text-dark small">Dokumen Pendukung Terlampir</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">{{ basename($trigger->dokumen_override) }}</div>
+                                </div>
+                            </div>
+                            <a href="{{ asset('storage/' . $trigger->dokumen_override) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                <i class="bi bi-eye me-1"></i> Lihat / Unduh Dokumen
+                            </a>
+                        </div>
+                    @endif
                 </div>
             </div>
 

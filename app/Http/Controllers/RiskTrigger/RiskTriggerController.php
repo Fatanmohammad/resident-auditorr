@@ -36,6 +36,45 @@ class RiskTriggerController extends Controller
     }
 
     /**
+     * Pastikan hanya role Admin yang dapat mengakses modul Risk Trigger
+     */
+    protected function authorizeAdmin(): void
+    {
+        $role = strtolower(Auth::user()->role ?? '');
+        if ($role !== 'admin') {
+            abort(403, 'Akses Ditolak: Modul Risk Trigger hanya diperuntukkan bagi Administrator.');
+        }
+    }
+
+    /**
+     * Halaman Tunggal Risk Trigger (Alarm Center)
+     * Hanya dapat diakses oleh Admin
+     */
+    public function index(Request $request)
+    {
+        $this->authorizeAdmin();
+
+        $user = Auth::user();
+        $alarms = $this->service->getActiveAlarms($user);
+        $kpi = $this->service->getAlarmKpiStats($user);
+
+        return view('risk_trigger.index', compact('alarms', 'kpi'));
+    }
+
+    /**
+     * Tandai Alarm Cabang sebagai Sudah Diinfokan
+     */
+    public function markAsInformed(Request $request, string $kodeUnit)
+    {
+        $this->authorizeAdmin();
+
+        $catatan = $request->input('catatan');
+        $this->service->markBranchAsInformed($kodeUnit, $catatan, Auth::user());
+
+        return redirect()->route('risk-trigger.index')->with('success', "Cabang {$kodeUnit} berhasil ditandai sebagai Sudah Diinfokan.");
+    }
+
+    /**
      * Cek apakah user adalah role RA
      */
     protected function isRa(?User $user = null): bool
@@ -137,140 +176,21 @@ class RiskTriggerController extends Controller
     }
 
     /**
-     * Dashboard Ringkasan Control (Tab Utama SOP 06)
+     * Dashboard Ringkasan Control (Dialihkan ke Halaman Tunggal Alarm)
      */
     public function control(Request $request)
     {
-        $user = Auth::user();
-        $isRa = $this->isRa($user);
-        $filterKodeUnit = $isRa ? null : $request->query('kode_unit');
-
-        $stats = $this->service->getRingkasanControlStats($user, $filterKodeUnit);
-
-        // Ambil daftar unit yang sesuai dengan hak akses
-        if ($isRa) {
-            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses')
-                ? $user->cabangIdYangDapatDiakses()
-                : [$user->cabang_id];
-            $units = Unit::whereIn('cabang_id', $allowedCabangIds)->orderBy('unit_code', 'asc')->get();
-            $userCabangName = $user->cabang?->nama_cabang ?? 'Cabang Anda';
-        } else {
-            $units = Unit::orderBy('unit_code', 'asc')->get();
-            $userCabangName = 'Semua Cabang (Global)';
-        }
-
-        return view('risk_trigger.control', [
-            'kpi' => $stats['kpi'],
-            'keputusanSummary' => $stats['keputusan_summary'],
-            'matrixArea' => $stats['matrix_area'],
-            'alarms' => $stats['alarms'],
-            'units' => $units,
-            'isRa' => $isRa,
-            'filterKodeUnit' => $filterKodeUnit,
-            'userCabangName' => $userCabangName,
-            'standarAreas' => RegisterTrigger::$STANDAR_AREAS,
-            'standarKeputusan' => RegisterTrigger::$STANDAR_KEPUTUSAN,
-            'standarSumber' => RegisterTrigger::$STANDAR_SUMBER,
-        ]);
+        $this->authorizeAdmin();
+        return redirect()->route('risk-trigger.index');
     }
 
     /**
-     * Halaman Master Register Trigger (37 Kolom Excel)
+     * Halaman Master Register Trigger (Dialihkan ke Halaman Tunggal Alarm)
      */
     public function register(Request $request)
     {
-        $user = Auth::user();
-        $isRa = $this->isRa($user);
-        $query = RegisterTrigger::query();
-
-        // Scope Cabang untuk role RA
-        if ($isRa) {
-            $query->byBranch($user);
-            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses')
-                ? $user->cabangIdYangDapatDiakses()
-                : [$user->cabang_id];
-            $units = Unit::whereIn('cabang_id', $allowedCabangIds)->orderBy('unit_code', 'asc')->get();
-            $userCabangName = $user->cabang?->nama_cabang ?? 'Cabang Anda';
-        } else {
-            // Filter Cabang / Kode Unit untuk Admin
-            if ($request->filled('kode_unit')) {
-                $expanded = RiskTriggerService::expandUnitCode($request->kode_unit);
-                $query->whereIn('kode_unit', $expanded);
-            }
-            $units = Unit::orderBy('unit_code', 'asc')->get();
-            $userCabangName = 'Semua Cabang (Global)';
-        }
-
-        // Filter Sumber
-        if ($request->filled('sumber')) {
-            $query->where('sumber', $request->sumber);
-        }
-
-        // Filter Area
-        if ($request->filled('area')) {
-            $query->where('area', $request->area);
-        }
-
-        // Filter Risk Level
-        if ($request->filled('risk_level')) {
-            $query->where('risk_level_reassessment', $request->risk_level);
-        }
-
-        // Filter Keputusan Final
-        if ($request->filled('keputusan_final')) {
-            $query->where('keputusan_final', $request->keputusan_final);
-        }
-
-        // Filter Status Workflow
-        if ($request->filled('status_workflow')) {
-            $query->where('status_workflow', $request->status_workflow);
-        }
-
-        // Filter Status Duplikat
-        if ($request->filled('status_duplikat')) {
-            $query->where('status_duplikat', $request->status_duplikat);
-        }
-
-        // Filter Search Keyword
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('trigger_id', 'like', "%{$q}%")
-                    ->orWhere('source_wp_id', 'like', "%{$q}%")
-                    ->orWhere('uraian_trigger', 'like', "%{$q}%")
-                    ->orWhere('objek_key', 'like', "%{$q}%")
-                    ->orWhere('nama_unit', 'like', "%{$q}%");
-            });
-        }
-
-        $baseQuery = RegisterTrigger::query();
-        if ($isRa) {
-            $baseQuery->byBranch($user);
-        } elseif ($request->filled('kode_unit')) {
-            $expanded = RiskTriggerService::expandUnitCode($request->kode_unit);
-            $baseQuery->whereIn('kode_unit', $expanded);
-        }
-        $stats = [
-            'total' => (clone $baseQuery)->count(),
-            'visit' => (clone $baseQuery)->where('keputusan_final', 'RISK TRIGGER VISIT')->count(),
-            'kritis' => (clone $baseQuery)->where('risk_level_reassessment', 'KRITIS')->count(),
-            'overdue' => (clone $baseQuery)->whereNotNull('sla_deadline')->where('sla_deadline', '<', now()->startOfDay())->where('status_workflow', '!=', 'SELESAI/DALAM TL')->count(),
-        ];
-
-        $triggers = $query->latest('id')->paginate(25)->withQueryString();
-        $alarms = $this->service->getActiveAlarms($user, $isRa ? null : $request->kode_unit);
-
-        return view('risk_trigger.register', [
-            'triggers' => $triggers,
-            'alarms' => $alarms,
-            'stats' => $stats,
-            'units' => $units,
-            'isRa' => $isRa,
-            'userCabangName' => $userCabangName,
-            'standarAreas' => RegisterTrigger::$STANDAR_AREAS,
-            'standarKeputusan' => RegisterTrigger::$STANDAR_KEPUTUSAN,
-            'standarSumber' => RegisterTrigger::$STANDAR_SUMBER,
-        ]);
+        $this->authorizeAdmin();
+        return redirect()->route('risk-trigger.index');
     }
 
     /**
@@ -278,49 +198,26 @@ class RiskTriggerController extends Controller
      */
     public function create()
     {
-        if ($this->isRa()) {
-            abort(403, 'Akses Ditolak: Hanya Admin / Reviewer yang memiliki wewenang menginput Trigger Manual.');
-        }
-
-        $units = Unit::orderBy('unit_code', 'asc')->get();
-
-        return view('risk_trigger.create', [
-            'units' => $units,
-            'standarAreas' => RegisterTrigger::$STANDAR_AREAS,
-            'standarKeputusan' => RegisterTrigger::$STANDAR_KEPUTUSAN,
-        ]);
+        $this->authorizeAdmin();
+        return redirect()->route('risk-trigger.index');
     }
 
     /**
-     * Halaman Detail Lengkap 37 Kolom Trigger (Dedicated Page)
+     * Halaman Detail Lengkap Trigger
      */
     public function show($id)
     {
-        $trigger = RegisterTrigger::with('assignmentScope')->findOrFail($id);
-        $this->checkBranchAccess($trigger);
-
-        return view('risk_trigger.show', [
-            'trigger' => $trigger,
-            'isRa' => $this->isRa(),
-            'standarKeputusan' => RegisterTrigger::$STANDAR_KEPUTUSAN,
-        ]);
+        $this->authorizeAdmin();
+        return redirect()->route('risk-trigger.index');
     }
 
     /**
-     * Halaman Override Keputusan (Dedicated Page) - KHUSUS ROLE ADMIN
+     * Halaman Override Keputusan - KHUSUS ROLE ADMIN
      */
     public function editOverride($id)
     {
-        if ($this->isRa()) {
-            abort(403, 'Akses Ditolak: Hanya Admin / Reviewer yang memiliki wewenang melakukan Override Keputusan.');
-        }
-
-        $trigger = RegisterTrigger::findOrFail($id);
-
-        return view('risk_trigger.override', [
-            'trigger' => $trigger,
-            'standarKeputusan' => RegisterTrigger::$STANDAR_KEPUTUSAN,
-        ]);
+        $this->authorizeAdmin();
+        return redirect()->route('risk-trigger.index');
     }
 
     /**
@@ -328,9 +225,9 @@ class RiskTriggerController extends Controller
      */
     public function sync(Request $request)
     {
+        $this->authorizeAdmin();
         $user = Auth::user();
-        $isRa = $this->isRa($user);
-        $filterKodeUnit = $isRa ? null : $request->input('kode_unit');
+        $filterKodeUnit = $request->input('kode_unit');
 
         try {
             $stats = $this->service->syncAll($user, $filterKodeUnit);
@@ -399,7 +296,7 @@ class RiskTriggerController extends Controller
         $validated = $request->validate([
             'override_keputusan' => 'nullable|string|max:50',
             'alasan_override' => 'nullable|string|required_with:override_keputusan',
-            'catatan_review' => 'nullable|string',
+            'dokumen_override' => 'nullable|file|mimes:pdf,jpg,jpeg,png,docx,xlsx|max:10240',
         ]);
 
         // Aturan Proteksi Fraud: Tidak boleh meng-override turun jika indikasi fraud == "Ya"
@@ -409,12 +306,54 @@ class RiskTriggerController extends Controller
 
         $trigger->override_keputusan = $validated['override_keputusan'] ?: null;
         $trigger->alasan_override = $validated['alasan_override'] ?: null;
-        $trigger->catatan_review = $validated['catatan_review'] ?: null;
+        if ($request->hasFile('dokumen_override')) {
+            $path = $request->file('dokumen_override')->store('risk_trigger_overrides', 'public');
+            $trigger->dokumen_override = $path;
+        }
         $trigger->reviewer = Auth::user()->name;
         $trigger->calculateDerivedAttributes();
         $trigger->save();
 
-        return redirect()->route('risk-trigger.show', $trigger->id)->with('success', "Keputusan dan catatan review trigger {$trigger->trigger_id} berhasil diperbarui oleh Reviewer.");
+        return redirect()->route('risk-trigger.show', $trigger->id)->with('success', "Alasan dan dokumen pendukung override untuk trigger {$trigger->trigger_id} berhasil disimpan.");
+    }
+
+    /**
+     * Follow-up status alarm akumulasi oleh Admin
+     */
+    public function followUpAlarm(Request $request)
+    {
+        $this->authorizeAdmin();
+
+        $kodeUnit = $request->input('kode_unit') ?: $request->input('unit_kerja');
+        $area = $request->input('area') ?: $request->input('area_risiko');
+        $catatan = $request->input('catatan') ?: $request->input('catatan_tindak_lanjut') ?: 'Telah diinformasikan kepada manajemen / Pak Adam untuk pendalaman lebih lanjut.';
+
+        if ($kodeUnit) {
+            $updateData = [
+                'status_tindak_lanjut_alarm' => 'TELAH DITINDAKLANJUTI',
+                'catatan_tindak_lanjut_alarm' => $catatan,
+                'ditindaklanjuti_oleh' => Auth::user()?->name ?? 'Admin SKAI',
+                'waktu_tindak_lanjut_alarm' => now(),
+            ];
+
+            $query = RegisterTrigger::where(function($q) use ($kodeUnit) {
+                $q->where('kode_unit', $kodeUnit)
+                  ->orWhere('nama_unit', $kodeUnit);
+            });
+
+            if ($area) {
+                $query->where('area', $area);
+            }
+
+            // Update status workflow for records waiting assignment/recorded
+            (clone $query)->whereIn('status_workflow', ['MENUNGGU ASSIGNMENT', 'TERCATAT', 'BARU'])
+                ->update(array_merge($updateData, ['status_workflow' => 'DALAM PANTAUAN ALARM']));
+
+            // Update all records with the follow-up metadata
+            $query->update($updateData);
+        }
+
+        return redirect()->back()->with('success', "Status alarm pada unit/cabang {$kodeUnit} berhasil ditandai Sudah Diinfokan.");
     }
 
     /**
@@ -581,7 +520,7 @@ class RiskTriggerController extends Controller
             'tanggal_visit' => 'required|date',
             'ra_pelaksana' => 'required|string|max:150',
             'reviewer' => 'required|string|max:150',
-            'referensi_otorisasi' => 'required|string|max:150',
+            'referensi_otorisasi' => 'nullable|string|max:150',
             'klasifikasi' => 'required|string|max:100',
             'batas_scope' => 'nullable|string',
             'kriteria_selesai' => 'nullable|string',
@@ -882,6 +821,45 @@ class RiskTriggerController extends Controller
         // Area aktif default dari KKA Tujuan
         $activeTab = $request->query('tab', $kka->kka_area ?: 'KKA_Teller_Kas');
 
+        // Data Pembanding Otomatis dari Sistem (Komparasi Data Database)
+        $trigger = $kka->trigger ?: RegisterTrigger::where('trigger_id', $kka->trigger_id)->first();
+        $historiTriggerCount = RegisterTrigger::where('kode_unit', $kka->kode_unit)
+            ->where('area', $kka->area)
+            ->count();
+        $historiDailyCount = \App\Models\DailyRegister\DailyRegisterFinding::where('kode_unit', $kka->kode_unit)
+            ->where(function($q) use ($kka) {
+                $q->where('source_sheet', 'like', "%{$kka->area}%")
+                  ->orWhere('jenis_exception_awal', 'like', "%{$kka->area}%");
+            })->count();
+
+        $totalHistori = $historiTriggerCount + $historiDailyCount;
+        $eksposurNominal = $trigger ? (float)$trigger->eksposur_nominal : 0;
+        $formattedEksposur = 'Rp ' . number_format($eksposurNominal, 0, ',', '.');
+        $parameterTransaksi = $trigger ? ($trigger->objek_key ?: ($trigger->source_wp_id ?: 'Parameter Transaksi Sistem')) : 'Data Transaksi Sistem';
+        $riskLevelAuto = $trigger ? $trigger->risk_level_reassessment : ($kka->risk_level ?: 'SEDANG');
+
+        $comparisonData = [
+            // Keys expected by resources/views/risk_trigger/kka/edit.blade.php
+            'historical_findings_count' => $totalHistori,
+            'exposure_nominal' => $formattedEksposur,
+            'related_transactions' => $parameterTransaksi,
+            'risk_level' => $riskLevelAuto,
+            'system_timestamp' => now()->format('d/m/Y H:i') . ' WITA',
+            // Legacy / raw numeric keys for compatibility
+            'eksposur_nominal' => $eksposurNominal,
+            'jumlah_kejadian' => $trigger ? (int)$trigger->jumlah_kejadian : 1,
+            'risk_score_reassessment' => $trigger ? (float)$trigger->risk_score_reassessment : 0,
+            'sumber' => $trigger ? $trigger->sumber : 'Sistem Audit',
+            'source_wp_id' => $trigger ? $trigger->source_wp_id : '-',
+            'histori_trigger_count' => $historiTriggerCount,
+            'histori_daily_count' => $historiDailyCount,
+            'total_exception_area' => $kka->exception_area ?? 0,
+        ];
+
+        $covenants = \App\Models\RiskTrigger\RiskTriggerCovenant::where('risk_trigger_kka_induk_id', $kka->id)
+            ->orderBy('id', 'asc')
+            ->get();
+
         return view('risk_trigger.kka.edit', [
             'kka' => $kka,
             'isRa' => $isRa,
@@ -897,6 +875,8 @@ class RiskTriggerController extends Controller
             'observasiRows' => $observasiRows,
             'areaCounts' => $areaCounts,
             'activeTab' => $activeTab,
+            'comparisonData' => $comparisonData,
+            'covenants' => $covenants,
         ]);
     }
 
@@ -909,7 +889,7 @@ class RiskTriggerController extends Controller
     }
 
     /**
-     * Update Data KKA Induk (Input Profesional RA & Status Review Admin)
+     * Update Data KKA Induk (Input RA & Status Review Admin)
      */
     public function kkaUpdate(Request $request, $id)
     {
@@ -926,11 +906,15 @@ class RiskTriggerController extends Controller
 
             $validated = $request->validate([
                 'ringkasan_bukti' => 'nullable|string',
+                'file_ringkasan_bukti' => 'nullable|file|mimes:pdf,jpg,jpeg,png,docx,xlsx,doc,xls|max:15360',
                 'hasil_analisis' => 'nullable|string',
                 'trigger_terbukti' => 'nullable|in:Ya,Tidak,Sebagian',
                 'perlu_perluasan' => 'required|in:Ya,Tidak',
                 'alasan_perluasan' => 'nullable|string|required_if:perlu_perluasan,Ya',
                 'simpulan_ra' => 'nullable|string',
+                'klausul_covenant' => 'nullable|string',
+                'status_covenant' => 'nullable|string|in:Terpenuhi,Tidak Terpenuhi,Dalam Proses',
+                'catatan_covenant' => 'nullable|string',
             ], [
                 'alasan_perluasan.required_if' => 'Alasan Perluasan wajib diisi jika Perlu Perluasan bernilai "Ya".',
             ]);
@@ -942,12 +926,21 @@ class RiskTriggerController extends Controller
             $validated = $request->validate([
                 'status_review' => 'required|in:DRAFT / BELUM DIREVIEW,REVISI,FINAL',
                 'ringkasan_bukti' => 'nullable|string',
+                'file_ringkasan_bukti' => 'nullable|file|mimes:pdf,jpg,jpeg,png,docx,xlsx,doc,xls|max:15360',
                 'hasil_analisis' => 'nullable|string',
                 'trigger_terbukti' => 'nullable|in:Ya,Tidak,Sebagian',
                 'perlu_perluasan' => 'nullable|in:Ya,Tidak',
                 'alasan_perluasan' => 'nullable|string',
                 'simpulan_ra' => 'nullable|string',
+                'klausul_covenant' => 'nullable|string',
+                'status_covenant' => 'nullable|string|in:Terpenuhi,Tidak Terpenuhi,Dalam Proses',
+                'catatan_covenant' => 'nullable|string',
             ]);
+        }
+
+        if ($request->hasFile('file_ringkasan_bukti')) {
+            $path = $request->file('file_ringkasan_bukti')->store('risk_trigger_bukti', 'public');
+            $validated['file_ringkasan_bukti'] = $path;
         }
 
         try {

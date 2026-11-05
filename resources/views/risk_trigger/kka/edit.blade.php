@@ -233,10 +233,10 @@
             <div>
                 <h6 class="mb-0 fw-bold text-dark">
                     <i class="bi bi-card-checklist text-primary me-2"></i>
-                    Bagian 1: KKA Induk (KKA_Risk_Trigger - Rumus Otomatis & Pertimbangan Profesional)
+                    Bagian 1: KKA Induk (KKA_Risk_Trigger - Rumus Otomatis &amp; Simpulan)
                 </h6>
                 <div class="small text-muted mt-0.5" style="font-size: 0.78rem;">
-                    20 Kolom Excel A s.d. T &bull; Pertimbangan profesional auditor atas trigger visit.
+                    20 Kolom Excel A s.d. T &bull; Simpulan auditor atas trigger visit.
                 </div>
             </div>
             <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1" style="font-size: 0.75rem; font-weight: 600;">
@@ -244,7 +244,7 @@
             </span>
         </div>
         <div class="card-body p-3 p-md-4">
-            <form action="{{ route('risk-trigger.kka.update', $kka->id) }}" method="POST">
+            <form action="{{ route('risk-trigger.kka.update', $kka->id) }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 {{-- Baris Otomatis F, G, H, I --}}
@@ -288,15 +288,114 @@
 
                 <hr class="text-muted opacity-25 my-3">
 
-                {{-- Baris Input Pengujian Profesional RA (J s.d. N, Q) --}}
+                {{-- Bagian Komparasi Data Sistem Otomatis & Input Pemenuhan Covenant --}}
+                <div class="card border-0 bg-light-subtle rounded-3 mb-4 shadow-sm">
+                    <div class="card-header bg-white py-2.5 px-3 border-bottom d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-dark small text-uppercase">
+                            <i class="bi bi-hdd-network text-primary me-1"></i> 1. Komparasi Data Sistem (Auto-Populated Database Sistem)
+                        </span>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5" style="font-size: 0.72rem;">
+                            <i class="bi bi-check2-circle me-1"></i>Sinkron Sistem: {{ $comparisonData['system_timestamp'] ?? now()->format('d/m/Y H:i') }}
+                        </span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label small text-muted text-uppercase mb-1" style="font-size: 0.75rem;">Histori Temuan Area Terkait</label>
+                                <div class="p-2 bg-white rounded border fw-semibold text-dark" style="font-size: 0.85rem;">
+                                    <i class="bi bi-clock-history text-secondary me-1"></i>{{ $comparisonData['historical_findings_count'] ?? 0 }} Temuan Terdokumentasi
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-muted text-uppercase mb-1" style="font-size: 0.75rem;">Nominal Eksposur Terdeteksi</label>
+                                <div class="p-2 bg-white rounded border fw-semibold text-dark" style="font-size: 0.85rem;">
+                                    <i class="bi bi-cash text-danger me-1"></i>{{ $comparisonData['exposure_nominal'] ?? 'Rp 0' }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-muted text-uppercase mb-1" style="font-size: 0.75rem;">Parameter Rekening / Transaksi</label>
+                                <div class="p-2 bg-white rounded border fw-semibold text-dark text-truncate" style="font-size: 0.85rem;" title="{{ $comparisonData['related_transactions'] ?? '-' }}">
+                                    <i class="bi bi-credit-card text-primary me-1"></i>{{ $comparisonData['related_transactions'] ?? '-' }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-muted text-uppercase mb-1" style="font-size: 0.75rem;">Level Risiko Otomatis</label>
+                                <div class="p-2 bg-white rounded border fw-semibold text-dark" style="font-size: 0.85rem;">
+                                    <span class="badge bg-danger">{{ $comparisonData['risk_level'] ?? 'Moderate-to-High' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Input Covenant Langsung di Bawah Komparasi Data Sistem --}}
+                        <div class="mt-3 pt-3 border-top">
+                            <label class="form-label small fw-bold text-dark text-uppercase mb-2">
+                                <i class="bi bi-file-earmark-check text-success me-1"></i> 2. Pemenuhan Covenant / Syarat Perjanjian (Covenant)
+                            </label>
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <label class="form-label small text-muted mb-1" style="font-size: 0.78rem;">Daftar / Uraian Klausul Covenant</label>
+                                    <textarea name="klausul_covenant" class="form-control form-control-sm" rows="3" 
+                                              placeholder="Contoh: Rasio perputaran kas, syarat asuransi jaminan, kelengkapan appraisal, pembatasan penarikan dana..."
+                                              {{ ($isFinal && $isRa) ? 'disabled' : '' }}>{{ old('klausul_covenant', $kka->klausul_covenant) }}</textarea>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted mb-1" style="font-size: 0.78rem;">Status Pemenuhan Covenant</label>
+                                    <select name="status_covenant" class="form-select form-select-sm" {{ ($isFinal && $isRa) ? 'disabled' : '' }}>
+                                        <option value="">-- Pilih Status Pemenuhan --</option>
+                                        <option value="Terpenuhi" {{ old('status_covenant', $kka->status_covenant) == 'Terpenuhi' ? 'selected' : '' }}>Terpenuhi</option>
+                                        <option value="Tidak Terpenuhi" {{ old('status_covenant', $kka->status_covenant) == 'Tidak Terpenuhi' ? 'selected' : '' }}>Tidak Terpenuhi</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small text-muted mb-1" style="font-size: 0.78rem;">Catatan Keterangan Covenant</label>
+                                    <textarea name="catatan_covenant" class="form-control form-control-sm" rows="3" 
+                                              placeholder="Catatan verifikasi kepatuhan klausul covenant atau deviasi yang ditemukan..."
+                                              {{ ($isFinal && $isRa) ? 'disabled' : '' }}>{{ old('catatan_covenant', $kka->catatan_covenant) }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="text-muted opacity-25 my-3">
+
+                {{-- Baris Input Pengujian RA (J s.d. N, Q) --}}
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold text-dark">
-                            Ringkasan Bukti (Kolom J - Input Teks RA)
-                        </label>
-                        <textarea name="ringkasan_bukti" class="form-control" rows="3" 
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold text-dark mb-0">
+                                Ringkasan Bukti (Kolom J - Input Teks & Lampiran RA)
+                            </label>
+                            @if($kka->file_ringkasan_bukti)
+                                @php
+                                    $evUrl = asset(str_starts_with($kka->file_ringkasan_bukti, 'storage/') ? $kka->file_ringkasan_bukti : 'storage/' . $kka->file_ringkasan_bukti);
+                                @endphp
+                                <a href="{{ $evUrl }}" target="_blank" class="badge bg-success text-white text-decoration-none px-2 py-1" title="Buka berkas bukti terlampir">
+                                    📎 Bukti Terlampir
+                                </a>
+                            @endif
+                        </div>
+                        <textarea name="ringkasan_bukti" class="form-control mb-2" rows="3" 
                                   placeholder="Tuliskan daftar dan ringkasan bukti fisik/dokumen yang diperoleh di lapangan..."
                                   {{ ($isFinal && $isRa) ? 'disabled' : '' }}>{{ old('ringkasan_bukti', $kka->ringkasan_bukti) }}</textarea>
+                        
+                        <div class="p-2 bg-light rounded border">
+                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-paperclip me-1"></i>Upload File Bukti Pendukung (PDF, JPG, PNG, DOCX, XLSX - maks 15MB)
+                            </label>
+                            <input type="file" name="file_ringkasan_bukti" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" {{ ($isFinal && $isRa) ? 'disabled' : '' }}>
+                            @if($kka->file_ringkasan_bukti)
+                                @php
+                                    $evUrl = asset(str_starts_with($kka->file_ringkasan_bukti, 'storage/') ? $kka->file_ringkasan_bukti : 'storage/' . $kka->file_ringkasan_bukti);
+                                @endphp
+                                <div class="small mt-1 d-flex align-items-center gap-1">
+                                    <span class="text-muted">File saat ini:</span>
+                                    <a href="{{ $evUrl }}" target="_blank" class="badge bg-light text-primary border text-decoration-none">
+                                        📎 Bukti Terlampir: {{ basename($kka->file_ringkasan_bukti) }}
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     <div class="col-md-6">
@@ -341,10 +440,10 @@
 
                     <div class="col-12">
                         <label class="form-label small fw-bold text-dark">
-                            Simpulan Profesional RA (Kolom Q - Simpulan Akhir RA atas Trigger Tersebut)
+                            Simpulan RA (Kolom Q - Simpulan Akhir RA atas Trigger Tersebut)
                         </label>
                         <textarea name="simpulan_ra" class="form-control" rows="3" 
-                                  placeholder="Tuliskan simpulan profesional akhir, rekomendasi mitigasi risiko, dan implikasi bagi unit kerja..."
+                                  placeholder="Tuliskan simpulan akhir, rekomendasi mitigasi risiko, dan implikasi bagi unit kerja..."
                                   {{ ($isFinal && $isRa) ? 'disabled' : '' }}>{{ old('simpulan_ra', $kka->simpulan_ra) }}</textarea>
                     </div>
 
@@ -391,7 +490,7 @@
                 @if($canModify && !$isFinal || !$isRa)
                 <div class="d-flex justify-content-end mt-4">
                     <button type="submit" class="btn btn-primary px-4 py-2">
-                        <i class="bi bi-save me-1"></i> Simpan Pertimbangan KKA Induk
+                        <i class="bi bi-save me-1"></i> Simpan Simpulan KKA Induk
                     </button>
                 </div>
                 @endif

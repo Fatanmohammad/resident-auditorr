@@ -282,6 +282,10 @@ class KkaControlIntegrasiService
                 $details = collect();
                 if ($latestPhysicalKka) {
                     $details = $modelClass::where('physical_kka_id', $latestPhysicalKka->id)->get();
+                    if ($namaSheet === 'KKA_Cash_Opname' && class_exists(\App\Models\DailyRegister\PhysicalKkaAtmMachine::class)) {
+                        $atmMachines = \App\Models\DailyRegister\PhysicalKkaAtmMachine::where('physical_kka_id', $latestPhysicalKka->id)->get();
+                        $details = $details->concat($atmMachines);
+                    }
                 }
 
                 $wajibProsedur = $details->isNotEmpty() ? $details->count() : $defaultCount;

@@ -196,6 +196,104 @@
     }
     .btn-review:hover { background-color: #152c6b; color: #fff; transform: translateY(-1px); }
 
+    /* Quick Filter Chips */
+    .quick-chip {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 0.28rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+    .quick-chip:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        color: #1e293b;
+    }
+    .quick-chip.active {
+        background: #1e3a8a;
+        border-color: #1e3a8a;
+        color: #ffffff !important;
+        box-shadow: 0 1px 4px rgba(30, 58, 138, 0.25);
+    }
+    .quick-chip.chip-revisi.active {
+        background: #e11d48;
+        border-color: #e11d48;
+        color: #ffffff !important;
+    }
+    .quick-chip.chip-belum.active {
+        background: #475569;
+        border-color: #475569;
+        color: #ffffff !important;
+    }
+    .quick-chip.chip-menunggu.active {
+        background: #d97706;
+        border-color: #d97706;
+        color: #ffffff !important;
+    }
+    .quick-chip.chip-selesai.active {
+        background: #059669;
+        border-color: #059669;
+        color: #ffffff !important;
+    }
+    .chip-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .chip-dot.dot-red { background-color: #ef4444; }
+    .chip-dot.dot-gray { background-color: #94a3b8; }
+    .chip-dot.dot-amber { background-color: #f59e0b; }
+    .chip-dot.dot-green { background-color: #10b981; }
+
+    /* Tab Indicator Dots */
+    .tab-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 2px;
+        flex-shrink: 0;
+    }
+    .tab-dot.dot-red {
+        background-color: #ef4444;
+        box-shadow: 0 0 0 2px #fff, 0 0 6px rgba(239, 68, 68, 0.8);
+        animation: pulse-dot 1.8s infinite;
+    }
+    .tab-dot.dot-amber {
+        background-color: #f59e0b;
+        box-shadow: 0 0 0 2px #fff, 0 0 6px rgba(245, 158, 11, 0.8);
+        animation: pulse-dot 1.8s infinite;
+    }
+    @keyframes pulse-dot {
+        0% { transform: scale(0.9); opacity: 0.8; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(0.9); opacity: 0.8; }
+    }
+    .kka-tab-item .badge-count.tab-completed {
+        background: #059669 !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+
+    /* Row Subtle Styling */
+    .row-perlu-revisi {
+        border-left: 4px solid #f43f5e !important;
+        background-color: rgba(255, 241, 242, 0.45) !important;
+    }
+    .row-selesai {
+        background-color: rgba(248, 250, 252, 0.75) !important;
+        color: #64748b;
+    }
+
     /* STYLING FULL PAGE DETAIL VIEW */
     .btn-back { background: #fff; border: 1px solid var(--border-color); padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; color: var(--text-dark); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
     
@@ -434,15 +532,42 @@
         </div>
     </div>
 
+    <!-- ALERT BACKLOG KEHADIRAN RA (Transaksi Tertunda Wajib Diperiksa) -->
+    <div id="backlogAlertBanner" class="alert alert-warning mb-3 shadow-sm border" style="display: none; border-left: 5px solid #f59e0b; border-radius: 8px; background: #fffbeb;">
+        <div class="d-flex align-items-center gap-3">
+            <span style="font-size: 1.5rem; color: #d97706;"><i class="bi bi-exclamation-triangle-fill"></i></span>
+            <div>
+                <strong style="color: #92400e;">Pemberitahuan Backlog Kehadiran RA:</strong>
+                <span id="backlogAlertText" style="color: #78350f;">Terdapat transaksi backlog dari tanggal sebelumnya yang wajib diperiksa. Data tidak terhapus otomatis.</span>
+            </div>
+        </div>
+    </div>
+
     <!-- FILTER KHUSUS RIWAYAT (Hanya tampil saat mode riwayat aktif) -->
     <div id="riwayatFilterCard" class="filter-card" style="display: none;">
-        <div style="font-weight: 700; color: var(--primary-blue); margin-bottom: 1rem; font-size: 0.9rem;">
-            <i class="bi bi-funnel"></i> Filter Pencarian Arsip Riwayat Selesai
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div style="font-weight: 700; color: var(--primary-blue); font-size: 0.95rem;">
+                <i class="bi bi-archive-fill me-1"></i> Arsip Riwayat Selesai — Matriks KKA Harian
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="#" id="btnPrintArsipMatriks" target="_blank" class="btn btn-sm btn-primary px-3 fw-semibold shadow-sm" style="border-radius: 6px; font-size: 0.82rem;">
+                    <i class="bi bi-printer me-1"></i> Cetak Arsip Matriks (Print / PDF)
+                </a>
+                <a href="#" id="btnExportExcelArsipMatriks" class="btn btn-sm btn-success px-3 fw-semibold shadow-sm" style="border-radius: 6px; font-size: 0.82rem;">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Export Excel Matriks
+                </a>
+            </div>
         </div>
-        <div class="filter-grid">
+        <div class="filter-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
             <div>
-                <label class="filter-label">Cari Kata Kunci / No Referensi / User</label>
+                <label class="filter-label">Cari Kata Kunci / No Referensi / No. Arsip</label>
                 <input type="text" id="filterKeyword" class="filter-control" placeholder="Ketik kata kunci...">
+            </div>
+            <div>
+                <label class="filter-label">Grup Sub-Area Checklist</label>
+                <select id="filterRiwayatSubArea" class="filter-control" onchange="applyCustomFilter()">
+                    <option value="">-- Semua Sub-Area --</option>
+                </select>
             </div>
             <div>
                 <label class="filter-label">Status Klarifikasi</label>
@@ -453,10 +578,8 @@
                     <option value="Tidak Ada Klarifikasi">Tidak Ada Klarifikasi</option>
                 </select>
             </div>
-            <div>
+            <div class="d-flex align-items-end gap-2">
                 <button type="button" class="btn-filter" onclick="applyCustomFilter()"><i class="bi bi-search"></i> Filter</button>
-            </div>
-            <div>
                 <button type="button" class="btn-reset" onclick="resetCustomFilter()">Reset</button>
             </div>
         </div>
@@ -464,23 +587,35 @@
 
     <div class="kka-tabs" id="kkaTabContainer">
         @if(!$isSubmenu)
-        <div class="kka-tab-item active" onclick="switchTab(this, 'KKA_Teller_Kas', 'KKA Teller & Kas')">
-            <i class="bi bi-cash-stack"></i> KKA Teller & Kas <span class="badge-count tab-teller">0</span>
+        <div class="kka-tab-item active" onclick="switchTab(this, 'KKA_Teller_Kas', 'KKA Teller &amp; Kas')">
+            <span class="tab-dot dot-red" id="dot_revisi_KKA_Teller_Kas" style="display:none;" title="Ada KKA Perlu Revisi"></span>
+            <span class="tab-dot dot-amber" id="dot_menunggu_KKA_Teller_Kas" style="display:none;" title="Ada KKA Menunggu Konfirmasi"></span>
+            <i class="bi bi-cash-stack"></i> KKA Teller &amp; Kas <span class="badge-count tab-teller" id="tab_badge_KKA_Teller_Kas">0</span>
         </div>
-        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_DPK_Layanan', 'KKA DPK & Layanan Nasabah')">
-            <i class="bi bi-wallet2"></i> KKA DPK & Layanan <span class="badge-count tab-dpk">0</span>
+        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_DPK_Layanan', 'KKA DPK &amp; Layanan Nasabah')">
+            <span class="tab-dot dot-red" id="dot_revisi_KKA_DPK_Layanan" style="display:none;" title="Ada KKA Perlu Revisi"></span>
+            <span class="tab-dot dot-amber" id="dot_menunggu_KKA_DPK_Layanan" style="display:none;" title="Ada KKA Menunggu Konfirmasi"></span>
+            <i class="bi bi-wallet2"></i> KKA DPK &amp; Layanan <span class="badge-count tab-dpk" id="tab_badge_KKA_DPK_Layanan">0</span>
         </div>
         <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Kredit', 'KKA Kredit')">
-            <i class="bi bi-credit-card-2-front"></i> KKA Kredit <span class="badge-count tab-kredit">0</span>
+            <span class="tab-dot dot-red" id="dot_revisi_KKA_Kredit" style="display:none;" title="Ada KKA Perlu Revisi"></span>
+            <span class="tab-dot dot-amber" id="dot_menunggu_KKA_Kredit" style="display:none;" title="Ada KKA Menunggu Konfirmasi"></span>
+            <i class="bi bi-credit-card-2-front"></i> KKA Kredit <span class="badge-count tab-kredit" id="tab_badge_KKA_Kredit">0</span>
         </div>
-        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Biaya_Beban', 'KKA Biaya & Beban')">
-            <i class="bi bi-receipt"></i> KKA Biaya & Beban <span class="badge-count tab-biaya">0</span>
+        <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Biaya_Beban', 'KKA Biaya &amp; Beban')">
+            <span class="tab-dot dot-red" id="dot_revisi_KKA_Biaya_Beban" style="display:none;" title="Ada KKA Perlu Revisi"></span>
+            <span class="tab-dot dot-amber" id="dot_menunggu_KKA_Biaya_Beban" style="display:none;" title="Ada KKA Menunggu Konfirmasi"></span>
+            <i class="bi bi-receipt"></i> KKA Biaya &amp; Beban <span class="badge-count tab-biaya" id="tab_badge_KKA_Biaya_Beban">0</span>
         </div>
         <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Kartu_ATM', 'KKA Kartu ATM')">
-            <i class="bi bi-credit-card"></i> KKA Kartu ATM <span class="badge-count tab-atm">0</span>
+            <span class="tab-dot dot-red" id="dot_revisi_KKA_Kartu_ATM" style="display:none;" title="Ada KKA Perlu Revisi"></span>
+            <span class="tab-dot dot-amber" id="dot_menunggu_KKA_Kartu_ATM" style="display:none;" title="Ada KKA Menunggu Konfirmasi"></span>
+            <i class="bi bi-credit-card"></i> KKA Kartu ATM <span class="badge-count tab-atm" id="tab_badge_KKA_Kartu_ATM">0</span>
         </div>
         <div class="kka-tab-item" onclick="switchTab(this, 'KKA_Pengaduan', 'KKA Pengaduan')">
-            <i class="bi bi-chat-square-dots"></i> KKA Pengaduan <span class="badge-count tab-pengaduan">0</span>
+            <span class="tab-dot dot-red" id="dot_revisi_KKA_Pengaduan" style="display:none;" title="Ada KKA Perlu Revisi"></span>
+            <span class="tab-dot dot-amber" id="dot_menunggu_KKA_Pengaduan" style="display:none;" title="Ada KKA Menunggu Konfirmasi"></span>
+            <i class="bi bi-chat-square-dots"></i> KKA Pengaduan <span class="badge-count tab-pengaduan" id="tab_badge_KKA_Pengaduan">0</span>
         </div>
         <div class="kka-tab-item tab-control-integrasi" id="tabControlIntegrasi" onclick="switchTabControlIntegrasi(this)">
             <i class="bi bi-diagram-3-fill"></i> 
@@ -497,10 +632,34 @@
     <!-- WRAPPER 1: TABEL UTAMA SAMPLING KKA -->
     <div id="wrapperSamplingKka">
         <div class="card" style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background:#fff;">
-            <div style="padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-weight: 700; color: var(--primary-blue); font-size: 0.92rem;" id="tableTitle">KKA Teller & Kas</div>
-                <div class="badge" style="background:#e0e7ff; color:var(--primary-blue); font-size:0.75rem; padding: 0.35rem 0.75rem; border-radius: 12px;">
-                    <span id="totalDataCount">0</span> Data
+            <div style="padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="font-weight: 700; color: var(--primary-blue); font-size: 0.95rem;" id="tableTitle">KKA Teller & Kas</div>
+                    <div class="badge" style="background:#e0e7ff; color:var(--primary-blue); font-size:0.75rem; padding: 0.35rem 0.75rem; border-radius: 12px; font-weight:700;">
+                        <span id="totalDataCount">0</span> Data
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary fw-semibold shadow-sm" id="btnTambahMandiriKas" style="border-radius:6px; font-size:0.78rem; padding: 0.28rem 0.75rem; {{ in_array($defaultTab, ['KKA_Teller_Kas', 'KKA_Teller']) ? '' : 'display:none;' }}" onclick="openModalTambahMandiri()">
+                        <i class="bi bi-plus-circle me-1"></i> + Tambah Pemeriksaan Kas / Kas Kecil
+                    </button>
+                </div>
+
+                <!-- QUICK STATUS FILTER CHIPS (Filter 1-Klik dengan Hitungan Angka Dinamis) -->
+                <div class="d-flex align-items-center gap-1.5 flex-wrap" id="quickFilterChips">
+                    <button type="button" class="quick-chip active" id="chipSemua" onclick="setQuickStatusFilter('ALL')">
+                        Semua (<span id="chipCountSemua">0</span>)
+                    </button>
+                    <button type="button" class="quick-chip chip-revisi" id="chipRevisi" onclick="setQuickStatusFilter('PERLU_REVISI')">
+                        <span class="chip-dot dot-red"></span> Perlu Revisi (<span id="chipCountRevisi">0</span>)
+                    </button>
+                    <button type="button" class="quick-chip chip-belum" id="chipBelum" onclick="setQuickStatusFilter('BELUM_DIUJI')">
+                        <span class="chip-dot dot-gray"></span> Belum Diuji (<span id="chipCountBelum">0</span>)
+                    </button>
+                    <button type="button" class="quick-chip chip-menunggu" id="chipMenunggu" onclick="setQuickStatusFilter('MENUNGGU_KONFIRMASI')">
+                        <span class="chip-dot dot-amber"></span> Menunggu Konfirmasi (<span id="chipCountMenunggu">0</span>)
+                    </button>
+                    <button type="button" class="quick-chip chip-selesai" id="chipSelesai" onclick="setQuickStatusFilter('SELESAI')">
+                        <span class="chip-dot dot-green"></span> Selesai (<span id="chipCountSelesai">0</span>)
+                    </button>
                 </div>
             </div>
             <div class="table-wrapper">
@@ -508,20 +667,21 @@
                     <thead>
                         <tr>
                             <th style="text-align: center; width: 4%;">NO</th>
-                            <th style="text-align: left; width: 9%;">TANGGAL</th>
-                            <th style="text-align: center; width: 6%;">UNIT</th>
-                            <th style="text-align: left; width: 13%;">NO REFERENSI</th>
-                            <th style="text-align: left; width: 12%;">USER / MAKER</th>
-                            <th style="text-align: center; width: 7%;">KODE TRX</th>
-                            <th style="text-align: right; width: 13%;">NOMINAL</th>
-                            <th style="text-align: left; width: 22%;">DESKRIPSI / NARASI</th>
-                            <th style="text-align: center; width: 7%;">RISK</th>
-                            <th style="text-align: center; width: 7%;">AKSI</th>
+                            <th style="text-align: left; width: 8%;">TANGGAL</th>
+                            <th style="text-align: center; width: 5%;">UNIT</th>
+                            <th style="text-align: left; width: 11%;">NO REFERENSI</th>
+                            <th style="text-align: left; width: 10%;">USER / MAKER</th>
+                            <th style="text-align: center; width: 6%;">KODE TRX</th>
+                            <th style="text-align: right; width: 11%;">NOMINAL</th>
+                            <th style="text-align: left; width: 18%;">DESKRIPSI / NARASI</th>
+                            <th style="text-align: center; width: 8%;">RISK</th>
+                            <th style="text-align: center; width: 10%;">STATUS</th>
+                            <th style="text-align: center; width: 9%;">AKSI</th>
                         </tr>
                     </thead>
                     <tbody id="kkaTableBody">
                         <tr>
-                            <td colspan="10">
+                            <td colspan="11">
                                 <div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);">
                                     <i class="bi bi-hourglass-split" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i>
                                     <p>Memuat data KKA...</p>
@@ -847,6 +1007,48 @@
         </div>
     </div>
 
+    <!-- ALERT BOX REVISI (Tampil Otomatis saat Status = PERLU_REVISI) -->
+    <div id="alertBoxRevisi" class="mb-4 p-4 rounded shadow-sm" style="display: none; background: #fff1f2; border-left: 5px solid #f43f5e; border-top: 1px solid #ffe4e6; border-right: 1px solid #ffe4e6; border-bottom: 1px solid #ffe4e6;">
+        <div class="d-flex align-items-start gap-3">
+            <span style="width: 44px; height: 44px; border-radius: 10px; background: #fee2e2; color: #e11d48; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                <i class="bi bi-exclamation-octagon-fill"></i>
+            </span>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+                    <h6 class="mb-0 fw-bold" style="color: #9f1239; font-size: 0.95rem;">
+                        <i class="bi bi-arrow-repeat me-1"></i> Catatan Revisi dari Reviewer (Wajib Diperbaiki)
+                    </h6>
+                    <div class="d-flex align-items-center gap-2" style="font-size: 0.78rem; color: #be123c;">
+                        <span><i class="bi bi-person-badge me-1"></i> Reviewer: <strong id="alert_reviewer_name">-</strong></span>
+                        <span>•</span>
+                        <span><i class="bi bi-clock-history me-1"></i> <span id="alert_reviewed_at">-</span></span>
+                    </div>
+                </div>
+                <div class="p-3 rounded mt-2" style="background: #ffffff; border: 1px solid #fecdd3; font-size: 0.88rem; color: #881337; line-height: 1.5;" id="alert_reviewer_note">
+                    -
+                </div>
+                <div class="mt-2 text-muted" style="font-size: 0.75rem;">
+                    <i class="bi bi-info-circle me-1"></i> Silakan sesuaikan isian checklist atau rincian klarifikasi di bawah ini, lalu klik tombol <strong>"Simpan Perbaikan"</strong> untuk mengajukan kembali ke Reviewer.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFO BOX RIWAYAT REVISI (Tampil saat status MENUNGGU_KONFIRMASI atau SELESAI jika ada riwayat revisi) -->
+    <div id="infoBoxRiwayatRevisi" class="mb-4 p-3 rounded shadow-sm" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #64748b;">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-bold" style="font-size: 0.8rem; color: #334155;">
+                <i class="bi bi-clock-history me-1 text-secondary"></i> Riwayat Catatan Revisi Sebelumnya
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b;">
+                Oleh: <strong id="hist_reviewer_name">-</strong> (<span id="hist_reviewed_at">-</span>)
+            </span>
+        </div>
+        <div style="font-size: 0.82rem; color: #475569; background: #fff; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #e2e8f0;" id="hist_reviewer_note">
+            -
+        </div>
+    </div>
+
     <!-- SECTION 2: INPUTAN RESIDENT AUDITOR (RA) -->
     <div class="section-card ra">
         <div class="section-card-header" style="justify-content: space-between;">
@@ -856,6 +1058,46 @@
         <div class="section-card-body">
             <form id="formKkaRa" enctype="multipart/form-data">
                 <input type="hidden" id="ra_kka_id">
+
+                <!-- NO. ARSIP WAJIB (BERLAKU UNTUK SEMUA AREA KKA) & PARAMETER PENGADUAN -->
+                <div class="row g-3 mb-3 p-3 rounded" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                    <div class="col-md-6">
+                        <label class="custom-form-label fw-bold text-primary">
+                            <i class="bi bi-archive-fill me-1"></i> No. Arsip KKA <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="custom-form-control field-ra" id="no_arsip" placeholder="Misal: ARSIP/2026/001 atau No. Box/Map Fisik" required>
+                        <small class="text-muted" style="font-size:0.72rem;">Nomor arsip wajib diisi sebagai identifikasi fisik berkas/folder pada laporan Arsip Matriks.</small>
+                    </div>
+                    <div class="col-md-6" id="containerPengaduanFields" style="display:none;">
+                        <div class="d-flex align-items-center mb-1 text-primary fw-bold" style="font-size:0.8rem;">
+                            <i class="bi bi-chat-square-text me-1"></i> Parameter Keluhan Nasabah (E.4.5)
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="custom-form-label" style="font-size:0.72rem;">Tgl Keluhan</label>
+                                <input type="date" class="custom-form-control field-ra" id="tgl_keluhan" onchange="calculatePengaduanHariKerja()">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="custom-form-label" style="font-size:0.72rem;">Tgl Buku</label>
+                                <input type="date" class="custom-form-control field-ra" id="tgl_buku" onchange="calculatePengaduanHariKerja()">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="custom-form-label" style="font-size:0.72rem;">Status Keluhan</label>
+                                <select class="custom-form-control field-ra" id="status_keluhan" onchange="calculatePengaduanHariKerja()">
+                                    <option value="Proses">Proses</option>
+                                    <option value="Selesai">Selesai</option>
+                                    <option value="REJECT">REJECT</option>
+                                </select>
+                            </div>
+                            <div class="col-12 mt-1">
+                                <div class="p-2 rounded d-flex justify-content-between align-items-center" style="background:#eff6ff; border:1px solid #bfdbfe; font-size:0.78rem;">
+                                    <span>Lama Hari Kerja (NETWORKDAYS):</span>
+                                    <strong id="display_lama_hari_kerja" class="text-primary">-</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- 1. TABEL / ACCORDION CHECKLIST KKA (YA / TIDAK) -->
                 <div id="checklistAccordionContainer" style="margin-bottom: 1.5rem;">
@@ -942,10 +1184,11 @@
                 </div>
 
                 @if(strtolower(auth()->user()->role) === 'ra' || strtolower(auth()->user()->role) === 'admin')
-                <div style="display:flex; justify-content:flex-end; gap:0.8rem; border-top:1px solid var(--border-color); padding-top:1rem;">
+                <div id="raActionContainer" style="display:flex; justify-content:flex-end; align-items:center; gap:0.8rem; border-top:1px solid var(--border-color); padding-top:1rem;">
+                    <span id="badge_ra_status_info"></span>
                     <button type="button" class="btn-back" onclick="closeDetailView()">Batal</button>
-                    <button type="button" style="background:#f59e0b; color:#fff; border:none; padding:0.4rem 1.5rem; border-radius:6px; font-weight:600; cursor:pointer;" onclick="submitRaForm()">
-                        <i class="bi bi-send-fill" style="margin-right:0.3rem;"></i> Submit Review
+                    <button type="button" id="btnSubmitRa" style="background:#1e3a8a; color:#fff; border:none; padding:0.45rem 1.6rem; border-radius:6px; font-weight:600; cursor:pointer;" onclick="submitRaForm()">
+                        <i class="bi bi-send-fill" id="btnSubmitRaIcon" style="margin-right:0.3rem;"></i> <span id="btnSubmitRaText">Simpan &amp; Selesaikan KKA (Masuk Arsip)</span>
                     </button>
                 </div>
                 @endif
@@ -953,10 +1196,10 @@
         </div>
     </div>
 
-    <!-- SECTION 3: INPUTAN ADMIN / PIMSIE (REVIEWER) -->
+    <!-- SECTION 3: INPUTAN ADMIN / REVIEWER (KEPUTUSAN VERIFIKASI WORKFLOW) -->
     <div class="section-card admin">
         <div class="section-card-header" style="justify-content: space-between;">
-            <div><i class="bi bi-clipboard-check"></i> 3. Review &amp; Keputusan Pengawasan <span style="font-weight:normal; font-size:0.8rem; margin-left:0.3rem;">(Porsi Admin / Pimsie)</span></div>
+            <div><i class="bi bi-clipboard-check"></i> 3. Review &amp; Keputusan Verifikasi Pengawasan <span style="font-weight:normal; font-size:0.8rem; margin-left:0.3rem;">(Porsi Admin / Reviewer)</span></div>
             <span id="badge_admin_lock" style="font-size:0.75rem; background:#fff; padding:0.2rem 0.6rem; border-radius:12px; border:1px solid #a7f3d0; color:var(--text-muted);">Read Only</span>
         </div>
         <div class="section-card-body">
@@ -992,15 +1235,6 @@
 
                 <div class="custom-grid-2">
                     <div>
-                        <label class="custom-form-label">Status Review KKA <span style="color:#dc2626;">*</span></label>
-                        <select class="custom-form-control field-admin" id="status_review" @if(strtolower(auth()->user()->role) === 'ra') disabled @endif>
-                            <option value="">-- Pilih Status Review --</option>
-                            <option value="Approved">Approved (Selesai)</option>
-                            <option value="Need Revision">Need Revision (Minta RA Perbaiki)</option>
-                            <option value="Rejected">Rejected (Ditolak)</option>
-                        </select>
-                    </div>
-                    <div>
                         <label class="custom-form-label">Keputusan Eskalasi</label>
                         <select class="custom-form-control field-admin" id="keputusan_eskalasi" @if(strtolower(auth()->user()->role) === 'ra') disabled @endif>
                             <option value="Tidak">Tidak Dieskalasi</option>
@@ -1008,21 +1242,49 @@
                             <option value="Eskalasi Direksi">Eskalasi ke Direksi</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="custom-form-label">Status Workflow KKA Saat Ini <i class="bi bi-lock-fill text-muted" title="Dikelola 100% otomatis oleh sistem backend"></i></label>
+                        <div id="display_workflow_status_admin" class="custom-form-control" style="background:#f8fafc; font-weight:700; height: calc(1.5em + 1.2rem + 2px); display:flex; align-items:center;">
+                            -
+                        </div>
+                    </div>
                 </div>
 
-                <div style="margin-bottom: 1.5rem;">
-                    <label class="custom-form-label">Catatan Reviewer / Pimsie <span style="color:#dc2626;">*</span></label>
-                    <textarea class="custom-form-control field-admin" id="catatan_reviewer" rows="2" placeholder="Instruksi revisi, arahan tambahan, atau catatan persetujuan KKA..." @if(strtolower(auth()->user()->role) === 'ra') disabled @endif></textarea>
+                <!-- PANEL STATUS KETERANGAN VERIFIKASI (JIKA BUKAN MENUNGGU KONFIRMASI) -->
+                <div id="panelStatusAdminNonWaiting" class="p-3 rounded mb-3" style="display:none; background:#f8fafc; border:1px solid #e2e8f0;">
+                    <div id="statusAdminNonWaitingText" style="font-size:0.83rem; font-weight:600;"></div>
                 </div>
 
-                @if(in_array(strtolower(auth()->user()->role), ['admin', 'korwas', 'pimsie']))
-                <div style="display:flex; justify-content:flex-end; gap:0.8rem; border-top:1px solid var(--border-color); padding-top:1rem;">
-                    <button type="button" class="btn-back" onclick="closeDetailView()">Batal</button>
-                    <button type="button" style="background:#10b981; color:#fff; border:none; padding:0.4rem 1.5rem; border-radius:6px; font-weight:600; cursor:pointer;" onclick="submitAdminForm()">
-                        <i class="bi bi-check-circle-fill" style="margin-right:0.3rem;"></i> Submit Keputusan
-                    </button>
+                <!-- PANEL VERIFIKASI ADMIN (Tampil Bersih di Bagian Bawah Form Khusus Status MENUNGGU_KONFIRMASI atau Mode Admin) -->
+                <div id="panelVerifikasiAdmin" class="p-3 rounded mb-3" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;">
+                    <div class="d-flex align-items-center gap-2 mb-2" style="color:var(--primary-blue); font-weight:700; font-size:0.88rem;">
+                        <i class="bi bi-shield-check fs-5"></i> Panel Aksi Verifikasi Reviewer
+                    </div>
+                    <div class="mb-3">
+                        <label class="custom-form-label">
+                            Catatan Reviewer / Pimsie <span id="label_catatan_req" style="color:#dc2626; font-size:0.75rem;">(Wajib diisi jika Minta Revisi / Reject, Opsional jika Approve)</span>
+                        </label>
+                        <textarea class="custom-form-control field-admin" id="catatan_reviewer" rows="3" placeholder="Tuliskan alasan revisi spesifik untuk RA, atau catatan konfirmasi KKA..." @if(strtolower(auth()->user()->role) === 'ra') disabled @endif></textarea>
+                    </div>
+
+                    @if(in_array(strtolower(auth()->user()->role), ['admin', 'kabag_ra', 'kadiv_skai', 'pimsie', 'korwas']))
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2" style="border-top:1px solid #bfdbfe;">
+                        <button type="button" class="btn-back" onclick="closeDetailView()">
+                            <i class="bi bi-x"></i> Tutup
+                        </button>
+                        <div class="d-flex gap-2">
+                            <!-- TOMBOL MERAH / ORANYE: MINTA REVISI / REJECT -->
+                            <button type="button" id="btnAdminReject" class="btn btn-sm text-white px-3 py-2 fw-semibold shadow-sm" style="background:#e11d48; border-color:#be123c; border-radius:6px; font-size:0.82rem;" onclick="submitAdminDecision('REVISI')">
+                                <i class="bi bi-arrow-repeat me-1"></i> Minta Revisi / Reject
+                            </button>
+                            <!-- TOMBOL HIJAU: KONFIRMASI & SELESAIKAN (APPROVE) -->
+                            <button type="button" id="btnAdminApprove" class="btn btn-sm text-white px-3 py-2 fw-semibold shadow-sm" style="background:#059669; border-color:#047857; border-radius:6px; font-size:0.82rem;" onclick="submitAdminDecision('APPROVE')">
+                                <i class="bi bi-check-circle-fill me-1"></i> Konfirmasi &amp; Selesaikan (Approve)
+                            </button>
+                        </div>
+                    </div>
+                    @endif
                 </div>
-                @endif
             </form>
         </div>
     </div>
@@ -1043,12 +1305,16 @@
     let currentActiveSheet = '{{ $defaultTabName }}';
     let isShowingRiwayat = false;
 
+    let currentActiveUnit = '{{ $selectedKodeUnit ?? auth()->user()->unit_code ?? "001" }}';
+    let currentActiveDate = '{{ request("tanggal") ?? date("Y-m-d") }}';
+
     let currentItem = null;
     let currentChecklists = [];
     let currentRecurringCount = 1;
     const allMasterChecklists = @json($allChecklists ?? []);
 
     function changeAdminCabang(unitCode) {
+        currentActiveUnit = unitCode;
         const selectElem = document.getElementById('selectAdminCabang');
         const selectedOption = selectElem ? selectElem.options[selectElem.selectedIndex] : null;
         const cabangId = selectedOption ? selectedOption.getAttribute('data-cabang') : '';
@@ -1099,8 +1365,15 @@
 
         if (isShowingRiwayat) {
             document.getElementById('tableTitle').innerText = `${tabName} (Arsip Riwayat Selesai)`;
+            updateRiwayatSubAreaDropdown();
         } else {
             document.getElementById('tableTitle').innerText = tabName;
+        }
+
+        const isTeller = (sheetCode === 'KKA_Teller_Kas' || sheetCode === 'KKA_Teller');
+        const btnTambahMandiri = document.getElementById('btnTambahMandiriKas');
+        if (btnTambahMandiri) {
+            btnTambahMandiri.style.display = isTeller ? 'inline-flex' : 'none';
         }
         
         loadData();
@@ -1112,6 +1385,9 @@
         allTabs.forEach(tab => tab.classList.remove('active'));
 
         if (clickedElement) clickedElement.classList.add('active');
+
+        const btnTambahMandiri = document.getElementById('btnTambahMandiriKas');
+        if (btnTambahMandiri) btnTambahMandiri.style.display = 'none';
 
         // Sembunyikan section sampling, summary cards sampling, dan riwayat filter
         const wrapSampling = document.getElementById('wrapperSamplingKka');
@@ -1128,10 +1404,45 @@
         loadControlIntegrasi();
     }
 
+    let currentStatusFilter = 'ALL';
+
+    function setQuickStatusFilter(status) {
+        currentStatusFilter = status;
+        document.querySelectorAll('#quickFilterChips .quick-chip').forEach(ch => ch.classList.remove('active'));
+        if (status === 'ALL') {
+            document.getElementById('chipSemua')?.classList.add('active');
+        } else if (status === 'PERLU_REVISI') {
+            document.getElementById('chipRevisi')?.classList.add('active');
+        } else if (status === 'BELUM_DIUJI') {
+            document.getElementById('chipBelum')?.classList.add('active');
+        } else if (status === 'MENUNGGU_KONFIRMASI') {
+            document.getElementById('chipMenunggu')?.classList.add('active');
+        } else if (status === 'SELESAI') {
+            document.getElementById('chipSelesai')?.classList.add('active');
+        }
+        processDataDisplay();
+    }
+
+    function getItemWorkflowStatus(item) {
+        if (item.review_status) {
+            return item.review_status;
+        }
+        if ((item.status_review || '') === 'Approved') {
+            return 'SELESAI';
+        }
+        if ((item.status_review || '') === 'Revisi') {
+            return 'PERLU_REVISI';
+        }
+        if (item.submitted_at) {
+            return 'MENUNGGU_KONFIRMASI';
+        }
+        return 'BELUM_DIUJI';
+    }
+
     // Ambil Data via API
     function loadData(page = 1) {
         const tbody = document.getElementById('kkaTableBody');
-        tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);"><i class="bi bi-hourglass-split" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i><p>Memuat data...</p></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);"><i class="bi bi-hourglass-split" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i><p>Memuat data...</p></div></td></tr>`;
 
         let url = `${baseUrl}/data?page=${page}&source_sheet=${currentActiveSheetCode}`;
         @if(request()->has('kode_unit'))
@@ -1148,44 +1459,116 @@
         axios.get(url)
             .then(response => {
                 globalFindings = response.data.data.data;
-                
-                document.getElementById('totalDataCount').innerText = globalFindings.length;
-                document.getElementById('statTotalException').innerText = globalFindings.length;
-                
-                let totalNominal = globalFindings.reduce((acc, curr) => acc + (parseFloat(curr.nominal_terkait) || 0), 0);
-                document.getElementById('statTotalNominal').innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalNominal);
-                
-                let highRiskCount = globalFindings.filter(x => (x.risk_awal || '').toLowerCase() === 'high').length;
-                document.getElementById('statHighRisk').innerText = highRiskCount;
-                
-                let selesaiCount = globalFindings.filter(x => x.status_review === 'Approved').length;
-                document.getElementById('statSelesaiReview').innerText = selesaiCount;
-
                 const summary = response.data.summary || {};
                 const tabCounts = summary.tab_counts || {};
-                
-                // Update Badge di masing-masing Tab
-                const tabMapping = {
-                    'KKA_Teller_Kas': '.tab-teller',
-                    'KKA_DPK_Layanan': '.tab-dpk',
-                    'KKA_Kredit': '.tab-kredit',
-                    'KKA_Biaya_Beban': '.tab-biaya',
-                    'KKA_Kartu_ATM': '.tab-atm',
-                    'KKA_Pengaduan': '.tab-pengaduan'
-                };
-                
-                for (const [sheet, selector] of Object.entries(tabMapping)) {
-                    const badge = document.querySelector(selector);
-                    if (badge) {
-                        badge.innerText = tabCounts[sheet] || 0;
+                const tabStatuses = summary.tab_statuses || {};
+                const currentSheetCounts = summary.current_sheet_counts || {};
+
+                document.getElementById('totalDataCount').innerText = globalFindings.length;
+                document.getElementById('statTotalException').innerText = summary.total_exception ?? globalFindings.length;
+                document.getElementById('statTotalNominal').innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(summary.total_nominal || 0);
+                document.getElementById('statHighRisk').innerText = summary.high_risk ?? 0;
+                document.getElementById('statSelesaiReview').innerText = summary.selesai_review ?? 0;
+
+                // Update Dynamic Counts on Quick Filter Chips
+                const activeShStatus = tabStatuses[currentActiveSheetCode] || currentSheetCounts || {};
+                const totalSh = activeShStatus.total ?? globalFindings.length;
+                const perluSh = activeShStatus.perlu_revisi ?? globalFindings.filter(x => (getItemWorkflowStatus(x) === 'PERLU_REVISI')).length;
+                const menungguSh = activeShStatus.menunggu_konfirmasi ?? globalFindings.filter(x => (getItemWorkflowStatus(x) === 'MENUNGGU_KONFIRMASI')).length;
+                const selesaiSh = activeShStatus.selesai ?? globalFindings.filter(x => (getItemWorkflowStatus(x) === 'SELESAI')).length;
+                const belumSh = activeShStatus.belum_diuji ?? Math.max(0, totalSh - perluSh - menungguSh - selesaiSh);
+
+                if (document.getElementById('chipCountSemua')) document.getElementById('chipCountSemua').innerText = totalSh;
+                if (document.getElementById('chipCountRevisi')) document.getElementById('chipCountRevisi').innerText = perluSh;
+                if (document.getElementById('chipCountBelum')) document.getElementById('chipCountBelum').innerText = belumSh;
+                if (document.getElementById('chipCountMenunggu')) document.getElementById('chipCountMenunggu').innerText = menungguSh;
+                if (document.getElementById('chipCountSelesai')) document.getElementById('chipCountSelesai').innerText = selesaiSh;
+
+                // Update 6 Tab Navigation Indicators & Completion Badges
+                const sheetKeys = [
+                    'KKA_Teller_Kas',
+                    'KKA_DPK_Layanan',
+                    'KKA_Kredit',
+                    'KKA_Biaya_Beban',
+                    'KKA_Kartu_ATM',
+                    'KKA_Pengaduan'
+                ];
+                sheetKeys.forEach(sh => {
+                    const st = tabStatuses[sh] || {};
+                    const total = st.total ?? (tabCounts[sh] || 0);
+                    const perluRev = st.perlu_revisi || 0;
+                    const menKonf = st.menunggu_konfirmasi || 0;
+                    const isAllSelesai = st.is_all_selesai || (total > 0 && st.selesai === total);
+
+                    // Indikator Titik Merah (Red Dot) untuk Role RA
+                    const dotRed = document.getElementById(`dot_revisi_${sh}`);
+                    if (dotRed) {
+                        dotRed.style.display = (userRole === 'ra' && perluRev > 0) ? 'inline-block' : 'none';
                     }
+
+                    // Indikator Titik Kuning/Amber (Amber Dot) untuk Role Admin
+                    const dotAmber = document.getElementById(`dot_menunggu_${sh}`);
+                    if (dotAmber) {
+                        dotAmber.style.display = (userRole !== 'ra' && menKonf > 0) ? 'inline-block' : 'none';
+                    }
+
+                    // Penanda Tab Tuntas 100% (✓ Hijau)
+                    const badgeElem = document.getElementById(`tab_badge_${sh}`);
+                    if (badgeElem) {
+                        if (isAllSelesai) {
+                            badgeElem.classList.add('tab-completed');
+                            badgeElem.innerHTML = `<i class="bi bi-check-lg me-0.5"></i> ${total}`;
+                        } else {
+                            badgeElem.classList.remove('tab-completed');
+                            badgeElem.innerText = total;
+                        }
+                    }
+                });
+
+                // Backlog Alert Banner (Pemberitahuan Transaksi Tertunda Cuti/Absen RA)
+                const backlogBanner = document.getElementById('backlogAlertBanner');
+                const backlogText = document.getElementById('backlogAlertText');
+                if (summary.backlog_count && summary.backlog_count > 0) {
+                    if (backlogBanner) backlogBanner.style.display = 'block';
+                    if (backlogText) backlogText.innerHTML = `Terdapat <strong>${summary.backlog_count} transaksi backlog</strong> dari tanggal sebelumnya (cuti/absen RA) yang wajib diselesaikan. Data tidak terhapus otomatis.`;
+                } else {
+                    if (backlogBanner) backlogBanner.style.display = 'none';
                 }
 
+                updateRiwayatSubAreaDropdown();
                 processDataDisplay();
             })
             .catch(error => {
-                tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: #dc2626;"><i class="bi bi-exclamation-triangle" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i><p>Gagal memuat data.</p></div></td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: #dc2626;"><i class="bi bi-exclamation-triangle" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i><p>Gagal memuat data.</p></div></td></tr>`;
             });
+    }
+
+    function updateRiwayatSubAreaDropdown() {
+        const select = document.getElementById('filterRiwayatSubArea');
+        if (!select) return;
+
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">-- Semua Sub-Area --</option>';
+
+        let sheetKey = currentActiveSheetCode;
+        if (sheetKey === 'KKA_Teller' || sheetKey === 'KKA_Teller_Kas') {
+            sheetKey = 'KKA_Teller_Kas';
+        }
+
+        const items = (allMasterChecklists && (allMasterChecklists[sheetKey] || allMasterChecklists['KKA_Teller'])) || [];
+        const seen = new Set();
+        items.forEach(chk => {
+            if (chk.sub_area_code && !seen.has(chk.sub_area_code)) {
+                seen.add(chk.sub_area_code);
+                const opt = document.createElement('option');
+                opt.value = chk.sub_area_code;
+                opt.textContent = `${chk.sub_area_code} - ${chk.sub_area_name}`;
+                if (chk.sub_area_code === currentVal) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            }
+        });
     }
 
     // Toggle Mode Riwayat Selesai
@@ -1201,6 +1584,7 @@
             btn.style.borderColor = 'var(--primary-blue)';
             btnText.innerText = `Kembali ke Data Utama`;
             filterCard.style.display = 'block';
+            updateRiwayatSubAreaDropdown();
             
             document.getElementById('tableTitle').innerText = `${currentActiveSheet} (Arsip Riwayat Selesai)`;
         } else {
@@ -1215,20 +1599,47 @@
         processDataDisplay();
     }
 
-    // Proses Data untuk Ditampilkan (Filter Arsip & Pencarian)
+    // Proses Data untuk Ditampilkan (Filter Quick Chips, Filter Arsip & Smart Sorting)
     function processDataDisplay() {
-        let dataToRender = globalFindings;
+        let dataToRender = [...globalFindings];
 
         if (isShowingRiwayat) {
-            // Hanya ambil yang status review-nya Approved
-            dataToRender = dataToRender.filter(x => (x.status_review || '').trim() === 'Approved');
+            // Hanya ambil yang status review-nya Approved / SELESAI
+            dataToRender = dataToRender.filter(x => getItemWorkflowStatus(x) === 'SELESAI');
 
             // Ambil parameter filter tambahan
-            const keyword = document.getElementById('filterKeyword').value.toLowerCase();
-            const klarifikasi = document.getElementById('filterKlarifikasi').value;
+            const keyword = (document.getElementById('filterKeyword')?.value || '').toLowerCase();
+            const subArea = document.getElementById('filterRiwayatSubArea')?.value || '';
+            const klarifikasi = document.getElementById('filterKlarifikasi')?.value || '';
+
+            if (subArea) {
+                dataToRender = dataToRender.filter(x => {
+                    let subs = x.selected_sub_areas;
+                    if (typeof subs === 'string') {
+                        try { subs = JSON.parse(subs); } catch (e) { subs = []; }
+                    }
+                    if (Array.isArray(subs) && subs.length > 0) {
+                        return subs.includes(subArea);
+                    }
+                    // Fallback jika selected_sub_areas belum tersimpan: periksa jawaban checklist
+                    if (Array.isArray(x.checklist_answers) && x.checklist_answers.length > 0) {
+                        const answeredIds = x.checklist_answers.map(a => Number(a.checklist_id));
+                        const sheetKey = (currentActiveSheetCode === 'KKA_Teller' || currentActiveSheetCode === 'KKA_Teller_Kas') ? 'KKA_Teller_Kas' : currentActiveSheetCode;
+                        const matched = (allMasterChecklists[sheetKey] || []).filter(c => answeredIds.includes(Number(c.id)));
+                        if (matched.some(c => c.sub_area_code === subArea)) return true;
+                    }
+                    // Fallback keyword deskripsi Teller
+                    const desc = ((x.kategori || '') + ' ' + (x.rincian || '') + ' ' + (x.deskripsi || '') + ' ' + (x.jenis_exception_awal || '')).toLowerCase();
+                    if (subArea === 'A2') return desc.includes('kas kecil');
+                    if (subArea === 'A3') return desc.includes('khasanah') || desc.includes('brankas');
+                    if (subArea === 'A1') return !desc.includes('kas kecil') && !desc.includes('khasanah') && !desc.includes('brankas');
+                    return false;
+                });
+            }
 
             if (keyword) {
                 dataToRender = dataToRender.filter(x => 
+                    (x.no_arsip || '').toLowerCase().includes(keyword) ||
                     (x.no_referensi || '').toLowerCase().includes(keyword) ||
                     (x.offsite_id || '').toLowerCase().includes(keyword) ||
                     (x.user_maker || '').toLowerCase().includes(keyword) ||
@@ -1239,7 +1650,52 @@
             if (klarifikasi) {
                 dataToRender = dataToRender.filter(x => (x.status_klarifikasi || '') === klarifikasi);
             }
+
+            // Update Link Print & Export Excel Arsip Matriks
+            const activeUnit = '{{ $selectedKodeUnit ?? "003" }}';
+            const printBtn = document.getElementById('btnPrintArsipMatriks');
+            const exportBtn = document.getElementById('btnExportExcelArsipMatriks');
+            const currentSubArea = document.getElementById('filterRiwayatSubArea')?.value || '';
+            const subAreaQuery = currentSubArea ? `&sub_area=${encodeURIComponent(currentSubArea)}` : '';
+            if (printBtn) {
+                printBtn.href = `/daily-register/arsip-matriks/print?source_sheet=${encodeURIComponent(currentActiveSheetCode)}&kode_unit=${encodeURIComponent(activeUnit)}${subAreaQuery}`;
+            }
+            if (exportBtn) {
+                exportBtn.href = `/daily-register/arsip-matriks/export-excel?source_sheet=${encodeURIComponent(currentActiveSheetCode)}&kode_unit=${encodeURIComponent(activeUnit)}${subAreaQuery}`;
+            }
+        } else {
+            // Filter Kapsul Cepat (Quick Status Filter Chips)
+            if (currentStatusFilter && currentStatusFilter !== 'ALL') {
+                dataToRender = dataToRender.filter(x => getItemWorkflowStatus(x) === currentStatusFilter);
+            }
         }
+
+        // Terapkan Smart Sorting Default:
+        // Untuk RA: PERLU_REVISI ➔ BELUM_DIUJI ➔ MENUNGGU_KONFIRMASI ➔ SELESAI
+        // Untuk Admin: MENUNGGU_KONFIRMASI ➔ PERLU_REVISI ➔ BELUM_DIUJI ➔ SELESAI
+        const isRa = (userRole === 'ra');
+        const raOrderWeight = {
+            'PERLU_REVISI': 1,
+            'BELUM_DIUJI': 2,
+            'MENUNGGU_KONFIRMASI': 3,
+            'SELESAI': 4
+        };
+        const adminOrderWeight = {
+            'MENUNGGU_KONFIRMASI': 1,
+            'PERLU_REVISI': 2,
+            'BELUM_DIUJI': 3,
+            'SELESAI': 4
+        };
+        const weightMap = isRa ? raOrderWeight : adminOrderWeight;
+
+        dataToRender.sort((a, b) => {
+            const stA = getItemWorkflowStatus(a);
+            const stB = getItemWorkflowStatus(b);
+            const wA = weightMap[stA] || 5;
+            const wB = weightMap[stB] || 5;
+            if (wA !== wB) return wA - wB;
+            return (b.id || 0) - (a.id || 0);
+        });
 
         renderTable(dataToRender);
     }
@@ -1249,22 +1705,89 @@
     }
 
     function resetCustomFilter() {
-        document.getElementById('filterKeyword').value = '';
-        document.getElementById('filterKlarifikasi').value = '';
+        if (document.getElementById('filterKeyword')) document.getElementById('filterKeyword').value = '';
+        if (document.getElementById('filterRiwayatSubArea')) document.getElementById('filterRiwayatSubArea').value = '';
+        if (document.getElementById('filterKlarifikasi')) document.getElementById('filterKlarifikasi').value = '';
         processDataDisplay();
     }
 
-    // Render Tabel Utama
+    // Render Tabel Utama dengan Kolom STATUS & Tombol AKSI Kontekstual
     function renderTable(data) {
         const tbody = document.getElementById('kkaTableBody');
         tbody.innerHTML = '';
 
         if(!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 2.5rem; color: #cbd5e1; display: block; margin-bottom: 1rem;"></i><p>Tidak ada data ditemukan.</p></div></td></tr>`;
+            const isTellerKas = (currentActiveSheetCode === 'KKA_Teller_Kas' || currentActiveSheetCode === 'KKA_Teller');
+            if (isTellerKas) {
+                tbody.innerHTML = `<tr><td colspan="11">
+                    <div class="empty-state" style="text-align: center; padding: 2.8rem 1rem; color: var(--text-muted);">
+                        <i class="bi bi-inbox" style="font-size: 2.5rem; color: #cbd5e1; display: block; margin-bottom: 0.6rem;"></i>
+                        <h6 class="fw-bold text-dark mb-1">Nihil Sampel Transaksi Mutasi Teller CBS Hari Ini</h6>
+                        <p class="small text-muted mb-3" style="max-width: 540px; margin: 0 auto 1rem auto;">Tidak ada sampel transaksi mutasi teller yang terjaring dari DUMP CBS pada tanggal ini. RA dapat menambahkan baris temuan mandiri untuk <strong>Kas Kecil (A2)</strong> atau <strong>Kas / Khasanah (A3)</strong> agar pengujian, arsip, dan print matriks KKA harian tetap dapat diselesaikan.</p>
+                        <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold" onclick="openModalTambahMandiri()">
+                            <i class="bi bi-plus-circle me-1"></i> + Tambah Pemeriksaan Kas / Kas Kecil
+                        </button>
+                    </div>
+                </td></tr>`;
+            } else {
+                tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 2.5rem; color: #cbd5e1; display: block; margin-bottom: 1rem;"></i><p>Tidak ada data transaksi ditemukan.</p></div></td></tr>`;
+            }
             return;
         }
 
+        const isRa = (userRole === 'ra');
+
         data.forEach((item, index) => {
+            const status = getItemWorkflowStatus(item);
+
+            // 1. Kolom STATUS: Pill badge berikon elegan
+            let statusBadge = '';
+            let rawNote = item.reviewer_note || item.catatan_reviewer || 'Perlu perbaikan dari RA';
+            let reviewerNoteSafe = rawNote.replace(/"/g, '&quot;');
+
+            if (status === 'PERLU_REVISI') {
+                statusBadge = `<span class="badge border" style="background:#fff1f2; color:#be123c; border-color:#fecdd3; border-radius:12px; padding:0.25rem 0.55rem; font-size:0.72rem; cursor:pointer;" data-bs-toggle="tooltip" data-bs-placement="top" title="Alasan: ${reviewerNoteSafe}"><i class="bi bi-exclamation-triangle-fill me-1"></i> Perlu Revisi</span>`;
+            } else if (status === 'MENUNGGU_KONFIRMASI') {
+                statusBadge = `<span class="badge border" style="background:#fffbeb; color:#b45309; border-color:#fde68a; border-radius:12px; padding:0.25rem 0.55rem; font-size:0.72rem;"><i class="bi bi-hourglass-split me-1"></i> Menunggu Konfirmasi</span>`;
+            } else if (status === 'SELESAI') {
+                statusBadge = `<span class="badge border" style="background:#ecfdf5; color:#047857; border-color:#a7f3d0; border-radius:12px; padding:0.25rem 0.55rem; font-size:0.72rem;"><i class="bi bi-check-circle-fill me-1"></i> Selesai</span>`;
+            } else {
+                statusBadge = `<span class="badge border" style="background:#f1f5f9; color:#475569; border-color:#e2e8f0; border-radius:12px; padding:0.25rem 0.55rem; font-size:0.72rem;"><i class="bi bi-circle me-1" style="font-size:0.6rem;"></i> Belum Diuji</span>`;
+            }
+
+            // 2. Row Highlighting Halus
+            let rowClass = '';
+            if (status === 'PERLU_REVISI') {
+                rowClass = 'row-perlu-revisi';
+            } else if (status === 'SELESAI') {
+                rowClass = 'row-selesai';
+            }
+
+            // 3. Tombol AKSI Kontekstual Berdasarkan Role (RA vs Admin)
+            let actionBtn = '';
+            if (isRa) {
+                if (status === 'PERLU_REVISI') {
+                    actionBtn = `<button class="btn btn-sm text-white" style="background:#e11d48; border-color:#be123c; font-size:0.74rem; font-weight:600; padding:0.32rem 0.75rem; border-radius:6px; white-space:nowrap;" onclick="openDetailView(${item.id})">Perbaiki <i class="bi bi-chevron-right ms-0.5"></i></button>`;
+                } else if (status === 'MENUNGGU_KONFIRMASI') {
+                    actionBtn = `<button class="btn btn-sm" style="background:#ffffff; border:1px solid #cbd5e1; color:#334155; font-size:0.74rem; font-weight:600; padding:0.32rem 0.75rem; border-radius:6px; white-space:nowrap;" onclick="openDetailView(${item.id})"><i class="bi bi-eye me-1"></i> Lihat Isian</button>`;
+                } else if (status === 'SELESAI') {
+                    actionBtn = `<button class="btn btn-sm" style="background:#ecfdf5; border:1px solid #a7f3d0; color:#047857; font-size:0.74rem; font-weight:600; padding:0.32rem 0.75rem; border-radius:6px; white-space:nowrap;" onclick="openDetailView(${item.id})"><i class="bi bi-check2 me-1"></i> Selesai ✓</button>`;
+                } else {
+                    actionBtn = `<button class="btn btn-sm text-white" style="background:#1e3a8a; border-color:#1e3a8a; font-size:0.74rem; font-weight:600; padding:0.32rem 0.75rem; border-radius:6px; white-space:nowrap;" onclick="openDetailView(${item.id})">Review <i class="bi bi-chevron-right ms-0.5"></i></button>`;
+                }
+            } else {
+                // Admin / Reviewer
+                if (status === 'MENUNGGU_KONFIRMASI') {
+                    actionBtn = `<button class="btn btn-sm text-white" style="background:#1e3a8a; border-color:#1e3a8a; font-size:0.74rem; font-weight:600; padding:0.32rem 0.75rem; border-radius:6px; white-space:nowrap;" onclick="openDetailView(${item.id})">Verifikasi <i class="bi bi-chevron-right ms-0.5"></i></button>`;
+                } else if (status === 'PERLU_REVISI') {
+                    actionBtn = `<button class="btn btn-sm" style="background:#fff1f2; border:1px solid #fecdd3; color:#be123c; font-size:0.74rem; font-weight:600; padding:0.32rem 0.75rem; border-radius:6px; white-space:nowrap;" onclick="openDetailView(${item.id})">Menunggu RA</button>`;
+                } else if (status === 'SELESAI') {
+                    actionBtn = `<button class="btn btn-sm" style="background:#ecfdf5; border:1px solid #a7f3d0; color:#047857; font-size:0.74rem; font-weight:600; padding:0.32rem 0.75rem; border-radius:6px; white-space:nowrap;" onclick="openDetailView(${item.id})">Terkonfirmasi ✓</button>`;
+                } else {
+                    actionBtn = `<button class="btn btn-sm" style="background:#ffffff; border:1px solid #e2e8f0; color:#64748b; font-size:0.74rem; font-weight:600; padding:0.32rem 0.75rem; border-radius:6px; white-space:nowrap;" onclick="openDetailView(${item.id})">Detail</button>`;
+                }
+            }
+
             let riskVal = item.risk_final || item.risk_awal || 'Moderate';
             let riskLower = riskVal.toLowerCase();
             let riskBadgeStyle = 'background-color:#fffbeb; color:#b45309; border:1px solid #fde68a;';
@@ -1281,18 +1804,17 @@
             }
             let riskBadge = `<span class="badge" style="border-radius:12px; padding:0.25rem 0.55rem; font-size:0.72rem; ${riskBadgeStyle}">${riskVal}</span>`;
             let nominalStr = item.nominal_terkait > 0 ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.nominal_terkait) : '-';
-            
-            // Pengecekan agar user_maker yang kosong atau strip (-) otomatis tertulis "Sistem / Tidak Tercatat"
             let userMakerDisplay = (!item.user_maker || item.user_maker === '-') ? 'Sistem / Tidak Tercatat' : item.user_maker;
             let deskripsiDisplay = item.deskripsi || item.catatan_rule || item.rincian || '-';
             let deskripsiClean = deskripsiDisplay.replace(/"/g, '&quot;');
 
-            const tr = `<tr>
+            const tr = `<tr class="${rowClass}">
                 <td style="text-align:center; color:var(--text-muted); font-size:0.75rem;">${index + 1}</td>
                 <td style="white-space:nowrap; font-size:0.78rem;">${item.tanggal_data || '-'}</td>
                 <td style="text-align:center;"><span class="badge bg-light text-dark border" style="border-radius:20px; padding: 0.2rem 0.45rem; font-size:0.7rem;">${item.kode_unit || '-'}</span></td>
                 <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.75rem;" title="${item.no_referensi || item.offsite_id || '-'}">
                     <span class="font-monospace text-primary">${item.no_referensi || item.offsite_id || '-'}</span>
+                    ${item.no_arsip ? `<div style="font-size:0.7rem; color:#047857; font-weight:600;"><i class="bi bi-archive me-0.5"></i> ${item.no_arsip}</div>` : ''}
                 </td>
                 <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.76rem;" title="${userMakerDisplay}">
                     ${userMakerDisplay}
@@ -1303,14 +1825,19 @@
                     ${deskripsiDisplay}
                 </td>
                 <td style="text-align:center;">${riskBadge}</td>
-                <td style="text-align:center;">
-                    <button class="btn-review" onclick="openDetailView(${item.id})">
-                        Review <i class="bi bi-chevron-right" style="font-size:0.7rem;"></i>
-                    </button>
-                </td>
+                <td style="text-align:center;">${statusBadge}</td>
+                <td style="text-align:center;">${actionBtn}</td>
             </tr>`;
             tbody.insertAdjacentHTML('beforeend', tr);
         });
+
+        // Initialize tooltips
+        try {
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        } catch(e) {}
     }
 
     // FUNGSI TOGGLE KE FULL PAGE DETAIL VIEW (MENGAMBIL DATA REVIEW LENGKAP & CHECKLIST DARI SERVER)
@@ -1334,10 +1861,20 @@
     }
 
     function populateDetailForm(item) {
+        const itemStatus = getItemWorkflowStatus(item);
+
         // Populate Header & Summary
         document.getElementById('header_nama_sheet').innerText = currentActiveSheet;
         document.getElementById('head_staging_id').innerText = item.offsite_id || item.staging_id || `KKA-${item.id}`;
-        document.getElementById('badge_status_atas').innerText = item.status_review || 'Belum Di-review';
+        
+        // Status Badge Atas
+        const statusBadgeMap = {
+            'PERLU_REVISI': '<span class="badge border" style="background:#fff1f2; color:#be123c; border-color:#fecdd3; padding:0.35rem 0.75rem; border-radius:12px; font-size:0.78rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i> Perlu Revisi</span>',
+            'MENUNGGU_KONFIRMASI': '<span class="badge border" style="background:#fffbeb; color:#b45309; border-color:#fde68a; padding:0.35rem 0.75rem; border-radius:12px; font-size:0.78rem;"><i class="bi bi-hourglass-split me-1"></i> Menunggu Konfirmasi</span>',
+            'SELESAI': '<span class="badge border" style="background:#ecfdf5; color:#047857; border-color:#a7f3d0; padding:0.35rem 0.75rem; border-radius:12px; font-size:0.78rem;"><i class="bi bi-check-circle-fill me-1"></i> Selesai</span>',
+            'BELUM_DIUJI': '<span class="badge border" style="background:#f1f5f9; color:#475569; border-color:#e2e8f0; padding:0.35rem 0.75rem; border-radius:12px; font-size:0.78rem;"><i class="bi bi-circle me-1"></i> Belum Diuji</span>'
+        };
+        document.getElementById('badge_status_atas').innerHTML = statusBadgeMap[itemStatus] || itemStatus;
         
         document.getElementById('sum_tanggal').innerText = item.tanggal_data || '-';
         document.getElementById('sum_unit').innerText = item.kode_unit || '-';
@@ -1365,6 +1902,33 @@
         document.getElementById('sum_risk_badge').innerHTML = `<span style="background-color:${badgeBgColor}; color:${badgeTextColor}; border:1px solid ${badgeBorderColor}; border-radius:12px; padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;">${item.risk_final || item.risk_awal || 'Moderate'}</span>`;
         document.getElementById('sum_deskripsi').innerText = item.deskripsi || item.rincian || '-';
 
+        // 1. Alert Box Revisi & Riwayat Box (Requirement 5)
+        const alertBox = document.getElementById('alertBoxRevisi');
+        const histBox = document.getElementById('infoBoxRiwayatRevisi');
+        const revNote = item.reviewer_note || item.catatan_reviewer || '';
+
+        if (itemStatus === 'PERLU_REVISI') {
+            if (alertBox) {
+                alertBox.style.display = 'block';
+                document.getElementById('alert_reviewer_name').innerText = item.reviewed_by || 'Reviewer / Admin';
+                document.getElementById('alert_reviewed_at').innerText = item.reviewed_at ? new Date(item.reviewed_at).toLocaleString('id-ID') : 'Baru Saja';
+                document.getElementById('alert_reviewer_note').innerText = revNote || 'Mohon tinjau dan sesuaikan kembali hasil pengujian KKA ini.';
+            }
+            if (histBox) histBox.style.display = 'none';
+        } else {
+            if (alertBox) alertBox.style.display = 'none';
+            if ((itemStatus === 'MENUNGGU_KONFIRMASI' || itemStatus === 'SELESAI') && revNote) {
+                if (histBox) {
+                    histBox.style.display = 'block';
+                    document.getElementById('hist_reviewer_name').innerText = item.reviewed_by || 'Reviewer / Admin';
+                    document.getElementById('hist_reviewed_at').innerText = item.reviewed_at ? new Date(item.reviewed_at).toLocaleString('id-ID') : '-';
+                    document.getElementById('hist_reviewer_note').innerText = revNote;
+                }
+            } else {
+                if (histBox) histBox.style.display = 'none';
+            }
+        }
+
         // Populate Section 1 (System)
         document.getElementById('sys_offsite_id').innerText = item.offsite_id || item.staging_id || `KKA-${item.id}`;
         document.getElementById('sys_tanggal_data').innerText = item.tanggal_data || '-';
@@ -1379,12 +1943,13 @@
 
         // Populate Section 2 (RA)
         document.getElementById('ra_kka_id').value = item.id;
+        document.getElementById('no_arsip').value = item.no_arsip || '';
         document.getElementById('bukti_referensi').value = item.bukti_referensi || '';
         document.getElementById('critical_trigger').value = item.critical_trigger || 'Tidak';
         document.getElementById('jenis_exception_ra').value = item.jenis_exception_ra || '';
         document.getElementById('hasil_uji').value = item.hasil_uji || '';
         document.getElementById('klarifikasi_unit').value = item.klarifikasi_unit || '';
-        
+
         // Kunci Tanggal Ditemukan / Diuji: Otomatis terkunci saat RA membuka KKA
         const d = new Date();
         const localTodayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1392,6 +1957,19 @@
         const tglInput = document.getElementById('tanggal_ditemukan');
         tglInput.value = tanggalVal;
         tglInput.readOnly = true;
+
+        // Parameter Pengaduan (Keluhan Nasabah E.4.5)
+        const containerPengaduan = document.getElementById('containerPengaduanFields');
+        const activeSh = item.source_sheet || currentActiveSheetCode;
+        if (activeSh === 'KKA_Pengaduan') {
+            if (containerPengaduan) containerPengaduan.style.display = 'block';
+            document.getElementById('tgl_keluhan').value = item.tgl_keluhan ? item.tgl_keluhan.split('T')[0] : (item.tanggal_data || '');
+            document.getElementById('tgl_buku').value = item.tgl_buku ? item.tgl_buku.split('T')[0] : localTodayStr;
+            document.getElementById('status_keluhan').value = item.status_keluhan || 'Proses';
+            calculatePengaduanHariKerja();
+        } else {
+            if (containerPengaduan) containerPengaduan.style.display = 'none';
+        }
 
         // Info File Bukti
         const fileInfoEl = document.getElementById('file_bukti_info');
@@ -1404,27 +1982,93 @@
         }
 
         // Render Accordion Checklist KKA
-        renderChecklistAccordion(currentChecklists, item.checklist_answers || []);
+        renderChecklistAccordion(currentChecklists, item.checklist_answers || [], item);
 
         // Populate Section 3 (Admin)
         document.getElementById('admin_kka_id').value = item.id;
         document.getElementById('status_klarifikasi').value = item.status_klarifikasi || '';
         document.getElementById('perluasan_sampel').value = item.perluasan_sampel ? 1 : 0;
         document.getElementById('keputusan_onsite').value = item.keputusan_onsite || '';
-        document.getElementById('status_review').value = item.status_review || '';
         document.getElementById('keputusan_eskalasi').value = item.keputusan_eskalasi || 'Tidak';
-        document.getElementById('catatan_reviewer').value = item.catatan_reviewer || '';
+        document.getElementById('catatan_reviewer').value = revNote;
+        document.getElementById('display_workflow_status_admin').innerHTML = statusBadgeMap[itemStatus] || itemStatus;
+
+        // Panel Admin State Display & Verification Panel
+        const panelNonWaiting = document.getElementById('panelStatusAdminNonWaiting');
+        const textNonWaiting = document.getElementById('statusAdminNonWaitingText');
+        const panelVerif = document.getElementById('panelVerifikasiAdmin');
+
+        if (itemStatus === 'MENUNGGU_KONFIRMASI') {
+            if (panelNonWaiting) panelNonWaiting.style.display = 'none';
+            if (panelVerif) panelVerif.style.display = 'block';
+        } else {
+            if (panelNonWaiting) {
+                panelNonWaiting.style.display = 'block';
+                if (itemStatus === 'SELESAI') {
+                    textNonWaiting.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> KKA telah <strong>SELESAI &amp; TERKONFIRMASI</strong> oleh <strong>${item.reviewed_by || 'Admin'}</strong> pada ${item.reviewed_at ? new Date(item.reviewed_at).toLocaleString('id-ID') : '-'}. Form terkunci otomatis (Read-Only).</span>`;
+                } else if (itemStatus === 'PERLU_REVISI') {
+                    textNonWaiting.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> KKA berstatus <strong>PERLU REVISI</strong>. Menunggu Resident Auditor cabang memperbaiki dan mengajukan ulang.</span>`;
+                } else {
+                    textNonWaiting.innerHTML = `<span class="text-secondary"><i class="bi bi-circle me-1"></i> KKA <strong>BELUM DIUJI</strong> oleh Resident Auditor.</span>`;
+                }
+            }
+            if (panelVerif) {
+                panelVerif.style.display = 'block';
+            }
+        }
 
         // Hitung otomasi skor risiko dan kendalikan visibilitas field exception
         onChecklistChange();
 
-        // Lock Logic based on Role
-        const isRa = (userRole === 'ra' || userRole === 'admin');
-        document.querySelectorAll('.field-ra').forEach(el => el.disabled = !isRa);
-        document.querySelectorAll('.field-admin').forEach(el => el.disabled = (userRole === 'ra'));
-        
-        document.getElementById('badge_ra_lock').innerText = isRa ? "Mode Edit" : "Read Only";
-        document.getElementById('badge_admin_lock').innerText = (userRole === 'ra') ? "Read Only" : "Mode Edit";
+        // Lock Logic based on Role & Status
+        const isRa = (userRole === 'ra');
+        const isSelesai = (itemStatus === 'SELESAI');
+
+        if (isSelesai) {
+            // SELESAI: Kunci form menjadi Read-Only bagi RA
+            document.querySelectorAll('.field-ra').forEach(el => el.disabled = true);
+            document.querySelectorAll('.subarea-checkbox').forEach(el => el.disabled = true);
+            document.querySelectorAll('.chk-answer').forEach(el => el.disabled = true);
+            document.querySelectorAll('.chk-keterangan').forEach(el => el.disabled = true);
+
+            document.getElementById('badge_ra_lock').innerText = "Read Only (Selesai)";
+            const btnSubmit = document.getElementById('btnSubmitRa');
+            if (btnSubmit) btnSubmit.style.display = isRa ? 'none' : 'inline-block';
+            const statusInfo = document.getElementById('badge_ra_status_info');
+            if (statusInfo) {
+                statusInfo.innerHTML = '<span class="badge border" style="background:#ecfdf5; color:#047857; border-color:#a7f3d0;"><i class="bi bi-check-circle-fill me-1"></i> Selesai &amp; Terkunci</span>';
+            }
+        } else {
+            const canEditRa = (isRa || userRole === 'admin');
+            document.querySelectorAll('.field-ra').forEach(el => el.disabled = !canEditRa);
+            document.querySelectorAll('.subarea-checkbox').forEach(el => el.disabled = !canEditRa);
+            document.querySelectorAll('.chk-answer').forEach(el => el.disabled = !canEditRa);
+            document.querySelectorAll('.chk-keterangan').forEach(el => el.disabled = !canEditRa);
+
+            const btnSubmit = document.getElementById('btnSubmitRa');
+            const submitIcon = document.getElementById('btnSubmitRaIcon');
+            const submitText = document.getElementById('btnSubmitRaText');
+            const statusInfo = document.getElementById('badge_ra_status_info');
+
+            if (btnSubmit) {
+                btnSubmit.style.display = 'inline-block';
+                if (itemStatus === 'PERLU_REVISI') {
+                    btnSubmit.style.background = '#e11d48';
+                    if (submitIcon) submitIcon.className = 'bi bi-send-check-fill';
+                    if (submitText) submitText.innerText = 'Simpan Perbaikan';
+                    document.getElementById('badge_ra_lock').innerText = "Mode Perbaikan";
+                } else {
+                    btnSubmit.style.background = '#1e3a8a';
+                    if (submitIcon) submitIcon.className = 'bi bi-send-fill';
+                    if (submitText) submitText.innerText = 'Simpan / Submit Review';
+                    document.getElementById('badge_ra_lock').innerText = "Mode Edit";
+                }
+            }
+            if (statusInfo) statusInfo.innerHTML = '';
+        }
+
+        document.querySelectorAll('.field-admin').forEach(el => el.disabled = isRa);
+        document.getElementById('badge_admin_lock').innerText = isRa ? "Read Only" : "Mode Verifikasi";
 
         // LAKUKAN TOGGLE TAMPILAN
         document.getElementById('dashboardView').style.display = 'none';
@@ -1439,7 +2083,7 @@
     }
 
     // RENDER ACCORDION CHECKLIST KKA DENGAN KELOMPOK PER SUB-AREA
-    function renderChecklistAccordion(checklists, existingAnswers) {
+    function renderChecklistAccordion(checklists, existingAnswers, item) {
         const container = document.getElementById('checklistAccordionContainer');
         if (!container) return;
 
@@ -1471,12 +2115,91 @@
             groups[code].items.push(chk);
         });
 
-        const isRa = (userRole === 'ra' || userRole === 'admin');
+        // Tentukan grup sub-area mana yang tercentang default / tersimpan
+        let savedSubAreas = [];
+        if (item && item.selected_sub_areas) {
+            let s = item.selected_sub_areas;
+            if (typeof s === 'string') {
+                try { s = JSON.parse(s); } catch (e) { s = []; }
+            }
+            if (Array.isArray(s)) savedSubAreas = s;
+        }
+
+        // Jika belum ada tersimpan tapi sudah ada jawaban checklist:
+        if (savedSubAreas.length === 0 && Array.isArray(existingAnswers) && existingAnswers.length > 0) {
+            const answeredChkIds = existingAnswers.map(a => Number(a.checklist_id));
+            checklists.forEach(chk => {
+                if (answeredChkIds.includes(Number(chk.id)) && !savedSubAreas.includes(chk.sub_area_code)) {
+                    savedSubAreas.push(chk.sub_area_code);
+                }
+            });
+        }
+
+        // Jika belum ada tersimpan sama sekali (pemeriksaan baru):
+        // "untuk centang dropdown checklist sesuaikan saja dengan yg ada di KKA teller dan kas sekarang"
+        if (savedSubAreas.length === 0 && item) {
+            const activeSh = item.source_sheet || currentActiveSheetCode;
+            const desc = ((item.kategori || '') + ' ' + (item.rincian || '') + ' ' + (item.deskripsi || '') + ' ' + (item.jenis_exception_awal || '')).toLowerCase();
+            if (activeSh === 'KKA_Teller_Kas' || activeSh === 'KKA_Teller') {
+                if (desc.includes('kas kecil')) {
+                    savedSubAreas = ['A2'];
+                } else if (desc.includes('khasanah') || desc.includes('brankas') || desc.includes('kas besar')) {
+                    savedSubAreas = ['A3'];
+                } else {
+                    savedSubAreas = ['A1'];
+                }
+            } else if (activeSh === 'KKA_DPK_Layanan') {
+                if (desc.includes('badan usaha') || desc.includes('pt') || desc.includes('cv') || desc.includes('perusahaan')) {
+                    savedSubAreas = ['D2'];
+                } else if (desc.includes('dormant') || desc.includes('blokir')) {
+                    savedSubAreas = ['D4'];
+                } else if (desc.includes('cs') || desc.includes('layanan') || desc.includes('antrean')) {
+                    savedSubAreas = ['D3'];
+                } else {
+                    savedSubAreas = ['D1'];
+                }
+            } else if (activeSh === 'KKA_Biaya_Beban') {
+                if (desc.includes('pengadaan') || desc.includes('vendor') || desc.includes('jasa')) {
+                    savedSubAreas = ['B2'];
+                } else if (desc.includes('perjalanan') || desc.includes('dinas') || desc.includes('sppd') || desc.includes('representasi')) {
+                    savedSubAreas = ['B3'];
+                } else if (desc.includes('pajak') || desc.includes('retribusi') || desc.includes('ppn') || desc.includes('pph')) {
+                    savedSubAreas = ['B4'];
+                } else {
+                    savedSubAreas = ['B1'];
+                }
+            } else if (activeSh === 'KKA_Kredit') {
+                if (desc.includes('flpp') || desc.includes('agunan') || desc.includes('jaminan') || desc.includes('kpr')) {
+                    savedSubAreas = ['C2'];
+                } else if (desc.includes('konstruksi') || desc.includes('monitoring') || desc.includes('restruktur')) {
+                    savedSubAreas = ['C3'];
+                } else {
+                    savedSubAreas = ['C1'];
+                }
+            } else if (activeSh === 'KKA_Kartu_ATM') {
+                if (desc.includes('retur') || desc.includes('tertelan') || desc.includes('rusak')) {
+                    savedSubAreas = ['E2'];
+                } else if (desc.includes('mesin') || desc.includes('fisik') || desc.includes('cctv') || desc.includes('kebersihan')) {
+                    savedSubAreas = ['E3'];
+                } else {
+                    savedSubAreas = ['E1'];
+                }
+            } else {
+                // Untuk sheet lain, default ke grup sub-area pertama
+                const firstCode = Object.keys(groups)[0];
+                if (firstCode) savedSubAreas = [firstCode];
+            }
+        }
+
+        const isRa = (userRole === 'ra');
+        const itemStatus = getItemWorkflowStatus(item);
+        const isSelesai = (itemStatus === 'SELESAI');
+        const canEditChecklist = (userRole === 'ra' || userRole === 'admin') && !isSelesai;
 
         let html = `
             <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background:#f1f5f9; border:1px solid var(--border-color);">
                 <div style="font-size:0.83rem; font-weight:700; color:var(--primary-blue, #1e3a8a);">
-                    <i class="bi bi-ui-checks me-1"></i> CHECKLIST PENGUJIAN AUDIT (${checklists.length} ITEM)
+                    <i class="bi bi-ui-checks me-1"></i> CHECKLIST PENGUJIAN AUDIT (<span id="checklistTotalItemsCount">0</span> ITEM)
                 </div>
                 <div class="d-flex gap-2 align-items-center">
                     <span class="badge bg-success" id="badgeTotalYa" style="font-size:0.75rem;">0 Ya</span>
@@ -1489,25 +2212,33 @@
         for (const code in groups) {
             const grp = groups[code];
             const collapseId = `collapseSubArea_${code}`;
+            const isChecked = savedSubAreas.includes(code);
 
             html += `
             <div class="accordion-item" style="border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.65rem; overflow:hidden;">
-                <h2 class="accordion-header" id="heading_${code}" style="background:#f8fafc;">
-                    <div class="d-flex justify-content-between align-items-center w-100 p-2 px-3" style="cursor:pointer;" onclick="toggleAccordionSubArea('${collapseId}')">
+                <h2 class="accordion-header" id="heading_${code}" style="background:#f8fafc; margin: 0;">
+                    <div class="d-flex justify-content-between align-items-center w-100 p-2 px-3">
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <i class="bi bi-chevron-down toggle-icon-${collapseId}" style="font-size:0.8rem; transition: transform 0.2s;"></i>
-                            <span class="fw-bold" style="font-size:0.82rem; color:var(--text-dark);">${grp.name}</span>
-                            <span class="badge bg-light text-secondary border" style="font-size:0.7rem;">${grp.items.length} Item</span>
-                            <span class="badge bg-danger text-white subarea-tidak-badge" id="subTidakBadge_${code}" style="display:none; font-size:0.7rem;">0 Temuan Tidak</span>
+                            <input type="checkbox" class="form-check-input subarea-checkbox" id="chk_subarea_${code}" value="${code}" 
+                                style="width: 1.15rem; height: 1.15rem; cursor: pointer; margin: 0;"
+                                onchange="onSubAreaToggle('${code}', this.checked)"
+                                onclick="event.stopPropagation();"
+                                ${isChecked ? 'checked' : ''} ${!canEditChecklist ? 'disabled' : ''}
+                                title="Centang untuk mengaktifkan pengujian sub-area ini">
+                            
+                            <div class="d-flex align-items-center gap-2" style="cursor:pointer; user-select:none;" onclick="toggleAccordionSubArea('${collapseId}')">
+                                <i class="bi ${isChecked ? 'bi-chevron-down' : 'bi-chevron-right'} toggle-icon-${collapseId}" style="font-size:0.8rem; transition: transform 0.2s;"></i>
+                                <span class="fw-bold" style="font-size:0.83rem; color:var(--text-dark);">${grp.name}</span>
+                                <span class="badge bg-light text-secondary border" style="font-size:0.7rem;">${grp.items.length} Item</span>
+                                <span class="badge bg-danger text-white subarea-tidak-badge" id="subTidakBadge_${code}" style="display:none; font-size:0.7rem;">0 Temuan Tidak</span>
+                            </div>
                         </div>
-                        ${isRa ? `
-                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold" style="font-size:0.72rem; border-radius:4px;" onclick="setSubAreaAllYa('${code}', event)">
-                            <i class="bi bi-check-all"></i> Set Semua Ya
-                        </button>
-                        ` : ''}
+                        <div>
+                            <span class="badge ${isChecked ? 'bg-primary-subtle text-primary border' : 'bg-light text-muted border'} subarea-status-badge" id="subStatusBadge_${code}" style="font-size: 0.72rem;">${isChecked ? 'Aktif Digunakan' : 'Nonaktif / Diabaikan'}</span>
+                        </div>
                     </div>
                 </h2>
-                <div id="${collapseId}" class="accordion-collapse" style="display: block;">
+                <div id="${collapseId}" class="accordion-collapse" style="display: ${isChecked ? 'block' : 'none'};">
                     <div class="accordion-body p-0" id="subAreaBody_${code}">
                         <div class="table-responsive">
                             <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.78rem;">
@@ -1525,26 +2256,27 @@
 
             grp.items.forEach(chk => {
                 const saved = answerMap[chk.id];
-                const jawaban = saved ? saved.jawaban : 'Ya';
+                const jawaban = saved ? saved.jawaban : '';
                 const ket = saved ? saved.keterangan : '';
                 const isYa = (jawaban === 'Ya');
+                const isTidak = (jawaban === 'Tidak');
 
                 html += `
-                    <tr id="row_chk_${chk.id}" class="${!isYa ? 'table-danger' : ''}">
+                    <tr id="row_chk_${chk.id}" class="${isTidak ? 'table-danger' : ''}">
                         <td style="text-align:center; color:var(--text-muted);">${chk.item_no}</td>
                         <td style="color:var(--text-dark); font-weight:500;">${chk.sub_area_name}</td>
                         <td style="color:var(--text-dark);">${chk.item_checklist}</td>
                         <td style="text-align:center;">
                             <div class="btn-group btn-group-sm" role="group">
-                                <input type="radio" class="btn-check chk-answer" name="chk_answer_${chk.id}" id="chk_ya_${chk.id}" value="Ya" data-subarea="${code}" autocomplete="off" onchange="onChecklistChange()" ${isYa ? 'checked' : ''} ${!isRa ? 'disabled' : ''}>
-                                <label class="btn btn-outline-success py-0 px-2" for="chk_ya_${chk.id}" style="font-size:0.72rem;">Ya</label>
+                                <input type="radio" class="btn-check chk-answer" name="chk_answer_${chk.id}" id="chk_ya_${chk.id}" value="Ya" data-subarea="${code}" autocomplete="off" onchange="onChecklistChange()" ${isYa ? 'checked' : ''} ${!canEditChecklist ? 'disabled' : ''}>
+                                <label class="btn btn-outline-success py-0 px-2" for="chk_ya_${chk.id}" style="font-size:0.72rem;">[✓] Ya</label>
 
-                                <input type="radio" class="btn-check chk-answer" name="chk_answer_${chk.id}" id="chk_tidak_${chk.id}" value="Tidak" data-subarea="${code}" autocomplete="off" onchange="onChecklistChange()" ${!isYa ? 'checked' : ''} ${!isRa ? 'disabled' : ''}>
-                                <label class="btn btn-outline-danger py-0 px-2" for="chk_tidak_${chk.id}" style="font-size:0.72rem;">Tidak</label>
+                                <input type="radio" class="btn-check chk-answer" name="chk_answer_${chk.id}" id="chk_tidak_${chk.id}" value="Tidak" data-subarea="${code}" autocomplete="off" onchange="onChecklistChange()" ${isTidak ? 'checked' : ''} ${!canEditChecklist ? 'disabled' : ''}>
+                                <label class="btn btn-outline-danger py-0 px-2" for="chk_tidak_${chk.id}" style="font-size:0.72rem;">[✗] Tidak</label>
                             </div>
                         </td>
                         <td>
-                            <input type="text" class="form-control form-control-sm chk-keterangan" id="chk_ket_${chk.id}" data-checklist-id="${chk.id}" placeholder="Catatan opsional..." value="${ket.replace(/"/g, '&quot;')}" ${!isRa ? 'disabled' : ''} style="font-size:0.75rem;">
+                            <input type="text" class="form-control form-control-sm chk-keterangan" id="chk_ket_${chk.id}" data-checklist-id="${chk.id}" data-subarea="${code}" placeholder="Catatan opsional..." value="${ket.replace(/"/g, '&quot;')}" ${!canEditChecklist ? 'disabled' : ''} style="font-size:0.75rem;">
                         </td>
                     </tr>
                 `;
@@ -1564,6 +2296,45 @@
         container.innerHTML = html;
     }
 
+    function onSubAreaToggle(code, isChecked) {
+        const collapseId = `collapseSubArea_${code}`;
+        const el = document.getElementById(collapseId);
+        const icon = document.querySelector(`.toggle-icon-${collapseId}`);
+        const statusBadge = document.getElementById(`subStatusBadge_${code}`);
+
+        if (statusBadge) {
+            statusBadge.innerText = isChecked ? 'Aktif Digunakan' : 'Nonaktif / Diabaikan';
+            statusBadge.className = isChecked ? 'badge bg-primary-subtle text-primary border subarea-status-badge' : 'badge bg-light text-muted border subarea-status-badge';
+        }
+
+        if (isChecked) {
+            // Otomatis expand terbuka
+            if (el) el.style.display = 'block';
+            if (icon) {
+                icon.classList.remove('bi-chevron-right');
+                icon.classList.add('bi-chevron-down');
+            }
+        } else {
+            // Otomatis collapse tertutup & reset isian di dalam grup tersebut
+            if (el) el.style.display = 'none';
+            if (icon) {
+                icon.classList.remove('bi-chevron-down');
+                icon.classList.add('bi-chevron-right');
+            }
+            document.querySelectorAll(`.chk-answer[data-subarea="${code}"]`).forEach(r => {
+                r.checked = false;
+                const chkId = r.name.replace('chk_answer_', '');
+                const row = document.getElementById(`row_chk_${chkId}`);
+                if (row) row.classList.remove('table-danger', 'table-danger-subtle');
+            });
+            document.querySelectorAll(`.chk-keterangan[data-subarea="${code}"]`).forEach(inp => {
+                inp.value = '';
+            });
+        }
+
+        onChecklistChange();
+    }
+
     function toggleAccordionSubArea(collapseId) {
         const el = document.getElementById(collapseId);
         if (!el) return;
@@ -1571,32 +2342,84 @@
         el.style.display = isVisible ? 'none' : 'block';
         const icon = document.querySelector(`.toggle-icon-${collapseId}`);
         if (icon) {
-            icon.style.transform = isVisible ? 'rotate(-90deg)' : 'rotate(0deg)';
+            if (isVisible) {
+                icon.classList.remove('bi-chevron-down');
+                icon.classList.add('bi-chevron-right');
+            } else {
+                icon.classList.remove('bi-chevron-right');
+                icon.classList.add('bi-chevron-down');
+            }
         }
     }
 
-    function setSubAreaAllYa(code, event) {
-        if (event) {
-            event.stopPropagation();
-            event.preventDefault();
+    // Kalkulasi Lama Hari Kerja Keluhan Nasabah (NETWORKDAYS)
+    function calculatePengaduanHariKerja() {
+        const status = (document.getElementById('status_keluhan') ? document.getElementById('status_keluhan').value : '').trim().toUpperCase();
+        const display = document.getElementById('display_lama_hari_kerja');
+        if (!display) return;
+
+        if (status === 'REJECT' || status === 'DITOLAK') {
+            display.innerText = 'DITOLAK';
+            display.className = 'badge bg-danger text-white px-2 py-1';
+            return;
         }
-        const body = document.getElementById(`subAreaBody_${code}`);
-        if (!body) return;
-        const yaRadios = body.querySelectorAll('.btn-check[value="Ya"]');
-        yaRadios.forEach(r => {
-            r.checked = true;
-        });
-        onChecklistChange();
+
+        const tgl1Val = document.getElementById('tgl_keluhan')?.value;
+        const tgl2Val = document.getElementById('tgl_buku')?.value;
+        if (!tgl1Val || !tgl2Val) {
+            display.innerText = '-';
+            display.className = 'text-muted';
+            return;
+        }
+
+        const d1 = new Date(tgl1Val);
+        const d2 = new Date(tgl2Val);
+        if (isNaN(d1) || isNaN(d2)) {
+            display.innerText = '-';
+            return;
+        }
+
+        let start = d1 < d2 ? d1 : d2;
+        let end = d1 < d2 ? d2 : d1;
+        let workDays = 0;
+        let cur = new Date(start);
+        while (cur <= end) {
+            const dayOfWeek = cur.getDay();
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Bukan Sabtu (6) / Minggu (0)
+                workDays++;
+            }
+            cur.setDate(cur.getDate() + 1);
+        }
+
+        display.innerText = `${workDays} Hari Kerja`;
+        display.className = 'badge bg-primary text-white px-2 py-1';
     }
 
     // PENANGANAN REAKTIF CHECKLIST & OTOMASI SKOR RISIKO
     function onChecklistChange() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.subarea-checkbox:checked'));
+        const checkedSubAreas = checkedBoxes.map(cb => cb.value);
+
+        // 1. Total item di header HANYA menghitung item dari grup dropdown yang dicentang
+        let totalActiveItems = 0;
+        if (currentChecklists && Array.isArray(currentChecklists)) {
+            totalActiveItems = currentChecklists.filter(chk => checkedSubAreas.includes(chk.sub_area_code)).length;
+        }
+        const totalItemsHeaderEl = document.getElementById('checklistTotalItemsCount');
+        if (totalItemsHeaderEl) {
+            totalItemsHeaderEl.innerText = totalActiveItems;
+        }
+
+        // 2. Penghitung Ya dan Tidak HANYA menghitung item dari grup dropdown yang dicentang
         let yaCount = 0;
         let tidakCount = 0;
         const subAreaTidakMap = {};
 
         document.querySelectorAll('.chk-answer:checked').forEach(r => {
             const sub = r.getAttribute('data-subarea');
+            if (!checkedSubAreas.includes(sub)) {
+                return; // Diabaikan jika grup sub-area tidak dicentang!
+            }
             const chkId = r.name.replace('chk_answer_', '');
             const row = document.getElementById(`row_chk_${chkId}`);
 
@@ -1620,10 +2443,10 @@
         if (badgeYa) badgeYa.innerText = `${yaCount} Ya`;
         if (badgeTidak) badgeTidak.innerText = `${tidakCount} Tidak`;
 
-        // Update SubArea Badges
+        // Update SubArea Badges (hanya untuk grup yang dicentang)
         document.querySelectorAll('.subarea-tidak-badge').forEach(b => {
             const code = b.id.replace('subTidakBadge_', '');
-            const cnt = subAreaTidakMap[code] || 0;
+            const cnt = checkedSubAreas.includes(code) ? (subAreaTidakMap[code] || 0) : 0;
             if (cnt > 0) {
                 b.innerText = `${cnt} Temuan Tidak`;
                 b.style.display = 'inline-block';
@@ -1632,7 +2455,7 @@
             }
         });
 
-        // 2. Kemunculan Kondisional (Jenis Exception, Hasil Pengujian, Klarifikasi Unit)
+        // 3. Kemunculan Kondisional (Jenis Exception, Hasil Pengujian, Klarifikasi Unit)
         const containerExc = document.getElementById('containerExceptionFields');
         const inputJenisExc = document.getElementById('jenis_exception_ra');
         const inputHasilUji = document.getElementById('hasil_uji');
@@ -1650,7 +2473,7 @@
             if (inputKlarifikasi) { inputKlarifikasi.required = false; inputKlarifikasi.value = ''; }
         }
 
-        // 3. Otomasi Skor Risiko
+        // 4. Otomasi Skor Risiko
         hitungOtomatisSkorRisiko(tidakCount);
     }
 
@@ -1803,13 +2626,42 @@
 
     function submitRaForm() {
         const id = document.getElementById('ra_kka_id').value;
+
+        const noArsip = (document.getElementById('no_arsip')?.value || '').trim();
+        if (!noArsip) {
+            alert('Kolom No. Arsip wajib diisi sebelum menyimpan atau menyelesaikan KKA!');
+            document.getElementById('no_arsip')?.focus();
+            return;
+        }
         
+        const checkedBoxes = Array.from(document.querySelectorAll('.subarea-checkbox:checked'));
+        const checkedSubAreas = checkedBoxes.map(cb => cb.value);
+
+        if (checkedSubAreas.length === 0) {
+            alert('Harap centang minimal 1 grup dropdown Sub-Area Checklist [✓] sebelum menyimpan hasil pemeriksaan!');
+            return;
+        }
+
+        let unansweredCount = 0;
         let tidakCount = 0;
         const checklistAnswers = [];
         currentChecklists.forEach(chk => {
+            if (!checkedSubAreas.includes(chk.sub_area_code)) {
+                return; // Diabaikan jika grup sub-area tidak dicentang!
+            }
+
+            const yaRadio = document.getElementById(`chk_ya_${chk.id}`);
             const tidakRadio = document.getElementById(`chk_tidak_${chk.id}`);
             const ketInput = document.getElementById(`chk_ket_${chk.id}`);
-            const jawaban = (tidakRadio && tidakRadio.checked) ? 'Tidak' : 'Ya';
+
+            const isYa = yaRadio && yaRadio.checked;
+            const isTidak = tidakRadio && tidakRadio.checked;
+
+            if (!isYa && !isTidak) {
+                unansweredCount++;
+            }
+
+            const jawaban = isTidak ? 'Tidak' : (isYa ? 'Ya' : 'Ya');
             if (jawaban === 'Tidak') tidakCount++;
             const keterangan = ketInput ? ketInput.value.trim() : '';
             checklistAnswers.push({
@@ -1818,6 +2670,11 @@
                 keterangan: keterangan
             });
         });
+
+        if (unansweredCount > 0) {
+            alert(`Terdapat ${unansweredCount} item checklist pada grup terpilih yang belum dicentang. Sesuai instruksi, RA wajib mencentang seluruh kotak checklist pada grup yang dipilih ([✓] Ya atau [✗] Tidak).`);
+            return;
+        }
 
         const jenisExc = document.getElementById('jenis_exception_ra').value.trim();
         const hasilUji = document.getElementById('hasil_uji').value.trim();
@@ -1842,6 +2699,7 @@
         }
 
         let formData = new FormData();
+        formData.append('no_arsip', noArsip);
         formData.append('bukti_referensi', document.getElementById('bukti_referensi').value);
         formData.append('critical_trigger', document.getElementById('critical_trigger').value);
         formData.append('jenis_exception_ra', tidakCount >= 1 ? jenisExc : '');
@@ -1849,7 +2707,15 @@
         formData.append('klarifikasi_unit', tidakCount >= 1 ? klarifikasi : '');
         formData.append('perlu_onsite', document.getElementById('perlu_onsite').value);
         formData.append('tanggal_ditemukan', document.getElementById('tanggal_ditemukan').value);
+        formData.append('selected_sub_areas', JSON.stringify(checkedSubAreas));
         formData.append('checklist_answers', JSON.stringify(checklistAnswers));
+
+        const activeSh = currentItem?.source_sheet || currentActiveSheetCode;
+        if (activeSh === 'KKA_Pengaduan') {
+            formData.append('tgl_keluhan', document.getElementById('tgl_keluhan')?.value || '');
+            formData.append('tgl_buku', document.getElementById('tgl_buku')?.value || '');
+            formData.append('status_keluhan', document.getElementById('status_keluhan')?.value || '');
+        }
 
         const fileInput = document.getElementById('file_bukti');
         if (fileInput.files.length > 0) {
@@ -1859,8 +2725,25 @@
         axios.post(`${baseUrl}/${id}/ra`, formData, { 
             headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'multipart/form-data' } 
         }).then(res => {
-            alert(res.data.message || 'Review RA berhasil disubmit!');
+            alert(res.data.message || 'Pemeriksaan KKA berhasil disimpan langsung ke Arsip Riwayat Selesai!');
             closeDetailView();
+            // Otomatis arahkan RA langsung ke mode Arsip Riwayat Selesai beserta tombol cetak arsip matriks
+            if (!isShowingRiwayat) {
+                isShowingRiwayat = true;
+                const btn = document.getElementById('btnToggleRiwayat');
+                const filterCard = document.getElementById('riwayatFilterCard');
+                const btnText = document.getElementById('btnRiwayatText');
+                if (btn) {
+                    btn.style.background = 'var(--primary-blue)';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = 'var(--primary-blue)';
+                }
+                if (btnText) btnText.innerText = 'Kembali ke Data Utama';
+                if (filterCard) filterCard.style.display = 'block';
+                if (document.getElementById('tableTitle')) {
+                    document.getElementById('tableTitle').innerText = `${currentActiveSheet} (Arsip Riwayat Selesai)`;
+                }
+            }
             loadData();
         }).catch(err => {
             if (err.response) {
@@ -1880,15 +2763,70 @@
         });
     }
 
+    function submitAdminDecision(decision) {
+        const id = document.getElementById('admin_kka_id').value;
+        const catatan = (document.getElementById('catatan_reviewer')?.value || '').trim();
+
+        if (decision === 'REVISI' && !catatan) {
+            alert('Catatan Alasan Revisi wajib diisi ketika meminta perbaikan KKA dari Resident Auditor!');
+            document.getElementById('catatan_reviewer')?.focus();
+            return;
+        }
+
+        const confirmMsg = decision === 'REVISI' 
+            ? 'Apakah Anda yakin ingin meminta revisi/perbaikan KKA ini kepada Resident Auditor?' 
+            : 'Apakah Anda yakin ingin mengonfirmasi dan menyelesaikan (Approve) KKA ini? Form akan terkunci secara otomatis.';
+
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+
+        const payload = {
+            decision: decision,
+            catatan_reviewer: catatan,
+            status_klarifikasi: document.getElementById('status_klarifikasi')?.value || '',
+            perluasan_sampel: document.getElementById('perluasan_sampel')?.value || 0,
+            keputusan_onsite: document.getElementById('keputusan_onsite')?.value || '',
+            keputusan_eskalasi: document.getElementById('keputusan_eskalasi')?.value || 'Tidak'
+        };
+
+        axios.post(`${baseUrl}/${id}/review-decision`, payload, {
+            headers: { 'X-CSRF-TOKEN': csrfToken }
+        }).then(res => {
+            alert(res.data.message || 'Keputusan verifikasi berhasil disimpan!');
+            closeDetailView();
+            loadData();
+        }).catch(err => {
+            if (err.response) {
+                if (err.response.status === 422) {
+                    let errors = err.response.data.errors;
+                    let msg = "Validasi Gagal:\n";
+                    if (errors) {
+                        for (let key in errors) {
+                            msg += `- ${errors[key][0]}\n`;
+                        }
+                    } else {
+                        msg += `- ${err.response.data.message || 'Input tidak valid'}\n`;
+                    }
+                    alert(msg);
+                } else {
+                    alert("Error Server (" + err.response.status + "): " + (err.response.data.message || 'Terjadi kesalahan sistem'));
+                }
+            } else {
+                alert('Gagal terhubung ke server!');
+            }
+        });
+    }
+
     function submitAdminForm() {
         const id = document.getElementById('admin_kka_id').value;
         const payload = {
-            status_klarifikasi: document.getElementById('status_klarifikasi').value,
-            perluasan_sampel: document.getElementById('perluasan_sampel').value,
-            keputusan_onsite: document.getElementById('keputusan_onsite').value,
-            status_review: document.getElementById('status_review').value,
-            keputusan_eskalasi: document.getElementById('keputusan_eskalasi').value,
-            catatan_reviewer: document.getElementById('catatan_reviewer').value,
+            status_klarifikasi: document.getElementById('status_klarifikasi')?.value || '',
+            perluasan_sampel: document.getElementById('perluasan_sampel')?.value || 0,
+            keputusan_onsite: document.getElementById('keputusan_onsite')?.value || '',
+            status_review: document.getElementById('status_review')?.value || 'Approved',
+            keputusan_eskalasi: document.getElementById('keputusan_eskalasi')?.value || 'Tidak',
+            catatan_reviewer: document.getElementById('catatan_reviewer')?.value || '',
             _method: 'PUT'
         };
 
@@ -2421,6 +3359,107 @@
             }
         });
     }
+
+    // =========================================================================
+    // MODAL TAMBAH MANDIRI PEMERIKSAAN KAS / KAS KECIL
+    // =========================================================================
+    function openModalTambahMandiri() {
+        const modalEl = document.getElementById('modalTambahMandiriKas');
+        if (!modalEl) return;
+
+        const dateInp = document.getElementById('mandiriTanggal');
+        if (dateInp) {
+            dateInp.value = currentActiveDate || '{{ request("tanggal") ?? date("Y-m-d") }}';
+        }
+        const unitInp = document.getElementById('mandiriKodeUnit');
+        if (unitInp) {
+            const selAdmin = document.getElementById('selectAdminCabang');
+            const activeUnit = (selAdmin && selAdmin.value) ? selAdmin.value : (currentActiveUnit || '{{ $selectedKodeUnit ?? auth()->user()->unit_code ?? "001" }}');
+            unitInp.value = activeUnit;
+        }
+
+        handleMandiriSubAreaChange();
+
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+        } else if (typeof $ !== 'undefined' && $.fn && $.fn.modal) {
+            $(modalEl).modal('show');
+        }
+    }
+
+    function handleMandiriSubAreaChange() {
+        const sel = document.getElementById('mandiriSubArea')?.value;
+        const descInp = document.getElementById('mandiriDeskripsi');
+        if (!descInp) return;
+        if (sel === 'A2') {
+            descInp.value = 'Pemeriksaan Fisik Mandiri Kas Kecil (Sub-Area A2)';
+        } else if (sel === 'A3') {
+            descInp.value = 'Pemeriksaan Fisik Mandiri Kas / Khasanah (Sub-Area A3)';
+        } else {
+            descInp.value = 'Pemeriksaan Fisik Mandiri Kas Kecil dan Kas / Khasanah (A2 & A3)';
+        }
+    }
+
+    function submitTambahMandiri(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmitMandiri');
+        if (btn) btn.disabled = true;
+
+        const payload = {
+            kode_unit: document.getElementById('mandiriKodeUnit')?.value,
+            tanggal_data: document.getElementById('mandiriTanggal')?.value,
+            sub_area: document.getElementById('mandiriSubArea')?.value,
+            nominal_terkait: document.getElementById('mandiriNominal')?.value || 0,
+            no_arsip: document.getElementById('mandiriNoArsip')?.value || '',
+            deskripsi: document.getElementById('mandiriDeskripsi')?.value || '',
+            _token: '{{ csrf_token() }}'
+        };
+
+        axios.post(`${baseUrl}/store-mandiri`, payload)
+            .then(res => {
+                const modalEl = document.getElementById('modalTambahMandiriKas');
+                if (modalEl) {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    } else if (typeof $ !== 'undefined' && $.fn && $.fn.modal) {
+                        $(modalEl).modal('hide');
+                    }
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: res.data.message || 'Pemeriksaan mandiri berhasil ditambahkan.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(res.data.message || 'Pemeriksaan mandiri berhasil ditambahkan.');
+                }
+
+                // Segarkan data dan buka review jika berhasil
+                loadData();
+                if (res.data.finding && res.data.finding.id) {
+                    setTimeout(() => {
+                        openDetailView(res.data.finding.id);
+                    }, 600);
+                }
+            })
+            .catch(err => {
+                const msg = err.response?.data?.message || 'Gagal menambahkan pemeriksaan mandiri.';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
+                } else {
+                    alert(msg);
+                }
+            })
+            .finally(() => {
+                if (btn) btn.disabled = false;
+            });
+    }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -2468,4 +3507,73 @@
     </div>
 </div>
 @endif
+
+<!-- MODAL TAMBAH MANDIRI PEMERIKSAAN KAS / KAS KECIL -->
+<div class="modal fade" id="modalTambahMandiriKas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <div class="modal-header py-3 px-4" style="background: #f8fafc; border-bottom: 1px solid var(--border-color);">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fs-5 text-primary"><i class="bi bi-cash-coin"></i></span>
+                    <h6 class="modal-title fw-bold" style="color: var(--primary-blue); margin-bottom: 0;">
+                        Tambah Pemeriksaan Kas / Kas Kecil Mandiri
+                    </h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formTambahMandiriKas" onsubmit="submitTambahMandiri(event)">
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 px-3 mb-3" style="font-size: 0.8rem; border-left: 4px solid #0284c7; background: #f0f9ff;">
+                        <i class="bi bi-info-circle-fill me-1 text-info"></i> Gunakan form ini untuk mencatat sampel pemeriksaan fisik Kas Kecil (A2) atau Kas/Khasanah (A3) pada tanggal aktif ketika tidak ada mutasi teller terjaring dari DUMP CBS.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted mb-1">Sub-Area Pemeriksaan <span class="text-danger">*</span></label>
+                        <select id="mandiriSubArea" class="form-select form-select-sm" required onchange="handleMandiriSubAreaChange()">
+                            <option value="A2" selected>Kas Kecil (Sub-Area A2 — Register, Bukti, & Fisik Kas Kecil)</option>
+                            <option value="A3">Kas / Khasanah (Sub-Area A3 — BA Opname & Dual Control Khasanah)</option>
+                            <option value="BOTH">Kedua Sub-Area (Kas Kecil & Kas Khasanah — A2 & A3)</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Tanggal Pemeriksaan <span class="text-danger">*</span></label>
+                            <input type="date" id="mandiriTanggal" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted mb-1">Kode Unit / Cabang <span class="text-danger">*</span></label>
+                            <input type="text" id="mandiriKodeUnit" class="form-control form-control-sm bg-light" readonly required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted mb-1">Nominal Terkait / Plafon Kas (Rp)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light fw-bold">Rp</span>
+                            <input type="number" id="mandiriNominal" class="form-control form-control-sm text-end" min="0" step="any" placeholder="0" value="0">
+                        </div>
+                        <small class="text-muted" style="font-size: 0.72rem;">Isi dengan saldo/plafon kas kecil atau saldo kas besar yang diuji.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted mb-1">Nomor Berita Acara / Arsip <small class="text-muted fw-normal">(Opsional)</small></label>
+                        <input type="text" id="mandiriNoArsip" class="form-control form-control-sm" placeholder="Contoh: BA-KK-20261105-001">
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-muted mb-1">Uraian / Deskripsi Pemeriksaan</label>
+                        <textarea id="mandiriDeskripsi" class="form-control form-control-sm" rows="2" placeholder="Uraian pemeriksaan mandiri..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-4" style="background: #f8fafc; border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold" id="btnSubmitMandiri">
+                        <i class="bi bi-save me-1"></i> Simpan Pemeriksaan Mandiri
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection

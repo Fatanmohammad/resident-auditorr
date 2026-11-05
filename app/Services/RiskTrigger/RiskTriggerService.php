@@ -29,6 +29,7 @@ use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class RiskTriggerService
@@ -215,7 +216,7 @@ class RiskTriggerService
             $stats['total_new'] += $onStats['new'];
             $stats['total_updated'] += $onStats['updated'];
 
-            // 5. Update Status Duplikasi & Alarm Akumulasi (> 5 Temuan)
+            // 5. Update Status Duplikasi & Alarm Akumulasi (> 10 Temuan)
             $this->recalculateDuplicatesAndAlarms();
 
             DB::commit();
@@ -450,7 +451,13 @@ class RiskTriggerService
             $penyebab = '';
             $riskScore = 5.0;
 
-            if (str_contains($k->source_type, 'CashDetail')) {
+            if (str_contains($k->source_type, 'AtmMachine')) {
+                $area = RegisterTrigger::AREA_CASH_OPNAME;
+                $objekKey = 'ATM ' . ($source->terminal_id ?? '-') . ' (' . ($source->lokasi ?? 'Galeri ATM') . ')';
+                $selisih = abs((float)($source->selisih ?? 0));
+                $penyebab = $source->keterangan_selisih ?? 'Selisih kas opname mesin ATM & kaset';
+                $riskScore = 12.0;
+            } elseif (str_contains($k->source_type, 'CashDetail')) {
                 $area = RegisterTrigger::AREA_CASH_OPNAME;
                 $objekKey = ($source->objek_persediaan ?? 'Kas') . ' (' . ($source->pecahan ?? '-') . ')';
                 $selisih = abs((float)($source->selisih ?? 0));
@@ -617,7 +624,7 @@ class RiskTriggerService
     /**
      * Penarikan Otomatis Temuan Onsite ke Register Trigger (SOP 06)
      * Mengintegrasikan 11 KKA Onsite (6 Transaksional, Cash Opname, Observasi, 3 Rekon Fisik) + onsite_kka_findings
-     * Aturan Sheet Petunjuk SOP 06 Baris 9: Sumber = "Onsite", Perlu Verifikasi Lapangan = "Tidak" kecuali ada catatan perluasan scope / bukti baru / belum tuntas, atau akumulasi > 5.
+     * Aturan Sheet Petunjuk SOP 06 Baris 9: Sumber = "Onsite", Perlu Verifikasi Lapangan = "Tidak" kecuali ada catatan perluasan scope / bukti baru / belum tuntas, atau akumulasi > 10.
      */
     protected function syncOnsiteFindings(?User $user = null, array &$existingMap = [], array &$existingDupKeyMap = [], ?array $targetUnits = null): array
     {
@@ -1142,23 +1149,27 @@ class RiskTriggerService
     }
 
     /**
-     * Hitung ulang Status Duplikasi & Notifikasi Alarm Akumulasi (> 5 Temuan)
+     * Hitung ulang Status Duplikasi & Notifikasi Alarm Akumulasi (> 10 Temuan)
      * Mengikuti rumus Excel COUNTIF($U$6:U6, U6) > 1 (Kejadian pertama = UNIK, repetisi berikutnya = DUPLIKAT - REVIEW)
+     */
+    /**
+     * Hitung ulang Status Duplikasi & Notifikasi Alarm Akumulasi (> 10 Temuan per Cabang/Unit)
      */
     public function recalculateDuplicatesAndAlarms(): array
     {
         $allTriggers = RegisterTrigger::orderBy('id', 'asc')->get();
 
-        // 1. Hitung akumulasi temuan Moderate-to-High dan High/Critical (skor >= 5) per Unit + Area risiko
-        $unitAreaHighCounts = [];
-        $unitAreaSourceCounts = [];
+        // 1. Hitung akumulasi temuan per Unit / Cabang
+        $unitHighCounts = [];
+        $unitSourceCounts = [];
+        $unitAreaCounts = [];
         foreach ($allTriggers as $t) {
-            if ($t->risk_score_reassessment >= 5 || $t->risk_score_sumber >= 5) {
-                $compositeKey = "{$t->kode_unit}|{$t->area}";
-                $unitAreaHighCounts[$compositeKey] = ($unitAreaHighCounts[$compositeKey] ?? 0) + 1;
-                $src = $t->sumber ?: 'Lainnya';
-                $unitAreaSourceCounts[$compositeKey][$src] = ($unitAreaSourceCounts[$compositeKey][$src] ?? 0) + 1;
-            }
+            $uCode = (string)$t->kode_unit;
+            $unitHighCounts[$uCode] = ($unitHighCounts[$uCode] ?? 0) + 1;
+            $src = $t->sumber ?: 'Lainnya';
+            $unitSourceCounts[$uCode][$src] = ($unitSourceCounts[$uCode][$src] ?? 0) + 1;
+            $area = $t->area ?: 'Umum/Lainnya';
+            $unitAreaCounts[$uCode][$area] = ($unitAreaCounts[$uCode][$area] ?? 0) + 1;
         }
 
         $triggeredAlarms = [];
@@ -1166,6 +1177,7 @@ class RiskTriggerService
 
         foreach ($allTriggers as $t) {
             $changed = false;
+            $uCode = (string)$t->kode_unit;
 
             // Status Duplikat: Muncul pertama kali = UNIK, repetisi berikutnya = DUPLIKAT - REVIEW
             $dupKey = $t->duplicate_key;
@@ -1183,31 +1195,34 @@ class RiskTriggerService
                 $changed = true;
             }
 
-            // Alarm Akumulasi > 5 Temuan (Daily Review + Offsite + Onsite)
-            $compositeKey = "{$t->kode_unit}|{$t->area}";
-            $countInGroup = $unitAreaHighCounts[$compositeKey] ?? 0;
-            $alarmActive = $countInGroup > 5;
+            // Alarm Akumulasi > 10 Temuan per Cabang (minimal 11 temuan)
+            $countInUnit = $unitHighCounts[$uCode] ?? 0;
+            $alarmActive = $countInUnit > RegisterTrigger::ACCUMULATION_ALARM_THRESHOLD;
 
             if ($alarmActive) {
-                $drCount = $unitAreaSourceCounts[$compositeKey]['Daily Review'] ?? 0;
-                $offCount = $unitAreaSourceCounts[$compositeKey]['Offsite'] ?? 0;
-                $onCount = $unitAreaSourceCounts[$compositeKey]['Onsite'] ?? 0;
-                $namaUnit = $t->nama_unit ?: $this->resolveUnitName($t->kode_unit);
+                $namaUnit = $t->nama_unit ?: $this->resolveUnitName($uCode);
+                $drCount = $unitSourceCounts[$uCode]['Daily Review'] ?? 0;
+                $offCount = $unitSourceCounts[$uCode]['Offsite'] ?? 0;
+                $onCount = $unitSourceCounts[$uCode]['Onsite'] ?? 0;
 
-                if (!isset($triggeredAlarms[$compositeKey])) {
-                    $triggeredAlarms[$compositeKey] = [
-                        'kode_unit' => $t->kode_unit,
+                if (!isset($triggeredAlarms[$uCode])) {
+                    // Tentukan area terbanyak
+                    $areaList = $unitAreaCounts[$uCode] ?? [];
+                    arsort($areaList);
+                    $topArea = array_key_first($areaList) ?? $t->area;
+
+                    $triggeredAlarms[$uCode] = [
+                        'kode_unit' => $uCode,
                         'nama_unit' => $namaUnit,
-                        'area' => $t->area,
-                        'count' => $countInGroup,
+                        'area' => $topArea,
+                        'count' => $countInUnit,
                         'dr_count' => $drCount,
                         'off_count' => $offCount,
                         'on_count' => $onCount,
-                        'message' => "PERINGATAN RISK TRIGGER: Area {$t->area} pada {$namaUnit} memiliki {$countInGroup} akumulasi temuan Moderate-to-High / High (> 5) dari gabungan [Daily Review: {$drCount}, Offsite: {$offCount}, Onsite: {$onCount}]. Segera lakukan pendalaman kembali / pemeriksaan Risk Trigger Visit!",
+                        'message' => "⚠️ Risk Trigger: Cabang {$namaUnit} memiliki {$countInUnit} temuan (> 10). Segera informasikan untuk pendalaman lebih lanjut.",
                     ];
                 }
 
-                // Otomatis tandai Perlu Verifikasi Lapangan = "Ya"
                 if ($t->perlu_verifikasi_lapangan !== 'Ya') {
                     $t->perlu_verifikasi_lapangan = 'Ya';
                     $changed = true;
@@ -1223,52 +1238,130 @@ class RiskTriggerService
     }
 
     /**
-     * Dapatkan daftar aktif Notifikasi Alarm (> 5 Temuan per Unit & Area)
-     * Mengagregasi seluruh temuan Moderate-to-High & High/Critical dari Daily Review, Offsite, dan Onsite
+     * Dapatkan daftar aktif Notifikasi Alarm (> 10 Temuan per Cabang / Unit Kerja)
+     * Mengagregasi seluruh temuan dari Daily Review, KKA Fisik, Offsite, dan Onsite
      */
     public function getActiveAlarms(?User $user = null, ?string $filterKodeUnit = null): array
     {
-        $query = RegisterTrigger::where(function ($q) {
-            $q->where('risk_score_reassessment', '>=', 5)
-                ->orWhere('risk_score_sumber', '>=', 5);
-        });
-
+        // Role RA tidak diperkenankan mengakses modul Risk Trigger
         if ($user && strtolower($user->role) === 'ra') {
-            $query->byBranch($user);
-        } elseif (!empty($filterKodeUnit)) {
+            return [];
+        }
+
+        $query = RegisterTrigger::query();
+
+        if (!empty($filterKodeUnit)) {
             $expanded = static::expandUnitCode($filterKodeUnit);
             $query->whereIn('kode_unit', $expanded);
         }
 
-        $allHighTriggers = $query->get();
-        $grouped = $allHighTriggers->groupBy(function ($t) {
-            return "{$t->kode_unit}|{$t->area}";
-        });
+        $allTriggers = $query->orderBy('tanggal_trigger', 'desc')->orderBy('id', 'desc')->get();
+        $grouped = $allTriggers->groupBy('kode_unit');
 
         $alarms = [];
-        foreach ($grouped as $key => $triggers) {
+        foreach ($grouped as $uCode => $triggers) {
             $total = $triggers->count();
-            if ($total > 5) {
+            if ($total > RegisterTrigger::ACCUMULATION_ALARM_THRESHOLD) {
                 $first = $triggers->first();
-                $namaUnit = $first->nama_unit ?: $this->resolveUnitName($first->kode_unit);
+                $namaUnit = $first->nama_unit ?: $this->resolveUnitName((string)$uCode);
+
+                // Sebaran Area Temuan
+                $areaCounts = $triggers->groupBy('area')->map->count()->sortDesc();
+                $topArea = $areaCounts->keys()->first() ?? 'Umum/Lainnya';
+                $sebaranParts = [];
+                foreach ($areaCounts->take(3) as $areaName => $cnt) {
+                    $sebaranParts[] = "{$areaName} ({$cnt})";
+                }
+                $sebaranText = implode(', ', $sebaranParts);
+
+                // Waktu Terdeteksi
+                $latestTrigger = $triggers->first();
+                $waktuTerdeteksi = $latestTrigger?->created_at 
+                    ? $latestTrigger->created_at->format('d/m/Y H:i') 
+                    : ($latestTrigger?->tanggal_trigger ? Carbon::parse($latestTrigger->tanggal_trigger)->format('d/m/Y') : now()->format('d/m/Y H:i'));
+
                 $drCount = $triggers->where('sumber', 'Daily Review')->count();
                 $offCount = $triggers->where('sumber', 'Offsite')->count();
                 $onCount = $triggers->where('sumber', 'Onsite')->count();
 
+                $followedUpTrigger = $triggers->first(function ($t) {
+                    return in_array($t->status_workflow, ['DALAM PANTAUAN ALARM', 'SELESAI/DALAM TL', 'SELESAI'])
+                        || $t->status_tindak_lanjut_alarm === 'TELAH DITINDAKLANJUTI';
+                });
+                $isFollowedUp = $followedUpTrigger !== null;
+                $catatanFollowUp = $followedUpTrigger?->catatan_tindak_lanjut_alarm 
+                    ?? ($isFollowedUp ? 'Telah diinformasikan kepada manajemen / Pak Adam.' : null);
+                $waktuFollowUp = $followedUpTrigger?->waktu_tindak_lanjut_alarm;
+                $ditindaklanjutiOleh = $followedUpTrigger?->ditindaklanjuti_oleh;
+
                 $alarms[] = [
-                    'kode_unit' => $first->kode_unit,
+                    'kode_unit' => (string)$uCode,
                     'nama_unit' => $namaUnit,
-                    'area' => $first->area,
+                    'area' => $topArea,
+                    'sebaran_area' => $sebaranText,
+                    'area_counts' => $areaCounts->toArray(),
                     'count' => $total,
                     'dr_count' => $drCount,
                     'off_count' => $offCount,
                     'on_count' => $onCount,
-                    'message' => "PERINGATAN RISK TRIGGER: Area {$first->area} pada {$namaUnit} memiliki {$total} akumulasi temuan Moderate-to-High / High (> 5) dari gabungan [Daily Review: {$drCount}, Offsite: {$offCount}, Onsite: {$onCount}]. Segera lakukan pendalaman kembali / pemeriksaan Risk Trigger Visit!",
+                    'waktu_terdeteksi' => $waktuTerdeteksi,
+                    'is_followed_up' => $isFollowedUp,
+                    'status_notifikasi' => $isFollowedUp ? 'Sudah Diinfokan' : 'Perlu Diinfokan',
+                    'status_label' => $isFollowedUp ? 'Sudah Diinfokan' : 'Perlu Diinfokan',
+                    'catatan_tindak_lanjut' => $catatanFollowUp,
+                    'waktu_tindak_lanjut' => $waktuFollowUp ? $waktuFollowUp->format('d/m/Y H:i') : null,
+                    'ditindaklanjuti_oleh' => $ditindaklanjutiOleh,
+                    'message' => "⚠️ Risk Trigger: Cabang {$namaUnit} memiliki {$total} temuan (> 10). Segera informasikan untuk pendalaman lebih lanjut.",
+                    'findings' => $triggers,
                 ];
             }
         }
 
         return $alarms;
+    }
+
+    /**
+     * Jumlah Cabang yang sedang terkena trigger > 10 temuan
+     */
+    public function getActiveAlarmsCount(?User $user = null): int
+    {
+        return count($this->getActiveAlarms($user));
+    }
+
+    /**
+     * KPI Statistik Ringkas: Total Cabang | Belum Diinfokan | Sudah Diinfokan
+     */
+    public function getAlarmKpiStats(?User $user = null): array
+    {
+        $alarms = $this->getActiveAlarms($user);
+        $total = count($alarms);
+        $belum = collect($alarms)->where('is_followed_up', false)->count();
+        $sudah = collect($alarms)->where('is_followed_up', true)->count();
+
+        return [
+            'total_cabang' => $total,
+            'belum_diinfokan' => $belum,
+            'sudah_diinfokan' => $sudah,
+        ];
+    }
+
+    /**
+     * Tandai Alarm Cabang sebagai Sudah Diinfokan
+     */
+    public function markBranchAsInformed(string $kodeUnit, ?string $catatan = null, ?User $actor = null): int
+    {
+        $actorName = $actor ? $actor->name : (Auth::user()?->name ?? 'Admin SKAI');
+        $note = $catatan ?: 'Telah diinformasikan kepada manajemen / Pak Adam untuk pendalaman lebih lanjut.';
+        $expanded = static::expandUnitCode($kodeUnit);
+
+        return RegisterTrigger::whereIn('kode_unit', !empty($expanded) ? $expanded : [$kodeUnit])
+            ->update([
+                'status_workflow' => 'DALAM PANTAUAN ALARM',
+                'status_tindak_lanjut_alarm' => 'TELAH DITINDAKLANJUTI',
+                'catatan_tindak_lanjut_alarm' => $note,
+                'waktu_tindak_lanjut_alarm' => now(),
+                'ditindaklanjuti_oleh' => $actorName,
+            ]);
     }
 
     /**
@@ -1364,7 +1457,7 @@ class RiskTriggerService
                 'total_trigger' => $totalTrigger,
                 'total_visit' => $totalVisit,
                 'total_exception' => $totalException,
-                'is_alarm' => isset($alarmAreaMap[$areaName]) || $totalTrigger > 5,
+                'is_alarm' => isset($alarmAreaMap[$areaName]) || $totalTrigger > RegisterTrigger::ACCUMULATION_ALARM_THRESHOLD,
             ];
         }
 
@@ -1469,7 +1562,7 @@ class RiskTriggerService
         $assignment->area = $trigger->area;
         $assignment->risk_level = $trigger->risk_level_reassessment;
         $assignment->keputusan_final = $trigger->keputusan_final;
-        $assignment->kka_tujuan = $trigger->kka_tujuan;
+        $assignment->kka_tujuan = $trigger->kka_tujuan ?: RegisterTrigger::mapAreaToKkaTujuan($trigger->area);
         $assignment->scope_tujuan_awal = $trigger->uraian_trigger;
         $assignment->periode_populasi = $periodePopulasi;
         $assignment->tanggal_visit = $tanggalVisit;
@@ -1508,7 +1601,7 @@ class RiskTriggerService
         $pk->visit_id = $assignment->visit_id;
         $pk->trigger_id = $trigger->trigger_id;
         $pk->area = $trigger->area;
-        $pk->kka_tujuan = $param?->kka_tujuan ?: $trigger->kka_tujuan;
+        $pk->kka_tujuan = $param?->kka_tujuan ?: ($trigger->kka_tujuan ?: RegisterTrigger::mapAreaToKkaTujuan($trigger->area));
         $pk->tujuan_uji = $param?->tujuan_uji ?: 'Membuktikan transaksi/selisih/reversal/otorisasi pemicu';
         $pk->kriteria_utama = $param?->kriteria_utama ?: 'Kebijakan dan SOP relevan';
         $pk->data_bukti_minimum = $param?->data_bukti_minimum ?: ($trigger->bukti_awal ?: 'Daftar transaksi pemicu dan voucher');
@@ -1725,9 +1818,12 @@ class RiskTriggerService
             }
         }
 
-        // Input Pengujian Profesional RA (Kolom J s.d. N, Kolom Q)
+        // Input Pengujian RA (Kolom J s.d. N, Kolom Q)
         if (array_key_exists('ringkasan_bukti', $data)) {
             $kka->ringkasan_bukti = trim($data['ringkasan_bukti']) ?: null;
+        }
+        if (array_key_exists('file_ringkasan_bukti', $data)) {
+            $kka->file_ringkasan_bukti = $data['file_ringkasan_bukti'];
         }
         if (array_key_exists('hasil_analisis', $data)) {
             $kka->hasil_analisis = trim($data['hasil_analisis']) ?: null;
@@ -1748,6 +1844,33 @@ class RiskTriggerService
         }
         if (array_key_exists('simpulan_ra', $data)) {
             $kka->simpulan_ra = trim($data['simpulan_ra']) ?: null;
+        }
+        if (array_key_exists('klausul_covenant', $data)) {
+            $kka->klausul_covenant = trim((string)$data['klausul_covenant']) ?: null;
+        }
+        if (array_key_exists('status_covenant', $data)) {
+            $kka->status_covenant = trim((string)$data['status_covenant']) ?: null;
+        }
+        if (array_key_exists('catatan_covenant', $data)) {
+            $kka->catatan_covenant = trim((string)$data['catatan_covenant']) ?: null;
+        }
+        if (array_key_exists('komparasi_sistem_data', $data)) {
+            $kka->komparasi_sistem_data = $data['komparasi_sistem_data'];
+        }
+
+        // Simpan / sinkronisasi row ke RiskTriggerCovenant jika klausul_covenant terisi
+        if (!empty($kka->klausul_covenant)) {
+            \App\Models\RiskTrigger\RiskTriggerCovenant::updateOrCreate(
+                [
+                    'risk_trigger_kka_induk_id' => $kka->id,
+                    'visit_id' => $kka->visit_id,
+                ],
+                [
+                    'klausul_covenant' => $kka->klausul_covenant,
+                    'status_pemenuhan' => $kka->status_covenant ?: 'Terpenuhi',
+                    'catatan' => $kka->catatan_covenant,
+                ]
+            );
         }
 
         // Status Review (Kolom T): Khusus Admin / Reviewer

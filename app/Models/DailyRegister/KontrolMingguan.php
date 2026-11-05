@@ -77,14 +77,14 @@ class KontrolMingguan extends Model
         $weekNumber = (int) $refDate->isoWeek();
 
         $existing = self::where('kode_unit', $kodeUnit)
-            ->where('start_date', $monday)
+            ->whereDate('start_date', $monday)
             ->orderBy('hari_rencana', 'asc')
             ->get();
 
         if ($existing->count() < 5) {
             foreach (self::defaultAreas() as $def) {
                 $item = self::where('kode_unit', $kodeUnit)
-                    ->where('start_date', $monday)
+                    ->whereDate('start_date', $monday)
                     ->where('area_key', $def['area_key'])
                     ->first();
 
@@ -109,7 +109,7 @@ class KontrolMingguan extends Model
             }
 
             $existing = self::where('kode_unit', $kodeUnit)
-                ->where('start_date', $monday)
+                ->whereDate('start_date', $monday)
                 ->orderBy('hari_rencana', 'asc')
                 ->get();
         }

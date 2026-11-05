@@ -12,6 +12,108 @@
     </p>
 </div>
 
+{{-- ALERT BANNER PERINGATAN MENCOLOK RISK TRIGGER (> 10 TEMUAN) --}}
+@php
+    $uninformedAlarms = collect($riskTriggerAlarms ?? [])->where('is_followed_up', false)->values()->all();
+@endphp
+@if(strtolower(auth()->user()->role ?? '') === 'admin' && !empty($uninformedAlarms))
+<div class="alert alert-danger border-danger-subtle p-3.5 mb-4 shadow-sm" style="border-radius: 12px; background: #fff5f5; border: 2px solid #ef4444;">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-danger text-white px-2.5 py-1.5" style="font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em;">
+                <i class="bi bi-bell-fill me-1"></i> ALARM RISK TRIGGER (SOP 06)
+            </span>
+            <span class="fw-bold text-danger" style="font-size: 0.96rem;">
+                Terdeteksi {{ count($uninformedAlarms) }} Cabang Melampaui Ambang Batas Akumulasi (&gt; 10 Temuan)
+            </span>
+        </div>
+        <a href="{{ route('risk-trigger.index') }}" class="btn btn-sm btn-danger px-3 py-1 rounded-pill fw-bold" style="font-size: 0.8rem;">
+            Buka SOP 06 Alarm Center &rarr;
+        </a>
+    </div>
+    <div style="font-size: 0.82rem; color: #7f1d1d; margin-bottom: 0.75rem;">
+        Alarm sistem menyala otomatis karena akumulasi temuan per cabang di bawah telah menembus ambang batas (&gt; 10 temuan). Admin dapat segera menginformasikan ke pimpinan untuk pendalaman lebih lanjut:
+    </div>
+    <div class="row g-2">
+        @foreach($uninformedAlarms as $alarm)
+        @php
+            $alarmModalId = 'modalDashAlarm_' . (\Illuminate\Support\Str::slug($alarm['kode_unit']) ?: md5($alarm['kode_unit']));
+        @endphp
+        <div class="col-md-4">
+            <div class="p-3 bg-white rounded border border-danger-subtle h-100 d-flex flex-column justify-content-between shadow-2xs">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start gap-1">
+                        <div class="fw-bold text-danger" style="font-size: 0.88rem;">{{ $alarm['nama_unit'] }} ({{ $alarm['kode_unit'] }})</div>
+                        <span class="badge bg-danger text-white">{{ $alarm['count'] }} Temuan</span>
+                    </div>
+                    <div class="text-dark small fw-semibold mt-1">Area Terbanyak: <span class="text-primary">{{ $alarm['area'] }}</span></div>
+                    <div class="text-muted mt-1" style="font-size: 0.76rem;">
+                        Sebaran: <strong>{{ $alarm['sebaran_area'] ?? $alarm['area'] }}</strong>
+                    </div>
+                    @if(!empty($alarm['is_followed_up']) && !empty($alarm['catatan_tindak_lanjut']))
+                        <div class="mt-1.5 p-1.5 bg-success-subtle rounded border border-success-subtle text-success small" style="font-size: 0.74rem;">
+                            <i class="bi bi-info-circle me-1"></i>{{ Str::limit($alarm['catatan_tindak_lanjut'], 70) }}
+                        </div>
+                    @endif
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2.5 pt-2 border-top">
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold" style="font-size: 0.72rem;">
+                        <i class="bi bi-clock-history me-0.5"></i> Perlu Diinfokan
+                    </span>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-xs btn-outline-danger py-0.5 px-2 rounded-pill" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#{{ $alarmModalId }}">
+                            <i class="bi bi-send-check me-0.5"></i> Tindak Lanjut
+                        </button>
+                        <a href="{{ route('risk-trigger.index') }}" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill" style="font-size: 0.75rem;">
+                            Detail &rarr;
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- MODAL TINDAK LANJUT ALARM --}}
+        <div class="modal fade" id="{{ $alarmModalId }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <form action="{{ route('risk-trigger.alarm.follow-up') }}" method="POST" class="modal-content text-start">
+                    @csrf
+                    <input type="hidden" name="kode_unit" value="{{ $alarm['kode_unit'] }}">
+                    <div class="modal-header bg-danger text-white py-2.5 px-3">
+                        <h6 class="modal-title fs-6 fw-bold">
+                            <i class="bi bi-bell-fill me-1"></i> Tindak Lanjut Alarm Cabang: {{ $alarm['nama_unit'] }}
+                        </h6>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-3">
+                        <div class="alert alert-light border p-2.5 mb-3 small">
+                            <div><strong>Kantor Cabang:</strong> {{ $alarm['nama_unit'] }} ({{ $alarm['kode_unit'] }})</div>
+                            <div><strong>Akumulasi Temuan:</strong> <span class="badge bg-danger text-white">{{ $alarm['count'] }} Temuan (&gt; 10)</span></div>
+                            <div class="text-muted mt-1">Sebaran Area: {{ $alarm['sebaran_area'] ?? $alarm['area'] }}</div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold text-dark mb-1">
+                                Catatan / Konfirmasi Penginformasian <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="catatan" class="form-control" rows="3" required placeholder="Tuliskan catatan bahwa alarm telah diinformasikan ke manajemen/Pak Adam...">{{ old('catatan', $alarm['catatan_tindak_lanjut'] ?? 'Diteruskan ke Pemimpin Cabang & Tim SKAI untuk pendalaman') }}</textarea>
+                            <div class="form-text small text-muted">
+                                Status alarm akan ditandai Sudah Diinfokan tanpa perlu form KKA/review panjang.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2 px-3">
+                        <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3 fw-bold">
+                            <i class="bi bi-check2-circle me-1"></i> Tandai Sudah Diinfokan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        @endforeach
+    </div>
+</div>
+@endif
+
 {{-- Stat Cards --}}
 <div class="grid grid-cols-4" style="margin-bottom: 1.5rem;">
     <div class="stat-card">

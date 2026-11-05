@@ -186,9 +186,29 @@
                         @forelse($indikasis ?? [] as $item)
                             <tr>
                                 <td class="ps-3">
-                                    <span class="badge bg-light text-primary border border-primary font-monospace fw-bold px-2 py-1">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-light border border-primary text-primary font-monospace fw-bold px-2 py-0 btn-detail-register"
+                                            style="font-size: 0.78rem; cursor: pointer;"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalDetailRegister"
+                                            data-id="{{ $item->indikasi_id }}"
+                                            data-real-id="{{ $item->id }}"
+                                            data-tgl="{{ $item->tanggal_diterima }}"
+                                            data-jam="{{ $item->jam ?? '08:30' }}"
+                                            data-unit="[{{ $item->kode_unit }}] {{ $item->nama_unit }}"
+                                            data-area="{{ $item->area ?? '-' }}"
+                                            data-sumber="{{ $item->sumber_indikasi }}"
+                                            data-redflag="{{ $item->red_flag_utama }}"
+                                            data-nominal="Rp {{ number_format($item->nominal_awal) }}"
+                                            data-sensitivitas="{{ $item->sensitivitas_reputasi }}"
+                                            data-nasabah="{{ $item->nasabah_terdampak ?? 'TIDAK' }}"
+                                            data-pimpinan="{{ $item->pihak_kunci_pimpinan ?? 'TIDAK' }}"
+                                            data-fakta="{{ $item->fakta_awal_terverifikasi ?? 'Belum ada catatan fakta terverifikasi' }}"
+                                            data-dugaan="{{ $item->dugaan_belum_terverifikasi ?? 'Belum ada catatan dugaan' }}"
+                                            data-status="{{ $item->status_kasus }}"
+                                            title="Klik untuk membuka detail lembar kerja kasus {{ $item->indikasi_id }}">
                                         {{ $item->indikasi_id }}
-                                    </span>
+                                    </button>
                                 </td>
                                 <td>
                                     <span class="fw-semibold text-dark d-block">
@@ -262,9 +282,47 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-1">
-                                        <i class="bi bi-folder2-open me-1"></i>{{ $item->status_kasus }}
-                                    </span>
+                                    @php
+                                        $st = strtoupper($item->status_kasus ?? 'OPEN');
+                                        $stClass = match($st) {
+                                            'OPEN' => 'bg-warning bg-opacity-15 text-dark border-warning',
+                                            'INVESTIGASI' => 'bg-danger bg-opacity-15 text-danger border-danger',
+                                            'CLOSED' => 'bg-success bg-opacity-15 text-success border-success',
+                                            'PEMBINAAN' => 'bg-info bg-opacity-15 text-info border-info',
+                                            default => 'bg-primary bg-opacity-10 text-primary border-primary',
+                                        };
+                                        $stIcon = match($st) {
+                                            'OPEN' => 'bi-folder2-open',
+                                            'INVESTIGASI' => 'bi-search',
+                                            'CLOSED' => 'bi-check-circle-fill',
+                                            'PEMBINAAN' => 'bi-person-check-fill',
+                                            default => 'bi-folder2-open',
+                                        };
+                                    @endphp
+                                    <button type="button" 
+                                            class="btn btn-sm py-1 px-2 border rounded-pill btn-detail-register d-inline-flex align-items-center gap-1 {{ $stClass }}"
+                                            style="font-size: 0.76rem; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalDetailRegister"
+                                            data-id="{{ $item->indikasi_id }}"
+                                            data-real-id="{{ $item->id }}"
+                                            data-tgl="{{ $item->tanggal_diterima }}"
+                                            data-jam="{{ $item->jam ?? '08:30' }}"
+                                            data-unit="[{{ $item->kode_unit }}] {{ $item->nama_unit }}"
+                                            data-area="{{ $item->area ?? '-' }}"
+                                            data-sumber="{{ $item->sumber_indikasi }}"
+                                            data-redflag="{{ $item->red_flag_utama }}"
+                                            data-nominal="Rp {{ number_format($item->nominal_awal) }}"
+                                            data-sensitivitas="{{ $item->sensitivitas_reputasi }}"
+                                            data-nasabah="{{ $item->nasabah_terdampak ?? 'TIDAK' }}"
+                                            data-pimpinan="{{ $item->pihak_kunci_pimpinan ?? 'TIDAK' }}"
+                                            data-fakta="{{ $item->fakta_awal_terverifikasi ?? 'Belum ada catatan fakta terverifikasi' }}"
+                                            data-dugaan="{{ $item->dugaan_belum_terverifikasi ?? 'Belum ada catatan dugaan' }}"
+                                            data-status="{{ $item->status_kasus }}"
+                                            title="Klik untuk membuka detail lembar kerja kasus {{ $item->indikasi_id }} (Status: {{ $item->status_kasus }})">
+                                        <i class="bi {{ $stIcon }}"></i>
+                                        <span>{{ $item->status_kasus }}</span>
+                                    </button>
                                 </td>
                                 <td class="text-end pe-3">
                                     <div class="btn-group btn-group-sm" role="group">
@@ -273,6 +331,7 @@
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#modalDetailRegister"
                                                 data-id="{{ $item->indikasi_id }}"
+                                                data-real-id="{{ $item->id }}"
                                                 data-tgl="{{ $item->tanggal_diterima }}"
                                                 data-jam="{{ $item->jam ?? '08:30' }}"
                                                 data-unit="[{{ $item->kode_unit }}] {{ $item->nama_unit }}"
@@ -317,19 +376,60 @@
     </div>
 </div>
 
+<style>
+    /* Styling scrollable modal form agar nyaman di-scroll pada semua resolusi layar */
+    #modalAddRegister .modal-content,
+    #modalDetailRegister .modal-content {
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+    }
+    #modalAddRegister .modal-header,
+    #modalDetailRegister .modal-header,
+    #modalAddRegister .modal-footer,
+    #modalDetailRegister .modal-footer {
+        flex-shrink: 0;
+    }
+    #modalAddRegister .modal-body,
+    #modalDetailRegister .modal-body {
+        overflow-y: auto !important;
+        max-height: calc(90vh - 130px) !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: #94a3b8 #f1f5f9;
+    }
+    #modalAddRegister .modal-body::-webkit-scrollbar,
+    #modalDetailRegister .modal-body::-webkit-scrollbar {
+        width: 8px;
+    }
+    #modalAddRegister .modal-body::-webkit-scrollbar-track,
+    #modalDetailRegister .modal-body::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+    #modalAddRegister .modal-body::-webkit-scrollbar-thumb,
+    #modalDetailRegister .modal-body::-webkit-scrollbar-thumb {
+        background-color: #94a3b8;
+        border-radius: 4px;
+    }
+    #modalAddRegister .modal-body::-webkit-scrollbar-thumb:hover,
+    #modalDetailRegister .modal-body::-webkit-scrollbar-thumb:hover {
+        background-color: #64748b;
+    }
+</style>
+
 <!-- Modal Form Tambah Register Indikasi (Form Terbimbing 3 Tahap) -->
 <div class="modal fade" id="modalAddRegister" tabindex="-1" aria-labelledby="modalAddRegisterLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <form action="{{ route('pemeriksaan_awal.register.store') }}" method="POST">
-                @csrf
-                <div class="modal-header bg-primary text-white py-3">
-                    <h5 class="modal-title fw-bold" id="modalAddRegisterLabel">
-                        <i class="bi bi-journal-plus me-2"></i> Form Registrasi Kasus Indikasi Fraud (WP-RA-09-A)
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
+        <form action="{{ route('pemeriksaan_awal.register.store') }}" method="POST" class="modal-content border-0 shadow-lg" style="max-height: 90vh;">
+            @csrf
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title fw-bold" id="modalAddRegisterLabel">
+                    <i class="bi bi-journal-plus me-2"></i> Form Registrasi Kasus Indikasi Fraud (WP-RA-09-A)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" style="overflow-y: auto; max-height: calc(90vh - 130px);">
                     <!-- SECTION 1: IDENTITAS & ASAL KASUS -->
                     <div class="d-flex align-items-center mb-3">
                         <span class="badge bg-primary rounded-circle p-2 me-2">1</span>
@@ -484,29 +584,45 @@
             </form>
         </div>
     </div>
-</div>
 
 <!-- Modal Detail Register Indikasi -->
 <div class="modal fade" id="modalDetailRegister" tabindex="-1" aria-labelledby="modalDetailRegisterLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content border-0 shadow" style="max-height: 90vh;">
             <div class="modal-header bg-dark text-white py-3">
                 <h5 class="modal-title fw-bold" id="modalDetailRegisterLabel">
                     <i class="bi bi-file-earmark-text me-2"></i> Lembar Kerja Detail Indikasi Fraud
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded border">
-                    <div>
+            <div class="modal-body p-4" style="overflow-y: auto; max-height: calc(90vh - 130px);">
+                <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded border flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-primary fs-6 font-monospace px-3 py-2" id="dtl_id">-</span>
-                        <span class="badge bg-secondary ms-2" id="dtl_status">-</span>
+                        <span class="badge bg-secondary px-3 py-2 fs-6" id="dtl_status">-</span>
                     </div>
                     <div class="text-end">
                         <small class="text-muted d-block">Tanggal Diterima</small>
                         <span class="fw-bold text-dark" id="dtl_waktu">-</span>
                     </div>
                 </div>
+
+                <!-- Form Ubah Status Kasus Cepat -->
+                <form id="formUpdateStatusKasus" method="POST" action="" class="mb-3 p-2 bg-light rounded border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    @csrf
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-muted small fw-bold mb-0 text-nowrap"><i class="bi bi-tag me-1"></i>Status Kasus:</label>
+                        <select name="status_kasus" id="select_update_status" class="form-select form-select-sm" style="width: auto;">
+                            <option value="OPEN">Status: OPEN (Pemeriksaan Awal / Fact-Finding)</option>
+                            <option value="INVESTIGASI">Status: INVESTIGASI (Investigasi Lanjut SKAI)</option>
+                            <option value="PEMBINAAN">Status: PEMBINAAN (Pembinaan Internal Unit)</option>
+                            <option value="CLOSED">Status: CLOSED (Kasus Ditutup / Selesai)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary btn-sm px-3 fw-semibold">
+                        <i class="bi bi-check-lg me-1"></i> Simpan Status
+                    </button>
+                </form>
 
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -554,10 +670,19 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light d-flex justify-content-between">
-                <div>
-                    <a href="{{ route('pemeriksaan_awal.triase') }}" class="btn btn-outline-primary btn-sm fw-semibold">
-                        <i class="bi bi-diagram-3 me-1"></i> Buka Lembar Triase
+            <div class="modal-footer bg-light d-flex justify-content-between flex-wrap gap-2">
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ route('pemeriksaan_awal.triase') }}" id="dtl_btn_triase" class="btn btn-primary btn-sm fw-semibold">
+                        <i class="bi bi-diagram-3 me-1"></i> Buka Lembar Triase (Tahap 2)
+                    </a>
+                    <a href="{{ route('pemeriksaan_awal.bukti_custody') }}" id="dtl_btn_custody" class="btn btn-outline-success btn-sm fw-semibold">
+                        <i class="bi bi-shield-check me-1"></i> Chain of Custody (Tahap 3)
+                    </a>
+                    <a href="{{ route('pemeriksaan_awal.kka') }}" id="dtl_btn_kka" class="btn btn-outline-secondary btn-sm fw-semibold">
+                        <i class="bi bi-journal-check me-1"></i> KKA Fact-Finding (Tahap 4)
+                    </a>
+                    <a href="{{ route('pemeriksaan_awal.eskalasi') }}" id="dtl_btn_eskalasi" class="btn btn-outline-warning text-dark btn-sm fw-semibold">
+                        <i class="bi bi-arrow-up-right-circle me-1"></i> Keputusan &amp; Eskalasi (Tahap 5)
                     </a>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Tutup</button>
@@ -581,12 +706,35 @@
             document.body.appendChild(modalDetail);
         }
 
-        // Handler untuk tombol detail register
+        // Handler untuk tombol detail register (termasuk tombol Status Kasus & ID Kasus)
         document.querySelectorAll('.btn-detail-register').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                document.getElementById('dtl_id').textContent = this.getAttribute('data-id');
-                document.getElementById('dtl_status').textContent = this.getAttribute('data-status');
-                document.getElementById('dtl_waktu').textContent = this.getAttribute('data-tgl') + ' (' + this.getAttribute('data-jam') + ' WITA)';
+                var id = this.getAttribute('data-id');
+                var realId = this.getAttribute('data-real-id');
+                var st = (this.getAttribute('data-status') || 'OPEN').toUpperCase();
+
+                document.getElementById('dtl_id').textContent = id;
+                
+                var statusElem = document.getElementById('dtl_status');
+                if (statusElem) {
+                    statusElem.textContent = st;
+                    var stColor = (st === 'OPEN') ? 'bg-warning text-dark' :
+                                  (st === 'INVESTIGASI' ? 'bg-danger text-white' :
+                                  (st === 'CLOSED' ? 'bg-success text-white' : 'bg-primary text-white'));
+                    statusElem.className = 'badge ms-2 ' + stColor;
+                }
+
+                var selectStatus = document.getElementById('select_update_status');
+                if (selectStatus) {
+                    selectStatus.value = st;
+                }
+
+                var formStatus = document.getElementById('formUpdateStatusKasus');
+                if (formStatus && realId) {
+                    formStatus.action = "{{ url('pemeriksaan-awal/register') }}/" + realId + "/status";
+                }
+
+                document.getElementById('dtl_waktu').textContent = this.getAttribute('data-tgl') + ' (' + (this.getAttribute('data-jam') || '08:30') + ' WITA)';
                 document.getElementById('dtl_unit').textContent = this.getAttribute('data-unit');
                 document.getElementById('dtl_area').textContent = this.getAttribute('data-area');
                 document.getElementById('dtl_sumber').textContent = this.getAttribute('data-sumber');
@@ -597,6 +745,16 @@
                 document.getElementById('dtl_redflag').textContent = this.getAttribute('data-redflag');
                 document.getElementById('dtl_fakta').textContent = this.getAttribute('data-fakta');
                 document.getElementById('dtl_dugaan').textContent = this.getAttribute('data-dugaan');
+
+                // Update link pipeline langsung mengarah ke kasus terpilih
+                var btnTriase = document.getElementById('dtl_btn_triase');
+                if (btnTriase) btnTriase.href = "{{ route('pemeriksaan_awal.triase') }}?q=" + encodeURIComponent(id);
+                var btnCustody = document.getElementById('dtl_btn_custody');
+                if (btnCustody) btnCustody.href = "{{ route('pemeriksaan_awal.bukti_custody') }}?indikasi_id=" + encodeURIComponent(id);
+                var btnKka = document.getElementById('dtl_btn_kka');
+                if (btnKka) btnKka.href = "{{ route('pemeriksaan_awal.kka') }}?q=" + encodeURIComponent(id);
+                var btnEskalasi = document.getElementById('dtl_btn_eskalasi');
+                if (btnEskalasi) btnEskalasi.href = "{{ route('pemeriksaan_awal.eskalasi') }}?q=" + encodeURIComponent(id);
             });
         });
     });

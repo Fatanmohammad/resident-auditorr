@@ -122,9 +122,15 @@
         </div>
         <div class="d-flex gap-2 mt-2 mt-md-0">
             @if($kalender)
-                <a href="{{ route('pelaporan-bulanan.narasi', $kalender->report_id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                    <i class="bi bi-pencil me-1"></i> Edit Narasi
-                </a>
+                @if(!$isRa)
+                    <a href="{{ route('pelaporan-bulanan.narasi', $kalender->report_id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                        <i class="bi bi-pencil-square me-1"></i> Editor WYSIWYG
+                    </a>
+                @else
+                    <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-2 d-flex align-items-center">
+                        <i class="bi bi-eye me-1"></i> Mode Preview (Read-Only)
+                    </span>
+                @endif
                 <button onclick="window.print()" class="btn btn-success btn-sm rounded-pill px-4 shadow-sm fw-bold">
                     <i class="bi bi-printer-fill me-1"></i> Cetak Dokumen (Print / PDF)
                 </button>
@@ -136,6 +142,18 @@
     <div class="no-print">
         @include('pelaporan_bulanan.tabs')
     </div>
+
+    @if($isRa)
+        <div class="alert alert-info border-0 shadow-sm rounded-3 mb-3 d-flex align-items-center no-print">
+            <i class="bi bi-info-circle-fill fs-4 me-3 text-primary"></i>
+            <div>
+                <h6 class="fw-bold mb-0">Mode Preview (Read-Only) Resident Auditor</h6>
+                <small class="text-muted">
+                    Sesuai SOP 08 revisi, Resident Auditor tidak lagi mengisi narasi kaku atau rekap manual. Seluruh lembar laporan ditarik 100% otomatis dari database pengawasan cabang Anda.
+                </small>
+            </div>
+        </div>
+    @endif
 
     {{-- Selector Report ID --}}
     <div class="selector-bar no-print shadow-sm">
@@ -317,47 +335,86 @@
                 </div>
             </div>
 
-            {{-- 2. ENAM BLOK RINGKASAN & ANALISIS KUALITATIF (A16:G40) --}}
+            {{-- 2. CATATAN EKSEKUTIF, HASIL UTAMA, & RENCANA PENGAWASAN --}}
             <div class="mb-3">
-                {{-- 1. Ringkasan Eksekutif (A16) --}}
-                <div class="section-title">1. RINGKASAN EKSEKUTIF (EXECUTIVE SUMMARY)</div>
+                {{-- 1. Catatan Eksekutif Admin (WYSIWYG) --}}
+                <div class="section-title"><i class="bi bi-file-earmark-richtext me-1"></i> 1. CATATAN &amp; ANALISIS EKSEKUTIF (ADMIN / SKAI)</div>
                 <div class="narasi-box">
-                    {!! nl2br(e($narasi->ringkasan_eksekutif ?: 'Belum diisi oleh Resident Auditor.')) !!}
+                    @if(!empty($narasi->catatan_eksekutif))
+                        {!! $narasi->catatan_eksekutif !!}
+                    @elseif(!empty($narasi->ringkasan_eksekutif))
+                        {!! nl2br(e($narasi->ringkasan_eksekutif)) !!}
+                    @else
+                        <span class="text-muted fst-italic">Belum ada catatan eksekutif yang ditambahkan oleh Admin/SKAI.</span>
+                    @endif
                 </div>
 
-                {{-- 2. Hasil Utama (A20) --}}
-                <div class="section-title">2. HASIL UTAMA & TEMUAN KUNCI PENGUJIAN</div>
-                <div class="narasi-box">
-                    {!! nl2br(e($narasi->hasil_utama ?: 'Tidak ada temuan signifikan pada periode ini.')) !!}
+                {{-- 2. Hasil Utama & Temuan Kunci (Tarik Otomatis Level Moderate to High & High) --}}
+                <div class="section-title mt-3"><i class="bi bi-shield-exclamation me-1"></i> 2. HASIL UTAMA &amp; TEMUAN KUNCI (MODERATE TO HIGH &amp; HIGH)</div>
+                <div class="table-responsive">
+                    <table class="report-table mb-2">
+                        <thead>
+                            <tr>
+                                <th style="width: 22%;">Area KKA &amp; Tingkat Risiko</th>
+                                <th style="width: 45%;">Uraian Temuan &amp; Eksposur Nominal</th>
+                                <th style="width: 33%;">Rekomendasi / Rencana Tindak Lanjut &amp; PIC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($hasilUtamaRows as $row)
+                            <tr>
+                                <td class="align-top">
+                                    <strong>{{ $row['area'] }}</strong>
+                                    <div class="mt-1">
+                                        <span class="badge {{ $row['risk_level'] === 'HIGH' ? 'bg-danger' : 'bg-warning text-dark' }}">
+                                            {{ $row['risk_level'] }}
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted mt-1" style="font-size: 0.72rem;">Sumber: {{ $row['source'] }}</div>
+                                </td>
+                                <td class="align-top">
+                                    @if($row['is_temuan_berulang'])
+                                        <div class="mb-1">
+                                            <span class="badge bg-warning text-dark border border-warning fw-bold">
+                                                <i class="bi bi-arrow-repeat me-1"></i> TEMUAN BERULANG
+                                            </span>
+                                        </div>
+                                    @endif
+                                    <div style="line-height: 1.5;">{!! nl2br(e($row['uraian'])) !!}</div>
+                                    @if($row['nominal'] > 0)
+                                        <div class="text-danger fw-bold mt-1 small">
+                                            Nominal Eksposur: {{ $row['nominal_formatted'] }}
+                                        </div>
+                                    @endif
+                                </td>
+                                <td class="align-top">
+                                    <div style="line-height: 1.5;">{!! nl2br(e($row['rekomendasi'] ?: '-')) !!}</div>
+                                    <div class="small text-muted mt-2 pt-1 border-top">
+                                        PIC: <strong>{{ $row['pic'] ?: '-' }}</strong> | Target: <strong>{{ $row['target_date'] ? \Carbon\Carbon::parse($row['target_date'])->format('d/m/Y') : '-' }}</strong>
+                                    </div>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="3" class="text-center py-2 text-muted fst-italic">
+                                    Tidak ada temuan signifikan (Moderate to High / High) pada periode pengawasan ini.
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
 
-                {{-- 3. Analisis Risiko / Tren (A25) --}}
-                <div class="section-title">3. ANALISIS RISIKO & TREN OPERASIONAL CABANG</div>
+                {{-- 3. Rencana Bulan Berikutnya (WYSIWYG Admin) --}}
+                <div class="section-title mt-3"><i class="bi bi-calendar-check me-1"></i> 3. RENCANA KERJA PENGAWASAN BULAN BERIKUTNYA</div>
                 <div class="narasi-box">
-                    {!! nl2br(e($narasi->analisis_risiko_tren ?: 'Analisis risiko operasional dan tren kepatuhan terpantau dalam batas toleransi wajar.')) !!}
-                </div>
-
-                <div class="row g-2">
-                    {{-- 4. Kendala (A30) --}}
-                    <div class="col-md-6">
-                        <div class="section-title">4. KENDALA PENGAWASAN</div>
-                        <div class="narasi-box" style="min-height: 80px;">
-                            {!! nl2br(e($narasi->kendala ?: 'Tidak terdapat kendala material dalam pelaksanaan pengawasan.')) !!}
-                        </div>
-                    </div>
-                    {{-- 5. Rencana Bulan Berikut (A35) --}}
-                    <div class="col-md-6">
-                        <div class="section-title">5. RENCANA BULAN BERIKUT</div>
-                        <div class="narasi-box" style="min-height: 80px;">
-                            {!! nl2br(e($narasi->rencana_bulan_berikut ?: 'Melanjutkan pengawasan rutin harian, offsite, dan monitoring tindak lanjut.')) !!}
-                        </div>
-                    </div>
-                </div>
-
-                {{-- 6. Arahan yang Diperlukan (A40) --}}
-                <div class="section-title">6. ARAHAN & DUKUNGAN YANG DIPERLUKAN (KORWAS / SKAI)</div>
-                <div class="narasi-box">
-                    {!! nl2br(e($narasi->arahan_diperlukan ?: 'Tidak ada arahan khusus yang diperlukan saat ini.')) !!}
+                    @if(!empty($narasi->rencana_bulan_depan))
+                        {!! $narasi->rencana_bulan_depan !!}
+                    @elseif(!empty($narasi->rencana_bulan_berikut))
+                        {!! nl2br(e($narasi->rencana_bulan_berikut)) !!}
+                    @else
+                        <span class="text-muted fst-italic">Melanjutkan pengawasan rutin harian, offsite review, dan monitoring tindak lanjut SKAI.</span>
+                    @endif
                 </div>
             </div>
 
@@ -447,20 +504,6 @@
 
                 <div class="small text-muted mt-1 fst-italic">
                     * Catatan: Metrik kinerja bulanan terhitung otomatis dari Roster RA, Log Aktivitas Harian, &amp; Kalender Kinerja RA.
-                </div>
-            </div>
-
-            {{-- Kolom Tanda Tangan Formal --}}
-            <div class="row text-center mt-5 pt-3">
-                <div class="col-6">
-                    <div class="small text-muted mb-5">Disusun Oleh,<br><strong>Resident Auditor Penugasan</strong></div>
-                    <div class="fw-bold text-decoration-underline">{{ $kalender->resident_auditor }}</div>
-                    <small class="text-muted d-block">{{ $kalender->unit_ra }}</small>
-                </div>
-                <div class="col-6">
-                    <div class="small text-muted mb-5">Diketahui & Disetujui Oleh,<br><strong>Kepala Bagian Resident Auditor / Korwas</strong></div>
-                    <div class="fw-bold text-decoration-underline">Siti (Kabag RA Korwas)</div>
-                    <small class="text-muted d-block">Satuan Kerja Audit Intern (SKAI)</small>
                 </div>
             </div>
         </div>

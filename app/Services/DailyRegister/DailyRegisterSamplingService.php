@@ -53,6 +53,9 @@ class DailyRegisterSamplingService
                     return !empty($f->hasil_uji) 
                         || !empty($f->simpulan_ra) 
                         || !empty($f->jenis_exception_ra)
+                        || !empty($f->no_arsip)
+                        || !empty($f->submitted_at)
+                        || ($f->review_status ?? '') === DailyRegisterFinding::STATUS_SELESAI
                         || in_array(strtoupper($f->status_review ?? ''), ['APPROVED', 'REVISI']);
                 });
                 foreach ($alreadyTested as $tested) {

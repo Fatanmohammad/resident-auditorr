@@ -188,6 +188,7 @@ Route::middleware('auth')->group(function () {
         // Register Indikasi
         Route::get('/register', [PemeriksaanAwalController::class, 'register'])->name('register');
         Route::post('/register/store', [PemeriksaanAwalController::class, 'storeRegister'])->name('register.store');
+        Route::post('/register/{id}/status', [PemeriksaanAwalController::class, 'updateStatus'])->name('register.status');
         
         // Triase Awal
         Route::get('/triase', [PemeriksaanAwalController::class, 'triase'])->name('triase');
@@ -344,8 +345,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [OffsiteController::class, 'index'])->name('offsite.index');
         Route::get('/cabang/{id}', [OffsiteController::class, 'detail'])->name('offsite.detail');
 
-        // Halaman Riwayat Upload CSV (History)
+        // Halaman Riwayat Upload CSV (History) & Verifikasi Integritas
         Route::get('/history', [AuditLogController::class, 'index'])->name('offsite.history.index');
+        Route::match(['get', 'post'], '/history/{id}/verify', [AuditLogController::class, 'verify'])->name('offsite.history.verify');
 
         // 1. Halaman Upload & Proses DUMP (Khusus RA/Admin)
         Route::get('/upload', [OffsiteController::class, 'create'])
@@ -392,6 +394,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/register/data', [ModuleDailyRegisterController::class, 'data'])->name('daily-register.register.data');
 
         // 3. KKA & Rekapitulasi Cabang + 3 KKA Tambahan
+        Route::get('/', [KkaDailyRegisterController::class, 'index'])->name('daily-register.index');
         Route::get('/rekapitulasi-cabang', [KkaDailyRegisterController::class, 'index'])->name('daily-register.rekapitulasi');
         Route::get('/kka', [KkaDailyRegisterController::class, 'index'])->name('daily-register.kka.index');
         Route::get('/cash-opname', [KkaDailyRegisterController::class, 'index'])->name('daily-register.cash-opname');
@@ -400,15 +403,24 @@ Route::middleware('auth')->group(function () {
         
         Route::get('/data', [KkaDailyRegisterController::class, 'data'])->name('daily-register.data');
         Route::get('/checklists', [KkaDailyRegisterController::class, 'getChecklists'])->name('daily-register.checklists');
+        Route::get('/arsip-matriks/print', [KkaDailyRegisterController::class, 'printArsipMatriks'])->name('daily-register.arsip-matriks.print');
+        Route::get('/arsip-matriks/export-excel', [KkaDailyRegisterController::class, 'exportExcelArsipMatriks'])->name('daily-register.arsip-matriks.export-excel');
+        Route::post('/store-mandiri', [KkaDailyRegisterController::class, 'storeMandiri'])->name('daily-register.store-mandiri')->middleware('role:ra,admin');
         Route::get('/{id}/review-data', [KkaDailyRegisterController::class, 'getReviewData'])->name('daily-register.review-data');
         Route::post('/{id}/ra', [KkaDailyRegisterController::class, 'updateRa'])->name('daily-register.update.ra')->middleware('role:ra,admin');
         Route::put('/{id}/admin', [KkaDailyRegisterController::class, 'updateAdmin'])->name('daily-register.update.admin')->middleware('role:admin,kabag_ra,kadiv_skai');
+        Route::post('/{id}/review-decision', [KkaDailyRegisterController::class, 'reviewDecision'])->name('daily-register.review-decision')->middleware('role:admin,kabag_ra,kadiv_skai,pimsie,korwas');
         Route::post('/{id}/konfirmasi', [KkaDailyRegisterController::class, 'konfirmasiCabang'])->name('daily-register.konfirmasi')->middleware('role:ra,admin,kabag_ra');
 
-        // 4. Physical KKA & Klarifikasi
         Route::get('/physical-kka/{id?}', [PhysicalKkaController::class, 'index'])->name('daily-register.physical-kka.index');
         Route::post('/physical-kka/submit', [PhysicalKkaController::class, 'submitAll'])->name('daily-register.physical-kka.submit');
         Route::post('/physical-kka/review', [PhysicalKkaController::class, 'submitReview'])->name('daily-register.physical-kka.review');
+        Route::get('/physical-kka/{id}/print-ba-kas', [PhysicalKkaController::class, 'printBaKas'])->name('daily-register.physical-kka.print-ba-kas');
+        Route::get('/physical-kka/{id}/print-ba-atm', [PhysicalKkaController::class, 'printBaAtm'])->name('daily-register.physical-kka.print-ba-atm');
+        Route::get('/physical-kka/{id}/print-kka-kartu', [PhysicalKkaController::class, 'printKkaKartu'])->name('daily-register.physical-kka.print-kka-kartu');
+        Route::get('/physical-kka/{id}/print-kka-cetakan', [PhysicalKkaController::class, 'printKkaCetakan'])->name('daily-register.physical-kka.print-kka-cetakan');
+        Route::get('/physical-kka/{id}/print-kka-observasi', [PhysicalKkaController::class, 'printKkaObservasi'])->name('daily-register.physical-kka.print-kka-observasi');
+        Route::get('/physical-kka/{id}/print-all', [PhysicalKkaController::class, 'printAll'])->name('daily-register.physical-kka.print-all');
         
         Route::get('/klarifikasi', [\App\Http\Controllers\DailyRegister\KlarifikasiController::class, 'index'])->name('daily-register.klarifikasi.index');
         Route::post('/klarifikasi/submit', [\App\Http\Controllers\DailyRegister\KlarifikasiController::class, 'submit'])->name('daily-register.klarifikasi.submit');
@@ -427,59 +439,49 @@ Route::middleware('auth')->group(function () {
     });
 
     // =========================================================================
-    // RISK TRIGGER VISIT (SOP 06)
     // =========================================================================
-    Route::prefix('risk-trigger')->middleware('role:admin,kabag_ra,kadiv_skai,ra,reviewer,pimsie')->group(function () {
-        Route::get('/control', [RiskTriggerController::class, 'control'])->name('risk-trigger.control');
-        Route::get('/register', [RiskTriggerController::class, 'register'])->name('risk-trigger.register');
-        Route::get('/create', [RiskTriggerController::class, 'create'])->name('risk-trigger.create');
-        Route::post('/manual', [RiskTriggerController::class, 'storeManual'])->name('risk-trigger.store-manual');
+    // RISK TRIGGER VISIT (SOP 06) - HALAMAN TUNGGAL ALARM ADMIN (> 10 TEMUAN)
+    // Akses dibatasi ketat hanya untuk Admin (role:admin, 403 Forbidden untuk role lain)
+    // =========================================================================
+    Route::prefix('risk-trigger')->middleware('role:admin')->group(function () {
+        // Halaman Tunggal Risk Trigger
+        Route::get('/', [RiskTriggerController::class, 'index'])->name('risk-trigger.index');
         Route::post('/sync', [RiskTriggerController::class, 'sync'])->name('risk-trigger.sync');
+        Route::post('/inform/{kodeUnit}', [RiskTriggerController::class, 'markAsInformed'])->name('risk-trigger.inform');
+        Route::post('/alarm/follow-up', [RiskTriggerController::class, 'followUpAlarm'])->name('risk-trigger.alarm.follow-up');
 
-        // FASE 2: ASSIGNMENT & SCOPE
-        Route::get('/assignment', [RiskTriggerController::class, 'assignment'])->name('risk-trigger.assignment');
-        Route::get('/assignment/create', [RiskTriggerController::class, 'createAssignment'])->name('risk-trigger.assignment.create');
-        Route::post('/assignment', [RiskTriggerController::class, 'storeAssignment'])->name('risk-trigger.assignment.store');
-        Route::get('/assignment/{id}/edit-dates', [RiskTriggerController::class, 'editActualDates'])->whereNumber('id')->name('risk-trigger.assignment.edit-dates');
-        Route::post('/assignment/{id}/actual-dates', [RiskTriggerController::class, 'updateActualDates'])->whereNumber('id')->name('risk-trigger.assignment.actual-dates');
-        Route::get('/assignment/{id}', [RiskTriggerController::class, 'showAssignment'])->whereNumber('id')->name('risk-trigger.assignment.show');
-
-        // PROGRAM KERJA TERARAH (DIHILANGKAN DARI WORKFLOW: LANGSUNG KE KKA RISK TRIGGER)
-        Route::get('/program-kerja', function () {
-            return redirect()->route('risk-trigger.kka.index');
-        })->name('risk-trigger.program-kerja');
-        Route::get('/program-kerja/{id}/edit', function () {
-            return redirect()->route('risk-trigger.kka.index');
-        })->whereNumber('id')->name('risk-trigger.program-kerja.edit');
-        Route::post('/program-kerja/{id}', function () {
-            return redirect()->route('risk-trigger.kka.index');
-        })->whereNumber('id')->name('risk-trigger.program-kerja.update');
-
-        // FASE 3: KKA RISK TRIGGER (KKA INDUK - 20 KOLOM EXCEL) & 8 KKA AREA
-        Route::get('/kka', [RiskTriggerController::class, 'kkaIndex'])->name('risk-trigger.kka.index');
-        Route::get('/kka/{id}', [RiskTriggerController::class, 'kkaShow'])->whereNumber('id')->name('risk-trigger.kka.show');
-        Route::get('/kka/{id}/edit', [RiskTriggerController::class, 'kkaEdit'])->whereNumber('id')->name('risk-trigger.kka.edit');
-        Route::post('/kka/{id}', [RiskTriggerController::class, 'kkaUpdate'])->whereNumber('id')->name('risk-trigger.kka.update');
-
-        // KKA Area Sample Rows (Multi-Row per Visit ID)
-        Route::post('/kka/{id}/area-row', [RiskTriggerController::class, 'storeAreaRow'])->whereNumber('id')->name('risk-trigger.kka.area-row.store');
-        Route::put('/kka/area-row/{area}/{rowId}', [RiskTriggerController::class, 'updateAreaRow'])->whereNumber('rowId')->name('risk-trigger.kka.area-row.update');
-        Route::delete('/kka/area-row/{area}/{rowId}', [RiskTriggerController::class, 'destroyAreaRow'])->whereNumber('rowId')->name('risk-trigger.kka.area-row.destroy');
-
-        // FASE 4: SIMPULAN, TINDAK LANJUT & CLOSURE (Simpulan_TL) & KLARIFIKASI BUKTI
-        Route::get('/simpulan-tl', [RiskTriggerController::class, 'simpulanTlIndex'])->name('risk-trigger.simpulan-tl.index');
-        Route::get('/simpulan-tl/{id}/edit', [RiskTriggerController::class, 'simpulanTlEdit'])->whereNumber('id')->name('risk-trigger.simpulan-tl.edit');
-        Route::post('/simpulan-tl/{id}', [RiskTriggerController::class, 'simpulanTlUpdate'])->whereNumber('id')->name('risk-trigger.simpulan-tl.update');
-        Route::post('/simpulan-tl/{id}/klarifikasi', [RiskTriggerController::class, 'storeKlarifikasi'])->whereNumber('id')->name('risk-trigger.simpulan-tl.klarifikasi.store');
-        Route::put('/simpulan-tl/klarifikasi/{id}', [RiskTriggerController::class, 'updateKlarifikasi'])->whereNumber('id')->name('risk-trigger.simpulan-tl.klarifikasi.update');
-        Route::delete('/simpulan-tl/klarifikasi/{id}', [RiskTriggerController::class, 'destroyKlarifikasi'])->whereNumber('id')->name('risk-trigger.simpulan-tl.klarifikasi.destroy');
-        Route::post('/simpulan-tl/{id}/pull-exceptions', [RiskTriggerController::class, 'pullExceptions'])->whereNumber('id')->name('risk-trigger.simpulan-tl.pull-exceptions');
-
-        // DETAIL & OVERRIDE TRIGGER (Wajib di bawah static route dengan whereNumber)
-        Route::get('/{id}', [RiskTriggerController::class, 'show'])->whereNumber('id')->name('risk-trigger.show');
-        Route::get('/{id}/override', [RiskTriggerController::class, 'editOverride'])->whereNumber('id')->name('risk-trigger.edit-override');
-        Route::post('/{id}/override', [RiskTriggerController::class, 'override'])->whereNumber('id')->name('risk-trigger.override');
-        Route::delete('/{id}', [RiskTriggerController::class, 'destroy'])->whereNumber('id')->name('risk-trigger.destroy');
+        // Safe Fallback Redirects untuk Sub-Menu Lama (Mencegah Dead Link & Menghilangkan Form KKA/Assignment)
+        Route::get('/control', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.control');
+        Route::get('/register', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.register');
+        Route::get('/create', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.create');
+        Route::post('/manual', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.store-manual');
+        Route::get('/assignment', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.assignment');
+        Route::get('/assignment/create', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.assignment.create');
+        Route::post('/assignment', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.assignment.store');
+        Route::get('/assignment/{id}/edit-dates', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.assignment.edit-dates');
+        Route::post('/assignment/{id}/actual-dates', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.assignment.actual-dates');
+        Route::get('/assignment/{id}', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.assignment.show');
+        Route::get('/program-kerja', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.program-kerja');
+        Route::get('/program-kerja/{id}/edit', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.program-kerja.edit');
+        Route::post('/program-kerja/{id}', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.program-kerja.update');
+        Route::get('/kka', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.kka.index');
+        Route::get('/kka/{id}', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.kka.show');
+        Route::get('/kka/{id}/edit', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.kka.edit');
+        Route::post('/kka/{id}', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.kka.update');
+        Route::post('/kka/{id}/area-row', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.kka.area-row.store');
+        Route::put('/kka/area-row/{area}/{rowId}', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.kka.area-row.update');
+        Route::delete('/kka/area-row/{area}/{rowId}', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.kka.area-row.destroy');
+        Route::get('/simpulan-tl', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.simpulan-tl.index');
+        Route::get('/simpulan-tl/{id}/edit', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.simpulan-tl.edit');
+        Route::post('/simpulan-tl/{id}', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.simpulan-tl.update');
+        Route::post('/simpulan-tl/{id}/klarifikasi', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.simpulan-tl.klarifikasi.store');
+        Route::put('/simpulan-tl/klarifikasi/{id}', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.simpulan-tl.klarifikasi.update');
+        Route::delete('/simpulan-tl/klarifikasi/{id}', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.simpulan-tl.klarifikasi.destroy');
+        Route::post('/simpulan-tl/{id}/pull-exceptions', fn() => redirect()->route('risk-trigger.index'))->name('risk-trigger.simpulan-tl.pull-exceptions');
+        Route::get('/{id}', fn() => redirect()->route('risk-trigger.index'))->whereNumber('id')->name('risk-trigger.show');
+        Route::get('/{id}/override', fn() => redirect()->route('risk-trigger.index'))->whereNumber('id')->name('risk-trigger.edit-override');
+        Route::post('/{id}/override', fn() => redirect()->route('risk-trigger.index'))->whereNumber('id')->name('risk-trigger.override');
+        Route::delete('/{id}', fn() => redirect()->route('risk-trigger.index'))->whereNumber('id')->name('risk-trigger.destroy');
     }); // Akhir Route::prefix('risk-trigger')
 
     // =========================================================================
@@ -498,37 +500,35 @@ Route::middleware('auth')->group(function () {
         Route::get('/checklist/{reportId?}', [PelaporanBulananController::class, 'checklist'])->name('pelaporan-bulanan.checklist');
         Route::post('/checklist/{reportId}', [PelaporanBulananController::class, 'updateChecklist'])->name('pelaporan-bulanan.checklist.update');
 
-        // Rekap Kegiatan (WP-RA-08-D)
-        Route::get('/rekap-kegiatan/{reportId?}', [PelaporanBulananController::class, 'rekapKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan');
-        Route::get('/rekap-kegiatan/{reportId}/create', [PelaporanBulananController::class, 'createKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.create');
+        // Rekap Kegiatan (Digabung ke Log Harian RA 100% Tarikan DB)
+        Route::get('/rekap-kegiatan/{reportId?}', fn() => redirect()->route('pelaporan-bulanan.log-harian'))->name('pelaporan-bulanan.rekap-kegiatan');
+        Route::get('/rekap-kegiatan/{reportId}/create', fn() => redirect()->route('pelaporan-bulanan.log-harian'))->name('pelaporan-bulanan.rekap-kegiatan.create');
         Route::post('/rekap-kegiatan/{reportId}/store', [PelaporanBulananController::class, 'storeKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.store');
-        Route::get('/rekap-kegiatan/{id}/edit', [PelaporanBulananController::class, 'editKegiatan'])->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.edit');
+        Route::get('/rekap-kegiatan/{id}/edit', fn() => redirect()->route('pelaporan-bulanan.log-harian'))->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.edit');
         Route::put('/rekap-kegiatan/{id}', [PelaporanBulananController::class, 'updateKegiatan'])->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.update');
         Route::delete('/rekap-kegiatan/{id}', [PelaporanBulananController::class, 'destroyKegiatan'])->whereNumber('id')->name('pelaporan-bulanan.rekap-kegiatan.destroy');
         Route::post('/rekap-kegiatan/{reportId}/sync', [PelaporanBulananController::class, 'syncKegiatan'])->name('pelaporan-bulanan.rekap-kegiatan.sync');
 
-        // Rekap Isu & TL (WP-RA-08-E)
-        Route::get('/rekap-isu-tl/{reportId?}', [PelaporanBulananController::class, 'rekapIsu'])->name('pelaporan-bulanan.rekap-isu-tl');
-        Route::get('/rekap-isu-tl/{reportId}/create', [PelaporanBulananController::class, 'createIsu'])->name('pelaporan-bulanan.rekap-isu-tl.create');
+        // Rekap Isu & TL (Disatukan ke Monitoring Tindak Lanjut Tanpa Form Rekap Terpisah)
+        Route::get('/rekap-isu-tl/{reportId?}', fn() => redirect()->route('monitoring.index'))->name('pelaporan-bulanan.rekap-isu-tl');
+        Route::get('/rekap-isu-tl/{reportId}/create', fn() => redirect()->route('monitoring.index'))->name('pelaporan-bulanan.rekap-isu-tl.create');
         Route::post('/rekap-isu-tl/{reportId}/store', [PelaporanBulananController::class, 'storeIsu'])->name('pelaporan-bulanan.rekap-isu-tl.store');
-        Route::get('/rekap-isu-tl/{id}/edit', [PelaporanBulananController::class, 'editIsu'])->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.edit');
+        Route::get('/rekap-isu-tl/{id}/edit', fn() => redirect()->route('monitoring.index'))->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.edit');
         Route::put('/rekap-isu-tl/{id}', [PelaporanBulananController::class, 'updateIsu'])->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.update');
         Route::delete('/rekap-isu-tl/{id}', [PelaporanBulananController::class, 'destroyIsu'])->whereNumber('id')->name('pelaporan-bulanan.rekap-isu-tl.destroy');
 
-        // FASE 2: Review Laporan (WP-RA-08-F)
-        Route::get('/review-laporan', [PelaporanBulananController::class, 'reviewLaporan'])->name('pelaporan-bulanan.review-laporan');
+        // Menu Review & Koreksi Admin (Dikonsolidasikan ke Dashboard Matriks Konsolidasi dengan Filter Pintar)
+        Route::get('/review-laporan', fn() => redirect()->route('pelaporan-bulanan.konsolidasi'))->name('pelaporan-bulanan.review-laporan');
         Route::get('/review-laporan/{reportId}/edit', [PelaporanBulananController::class, 'editReviewLaporan'])->name('pelaporan-bulanan.review-laporan.edit');
         Route::post('/review-laporan/{reportId}', [PelaporanBulananController::class, 'updateReviewLaporan'])->name('pelaporan-bulanan.review-laporan.update');
 
-        // FASE 2: Koreksi & Approval (WP-RA-08-G)
-        Route::get('/koreksi-approval', [PelaporanBulananController::class, 'koreksiApproval'])->name('pelaporan-bulanan.koreksi-approval');
+        Route::get('/koreksi-approval', fn() => redirect()->route('pelaporan-bulanan.konsolidasi', ['status_approval' => 'MENUNGGU_APPROVAL']))->name('pelaporan-bulanan.koreksi-approval');
         Route::get('/koreksi-approval/{reportId}/edit', [PelaporanBulananController::class, 'editKoreksiApproval'])->name('pelaporan-bulanan.koreksi-approval.edit');
         Route::post('/koreksi-approval/{reportId}', [PelaporanBulananController::class, 'updateKoreksiApproval'])->name('pelaporan-bulanan.koreksi-approval.update');
         Route::get('/koreksi-approval/{reportId}/resubmit', [PelaporanBulananController::class, 'resubmitKoreksiApproval'])->name('pelaporan-bulanan.koreksi-approval.resubmit');
         Route::post('/koreksi-approval/{reportId}/resubmit', [PelaporanBulananController::class, 'postResubmitKoreksiApproval'])->name('pelaporan-bulanan.koreksi-approval.post-resubmit');
 
-        // FASE 2: Matriks Isu Signifikan (WP-RA-08-H)
-        Route::get('/isu-signifikan', [PelaporanBulananController::class, 'isuSignifikan'])->name('pelaporan-bulanan.isu-signifikan');
+        Route::get('/isu-signifikan', fn() => redirect()->route('pelaporan-bulanan.konsolidasi', ['isu_signifikan' => 'YA']))->name('pelaporan-bulanan.isu-signifikan');
         Route::post('/isu-signifikan/{reportId}/pull', [PelaporanBulananController::class, 'pullIsuSignifikanAction'])->name('pelaporan-bulanan.isu-signifikan.pull');
         Route::get('/isu-signifikan/{id}/edit', [PelaporanBulananController::class, 'editIsuSignifikan'])->whereNumber('id')->name('pelaporan-bulanan.isu-signifikan.edit');
         Route::put('/isu-signifikan/{id}', [PelaporanBulananController::class, 'updateIsuSignifikan'])->whereNumber('id')->name('pelaporan-bulanan.isu-signifikan.update');
@@ -541,18 +541,26 @@ Route::middleware('auth')->group(function () {
         // FASE 3: Dashboard SOP 08 (WP-RA-08-L)
         Route::get('/dashboard-sop08', [PelaporanBulananController::class, 'dashboard'])->name('pelaporan-bulanan.dashboard');
 
-        // FASE 3: Register Konsolidasi Laporan (WP-RA-08-J)
+        // FASE 3: Register Konsolidasi Laporan (WP-RA-08-J) & Print/Excel
         Route::get('/konsolidasi', [PelaporanBulananController::class, 'konsolidasi'])->name('pelaporan-bulanan.konsolidasi');
+        Route::get('/konsolidasi/print', [PelaporanBulananController::class, 'printKonsolidasi'])->name('pelaporan-bulanan.konsolidasi.print');
+        Route::get('/konsolidasi/export-excel', [PelaporanBulananController::class, 'exportExcelKonsolidasi'])->name('pelaporan-bulanan.konsolidasi.export-excel');
+
+        // Konfirmasi KKA Nihil (Otomatis / Manual RA)
+        Route::post('/kka/confirm-nihil', [PelaporanBulananController::class, 'confirmNihilKka'])->name('pelaporan-bulanan.kka.confirm-nihil');
+
+        // WYSIWYG Admin Saving
+        Route::post('/wysiwyg/{reportId}', [PelaporanBulananController::class, 'updateWysiwyg'])->name('pelaporan-bulanan.wysiwyg.update');
 
         // FASE 3: Matriks Tren Isu & Temuan (WP-RA-08-K)
         Route::get('/tren-isu', [PelaporanBulananController::class, 'trenIsu'])->name('pelaporan-bulanan.tren-isu');
 
-        // FASE 3: Register Feedback Konsolidasi & Perbaikan (WP-RA-08-M)
-        Route::get('/feedback', [PelaporanBulananController::class, 'feedback'])->name('pelaporan-bulanan.feedback');
-        Route::get('/feedback/create', [PelaporanBulananController::class, 'createFeedback'])->name('pelaporan-bulanan.feedback.create');
-        Route::post('/feedback', [PelaporanBulananController::class, 'storeFeedback'])->name('pelaporan-bulanan.feedback.store');
-        Route::get('/feedback/{id}/edit', [PelaporanBulananController::class, 'editFeedback'])->whereNumber('id')->name('pelaporan-bulanan.feedback.edit');
-        Route::put('/feedback/{id}', [PelaporanBulananController::class, 'updateFeedback'])->whereNumber('id')->name('pelaporan-bulanan.feedback.update');
+        // Fitur Feedback Dihapus: Redirect ke Konsolidasi
+        Route::get('/feedback', fn() => redirect()->route('pelaporan-bulanan.konsolidasi'))->name('pelaporan-bulanan.feedback');
+        Route::get('/feedback/create', fn() => redirect()->route('pelaporan-bulanan.konsolidasi'))->name('pelaporan-bulanan.feedback.create');
+        Route::post('/feedback', fn() => redirect()->route('pelaporan-bulanan.konsolidasi'))->name('pelaporan-bulanan.feedback.store');
+        Route::get('/feedback/{id}/edit', fn() => redirect()->route('pelaporan-bulanan.konsolidasi'))->name('pelaporan-bulanan.feedback.edit');
+        Route::put('/feedback/{id}', fn() => redirect()->route('pelaporan-bulanan.konsolidasi'))->name('pelaporan-bulanan.feedback.update');
 
         // FASE 4: Roster Resident Auditor (WP-RA-08-N)
         Route::get('/master-ra', [PelaporanBulananController::class, 'masterRa'])->name('pelaporan-bulanan.master-ra');
@@ -573,7 +581,7 @@ Route::middleware('auth')->group(function () {
         // FASE 4: Kalender Pelaksanaan Tugas & Kinerja Bulanan RA (WP-RA-08-P)
         Route::get('/kalender-kinerja', [PelaporanBulananController::class, 'kalenderKinerjaRa'])->name('pelaporan-bulanan.kalender-kinerja');
 
-        // Narasi Laporan
+        // Narasi Laporan (WYSIWYG Admin / Preview RA)
         Route::get('/narasi/{reportId?}', [PelaporanBulananController::class, 'narasi'])->name('pelaporan-bulanan.narasi');
         Route::post('/narasi/{reportId}', [PelaporanBulananController::class, 'updateNarasi'])->name('pelaporan-bulanan.narasi.update');
 

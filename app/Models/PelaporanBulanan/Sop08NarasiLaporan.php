@@ -13,12 +13,20 @@ class Sop08NarasiLaporan extends Model
 
     protected $fillable = [
         'report_id',
+        'catatan_eksekutif',
+        'rencana_bulan_depan',
+        'admin_editor_id',
+        'is_consolidated',
         'ringkasan_eksekutif',
         'hasil_utama',
         'analisis_risiko_tren',
         'kendala',
         'rencana_bulan_berikut',
         'arahan_diperlukan',
+    ];
+
+    protected $casts = [
+        'is_consolidated' => 'boolean',
     ];
 
     public function kalender()

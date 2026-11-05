@@ -66,9 +66,32 @@ class PelaporanBulananController extends Controller
             $accessibleCabangIds = [$user->cabang_id];
         }
 
-        return Sop08MasterUnit::whereIn('cabang_id', $accessibleCabangIds)
+        $allowed = Sop08MasterUnit::whereIn('cabang_id', $accessibleCabangIds)
             ->pluck('kode_unit')
             ->toArray();
+
+        // Juga jika user terasosiasi via user_ra_id di Sop08MasterUnit
+        $allowedByUser = Sop08MasterUnit::where('user_ra_id', $user->id)
+            ->pluck('kode_unit')
+            ->toArray();
+        $allowed = array_unique(array_merge($allowed, $allowedByUser));
+
+        // Jika cabang RA memiliki kode_cabang, izinkan juga
+        if ($user->cabang_id) {
+            $cabang = \App\Models\Cabang::find($user->cabang_id);
+            if ($cabang && !empty($cabang->kode_cabang) && !in_array($cabang->kode_cabang, $allowed)) {
+                $allowed[] = $cabang->kode_cabang;
+            }
+        }
+
+        if (!empty($user->unit_kerja) && !in_array($user->unit_kerja, $allowed)) {
+            $allowed[] = $user->unit_kerja;
+        }
+        if (!empty($user->unit_code) && !in_array($user->unit_code, $allowed)) {
+            $allowed[] = $user->unit_code;
+        }
+
+        return array_values(array_unique($allowed));
     }
 
     /**
@@ -291,18 +314,28 @@ class PelaporanBulananController extends Controller
             ->get();
 
         $komponenList = Sop08ChecklistLaporan::komponenList();
+        $isRa = $this->isRa();
+        $isAdmin = $this->isAdmin();
+        $kkaCompliance = $kalender ? $this->service->getKkaComplianceStatus($kalender->kode_unit, $kalender->periode) : null;
 
         return view('pelaporan_bulanan.checklist', compact(
             'kalender',
             'checklist',
             'availableReports',
             'komponenList',
-            'reportId'
+            'reportId',
+            'isRa',
+            'isAdmin',
+            'kkaCompliance'
         ));
     }
 
     public function updateChecklist(Request $request, $reportId)
     {
+        if ($this->isRa()) {
+            abort(403, 'Mode Preview Aktif: Resident Auditor tidak lagi mencentang checklist manual. Seluruh data kelengkapan ditarik 100% otomatis dari database.');
+        }
+
         $kalender = Sop08KalenderLaporan::where('report_id', $reportId)->firstOrFail();
         $this->authorizeUnitAccess($kalender->kode_unit);
 
@@ -424,6 +457,10 @@ class PelaporanBulananController extends Controller
 
     public function storeKegiatan(Request $request, $reportId)
     {
+        if ($this->isRa()) {
+            abort(403, 'Mode Preview Aktif: Resident Auditor tidak lagi mengisi rekap kegiatan manual. Rekap kegiatan ditarik 100% otomatis dari database.');
+        }
+
         $kalender = Sop08KalenderLaporan::where('report_id', $reportId)->firstOrFail();
         $this->authorizeUnitAccess($kalender->kode_unit);
 
@@ -468,6 +505,10 @@ class PelaporanBulananController extends Controller
 
     public function updateKegiatan(Request $request, $id)
     {
+        if ($this->isRa()) {
+            abort(403, 'Mode Preview Aktif: Resident Auditor tidak lagi mengisi rekap kegiatan manual.');
+        }
+
         $kegiatan = Sop08RekapKegiatan::findOrFail($id);
         $this->authorizeUnitAccess($kegiatan->kode_unit);
 
@@ -493,6 +534,10 @@ class PelaporanBulananController extends Controller
 
     public function destroyKegiatan($id)
     {
+        if ($this->isRa()) {
+            abort(403, 'Mode Preview Aktif: Resident Auditor tidak lagi mengisi rekap kegiatan manual.');
+        }
+
         $kegiatan = Sop08RekapKegiatan::findOrFail($id);
         $this->authorizeUnitAccess($kegiatan->kode_unit);
         $reportId = $kegiatan->report_id;
@@ -582,6 +627,10 @@ class PelaporanBulananController extends Controller
 
     public function storeIsu(Request $request, $reportId)
     {
+        if ($this->isRa()) {
+            abort(403, 'Mode Preview Aktif: Seluruh isu dan status tindak lanjut ditarik langsung dari modul Monitoring Tindak Lanjut.');
+        }
+
         $kalender = Sop08KalenderLaporan::where('report_id', $reportId)->firstOrFail();
         $this->authorizeUnitAccess($kalender->kode_unit);
 
@@ -630,6 +679,10 @@ class PelaporanBulananController extends Controller
 
     public function updateIsu(Request $request, $id)
     {
+        if ($this->isRa()) {
+            abort(403, 'Mode Preview Aktif: Seluruh isu dan status tindak lanjut ditarik langsung dari modul Monitoring Tindak Lanjut.');
+        }
+
         $isu = Sop08RekapIsuTl::findOrFail($id);
         $this->authorizeUnitAccess($isu->kode_unit);
 
@@ -658,6 +711,10 @@ class PelaporanBulananController extends Controller
 
     public function destroyIsu($id)
     {
+        if ($this->isRa()) {
+            abort(403, 'Mode Preview Aktif: Seluruh isu dan status tindak lanjut ditarik langsung dari modul Monitoring Tindak Lanjut.');
+        }
+
         $isu = Sop08RekapIsuTl::findOrFail($id);
         $this->authorizeUnitAccess($isu->kode_unit);
         $reportId = $isu->report_id;
@@ -706,16 +763,25 @@ class PelaporanBulananController extends Controller
             ->orderBy('kode_unit', 'asc')
             ->get();
 
+        $isRa = $this->isRa();
+        $isAdmin = $this->isAdmin();
+
         return view('pelaporan_bulanan.narasi', compact(
             'kalender',
             'narasi',
             'availableReports',
-            'reportId'
+            'reportId',
+            'isRa',
+            'isAdmin'
         ));
     }
 
     public function updateNarasi(Request $request, $reportId)
     {
+        if ($this->isRa()) {
+            abort(403, 'Mode Preview Aktif: Resident Auditor hanya memiliki hak akses Preview Read-Only.');
+        }
+
         $kalender = Sop08KalenderLaporan::where('report_id', $reportId)->firstOrFail();
         $this->authorizeUnitAccess($kalender->kode_unit);
 
@@ -723,17 +789,49 @@ class PelaporanBulananController extends Controller
             return redirect()->route('pelaporan-bulanan.narasi', $reportId)->with('error', 'Laporan telah FINAL.');
         }
 
-        $narasi = Sop08NarasiLaporan::firstOrCreate(['report_id' => $reportId]);
-        $narasi->update($request->only([
-            'ringkasan_eksekutif',
-            'hasil_utama',
-            'analisis_risiko_tren',
-            'kendala',
-            'rencana_bulan_berikut',
-            'arahan_diperlukan',
-        ]));
+        $catatan = $request->input('catatan_eksekutif') ?? $request->input('ringkasan_eksekutif');
+        $rencana = $request->input('rencana_bulan_depan') ?? $request->input('rencana_bulan_berikut');
 
-        return redirect()->route('pelaporan-bulanan.narasi', $reportId)->with('success', "Narasi laporan {$reportId} berhasil disimpan.");
+        $this->service->saveWysiwygAdmin($reportId, $catatan, $rencana, auth()->id());
+
+        return redirect()->route('pelaporan-bulanan.narasi', $reportId)->with('success', "Catatan Eksekutif WYSIWYG untuk {$reportId} berhasil disimpan.");
+    }
+
+    public function updateWysiwyg(Request $request, $reportId)
+    {
+        if ($this->isRa()) {
+            abort(403, 'Mode Preview Aktif: Resident Auditor hanya memiliki hak akses Preview Read-Only.');
+        }
+
+        $kalender = Sop08KalenderLaporan::where('report_id', $reportId)->firstOrFail();
+        $this->authorizeUnitAccess($kalender->kode_unit);
+
+        $catatan = $request->input('catatan_eksekutif');
+        $rencana = $request->input('rencana_bulan_depan');
+
+        $this->service->saveWysiwygAdmin($reportId, $catatan, $rencana, auth()->id());
+
+        return redirect()->back()->with('success', "Catatan Eksekutif WYSIWYG untuk {$reportId} berhasil diperbarui.");
+    }
+
+    public function confirmNihilKka(Request $request)
+    {
+        $request->validate([
+            'kode_unit' => 'required',
+            'periode' => 'required',
+        ]);
+
+        $this->authorizeUnitAccess($request->kode_unit);
+
+        $this->service->confirmNihilKka(
+            $request->kode_unit,
+            $request->periode,
+            auth()->id(),
+            $request->input('area', 'ALL'),
+            $request->input('catatan', 'Konfirmasi KKA nihil transaksi oleh Resident Auditor.')
+        );
+
+        return redirect()->back()->with('success', "Konfirmasi KKA Nihil untuk cabang {$request->kode_unit} berhasil direkam (Status Kepatuhan: 🟢 HIJAU).");
     }
 
     // =========================================================================
@@ -803,8 +901,10 @@ class PelaporanBulananController extends Controller
                 ],
             ];
             $raPerformance = $this->service->calculateRaPerformanceForReport($reportId);
+            $hasilUtamaRows = $this->service->getHasilUtamaTemuanKunci($kalender->periode, $kalender->kode_unit);
         } else {
             $raPerformance = null;
+            $hasilUtamaRows = [];
         }
 
         $availableReports = Sop08KalenderLaporan::when($allowedUnits !== null, function($q) use ($allowedUnits) {
@@ -814,6 +914,9 @@ class PelaporanBulananController extends Controller
             ->orderBy('kode_unit', 'asc')
             ->get();
 
+        $isRa = $this->isRa();
+        $isAdmin = $this->isAdmin();
+
         return view('pelaporan_bulanan.laporan_bulanan', compact(
             'kalender',
             'narasi',
@@ -821,7 +924,10 @@ class PelaporanBulananController extends Controller
             'ringkasanIsu',
             'raPerformance',
             'availableReports',
-            'reportId'
+            'reportId',
+            'hasilUtamaRows',
+            'isRa',
+            'isAdmin'
         ));
     }
 
@@ -1395,7 +1501,7 @@ class PelaporanBulananController extends Controller
     }
 
     // =========================================================================
-    // FASE 3: 1. SUB-MENU KONSOLIDASI LAPORAN (WP-RA-08-J | 21 KOLOM)
+    // FASE 3: 1. SUB-MENU KONSOLIDASI LAPORAN (TABEL MATRIKS & SMART FILTERS)
     // =========================================================================
     public function konsolidasi(Request $request)
     {
@@ -1405,11 +1511,35 @@ class PelaporanBulananController extends Controller
 
         $allowedUnits = $this->getAllowedUnitCodes();
         $kodeUnit = $request->get('kode_unit');
+        if ($this->isRa() && !$kodeUnit && !empty($allowedUnits)) {
+            $kodeUnit = $allowedUnits[0];
+        }
         if ($kodeUnit) {
             $this->authorizeUnitAccess($kodeUnit);
         }
 
-        $konsolidasiRows = $this->service->getKonsolidasiData($periodeDate, $allowedUnits, $kodeUnit);
+        $filters = [
+            'kode_unit' => $kodeUnit,
+            'kepatuhan' => $request->get('kepatuhan'),
+            'status_approval' => $request->get('status_approval'),
+            'isu_signifikan' => $request->get('isu_signifikan'),
+        ];
+
+        // 1. Matriks Konsolidasi Bulanan Seluruh Cabang (7 Kolom Ringkas)
+        $matrixRows = $this->service->getMonthlyBranchMatrix($periodeDate, $allowedUnits, $filters);
+
+        // 2. Hasil Utama & Temuan Kunci (Moderate to High & High)
+        $hasilUtamaRows = $this->service->getHasilUtamaTemuanKunci($periodeDate, $kodeUnit);
+
+        // 3. Tarikan Kegiatan Terintegrasi
+        $unifiedActivities = $this->service->getUnifiedDailyActivities($periodeDate, $kodeUnit);
+
+        // 4. WYSIWYG Admin Notes untuk Laporan Aktif
+        $activeReportId = $request->get('reportId') ?? ($matrixRows[0]['report_id'] ?? null);
+        $activeNarasi = null;
+        if ($activeReportId) {
+            $activeNarasi = Sop08NarasiLaporan::where('report_id', $activeReportId)->first();
+        }
 
         $unitsQuery = Sop08MasterUnit::where('is_active', true);
         if ($allowedUnits !== null) {
@@ -1423,11 +1553,103 @@ class PelaporanBulananController extends Controller
         return view('pelaporan_bulanan.konsolidasi', compact(
             'params',
             'periode',
-            'konsolidasiRows',
+            'matrixRows',
+            'hasilUtamaRows',
+            'unifiedActivities',
+            'activeReportId',
+            'activeNarasi',
             'masterUnits',
+            'filters',
             'isRa',
             'isAdmin'
         ));
+    }
+
+    public function printKonsolidasi(Request $request)
+    {
+        $params = Sop08MasterParameter::getActive();
+        $periode = $request->get('periode', Carbon::parse($params->periode_dashboard)->format('Y-m'));
+        $periodeDate = Carbon::parse($periode . '-01')->format('Y-m-d');
+
+        $allowedUnits = $this->getAllowedUnitCodes();
+        $kodeUnit = $request->get('kode_unit');
+        if ($this->isRa() && !$kodeUnit && !empty($allowedUnits)) {
+            $kodeUnit = $allowedUnits[0];
+        }
+        if ($kodeUnit) {
+            $this->authorizeUnitAccess($kodeUnit);
+        }
+
+        $filters = [
+            'kode_unit' => $kodeUnit,
+            'kepatuhan' => $request->get('kepatuhan'),
+            'status_approval' => $request->get('status_approval'),
+            'isu_signifikan' => $request->get('isu_signifikan'),
+        ];
+
+        $matrixRows = $this->service->getMonthlyBranchMatrix($periodeDate, $allowedUnits, $filters);
+        $hasilUtamaRows = $this->service->getHasilUtamaTemuanKunci($periodeDate, $kodeUnit);
+        $unifiedActivities = $this->service->getUnifiedDailyActivities($periodeDate, $kodeUnit);
+
+        $activeReportId = $request->get('reportId') ?? ($matrixRows[0]['report_id'] ?? null);
+        $activeNarasi = $activeReportId ? Sop08NarasiLaporan::where('report_id', $activeReportId)->first() : null;
+
+        return view('pelaporan_bulanan.konsolidasi_print', compact(
+            'params',
+            'periode',
+            'matrixRows',
+            'hasilUtamaRows',
+            'unifiedActivities',
+            'activeReportId',
+            'activeNarasi'
+        ));
+    }
+
+    public function exportExcelKonsolidasi(Request $request)
+    {
+        $params = Sop08MasterParameter::getActive();
+        $periode = $request->get('periode', Carbon::parse($params->periode_dashboard)->format('Y-m'));
+        $periodeDate = Carbon::parse($periode . '-01')->format('Y-m-d');
+
+        $allowedUnits = $this->getAllowedUnitCodes();
+        $kodeUnit = $request->get('kode_unit');
+        if ($this->isRa() && !$kodeUnit && !empty($allowedUnits)) {
+            $kodeUnit = $allowedUnits[0];
+        }
+        if ($kodeUnit) {
+            $this->authorizeUnitAccess($kodeUnit);
+        }
+
+        $filters = [
+            'kode_unit' => $kodeUnit,
+            'kepatuhan' => $request->get('kepatuhan'),
+            'status_approval' => $request->get('status_approval'),
+            'isu_signifikan' => $request->get('isu_signifikan'),
+        ];
+
+        $matrixRows = $this->service->getMonthlyBranchMatrix($periodeDate, $allowedUnits, $filters);
+        $hasilUtamaRows = $this->service->getHasilUtamaTemuanKunci($periodeDate, $kodeUnit);
+        $unifiedActivities = $this->service->getUnifiedDailyActivities($periodeDate, $kodeUnit);
+
+        $activeReportId = $request->get('reportId') ?? ($matrixRows[0]['report_id'] ?? null);
+        $activeNarasi = $activeReportId ? Sop08NarasiLaporan::where('report_id', $activeReportId)->first() : null;
+
+        $viewContent = view('pelaporan_bulanan.konsolidasi_excel', compact(
+            'params',
+            'periode',
+            'matrixRows',
+            'hasilUtamaRows',
+            'unifiedActivities',
+            'activeReportId',
+            'activeNarasi'
+        ))->render();
+
+        $filename = 'Konsolidasi_Bulanan_SOP08_' . Carbon::parse($periodeDate)->format('Y_m') . '.xls';
+
+        return response($viewContent, 200, [
+            'Content-Type'        => 'application/vnd.ms-excel; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     // =========================================================================
@@ -1503,175 +1725,31 @@ class PelaporanBulananController extends Controller
     }
 
     // =========================================================================
-    // FASE 3: 4. SUB-MENU FEEDBACK KONSOLIDASI (WP-RA-08-M | 14 KOLOM)
+    // FASE 3: FITUR FEEDBACK TELAH DIHAPUS (REDIRECT KE KONSOLIDASI)
     // =========================================================================
     public function feedback(Request $request)
     {
-        $params = Sop08MasterParameter::getActive();
-        $allowedUnits = $this->getAllowedUnitCodes();
-
-        $query = Sop08Feedback::with('kalender');
-
-        if ($allowedUnits !== null) {
-            $query->whereIn('kode_unit', $allowedUnits);
-        }
-
-        if ($request->filled('kode_unit')) {
-            $this->authorizeUnitAccess($request->kode_unit);
-            $query->where('kode_unit', $request->kode_unit);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('jenis_feedback')) {
-            $query->where('jenis_feedback', $request->jenis_feedback);
-        }
-
-        $feedbackList = $query->orderBy('tanggal', 'desc')->get();
-
-        $unitsQuery = Sop08MasterUnit::where('is_active', true);
-        if ($allowedUnits !== null) {
-            $unitsQuery->whereIn('kode_unit', $allowedUnits);
-        }
-        $masterUnits = $unitsQuery->orderBy('kode_unit')->get();
-
-        $isRa = $this->isRa();
-        $isAdmin = $this->isAdmin();
-        $statusList = Sop08Feedback::statusList();
-        $jenisList = Sop08Feedback::jenisFeedbackList();
-
-        return view('pelaporan_bulanan.feedback', compact(
-            'params',
-            'feedbackList',
-            'masterUnits',
-            'statusList',
-            'jenisList',
-            'isRa',
-            'isAdmin'
-        ));
+        return redirect()->route('pelaporan-bulanan.konsolidasi')->with('info', 'Fitur Feedback telah dihapus dan digantikan oleh Konsolidasi Laporan Terpadu.');
     }
 
     public function createFeedback(Request $request)
     {
-        if ($this->isRa()) {
-            abort(403, 'Akses Ditolak: Hanya Admin / Bagian RA yang berhak membuat feedback konsolidasi.');
-        }
-
-        $allowedUnits = $this->getAllowedUnitCodes();
-        $availableReports = Sop08KalenderLaporan::when($allowedUnits !== null, function ($q) use ($allowedUnits) {
-                $q->whereIn('kode_unit', $allowedUnits);
-            })
-            ->orderBy('periode', 'desc')
-            ->orderBy('kode_unit')
-            ->get();
-
-        $autoFeedbackId = $this->service->generateFeedbackId(now()->format('Y-m-d'));
-        $jenisList = Sop08Feedback::jenisFeedbackList();
-
-        return view('pelaporan_bulanan.feedback_create', compact(
-            'availableReports',
-            'autoFeedbackId',
-            'jenisList'
-        ));
+        return redirect()->route('pelaporan-bulanan.konsolidasi');
     }
 
     public function storeFeedback(Request $request)
     {
-        if ($this->isRa()) {
-            abort(403, 'Akses Ditolak: Hanya Admin / Bagian RA yang berhak membuat feedback.');
-        }
-
-        $request->validate([
-            'report_id' => 'required|exists:sop08_kalender_laporans,report_id',
-            'tanggal' => 'required|date',
-            'jenis_feedback' => 'required|string',
-            'uraian_feedback' => 'required|string',
-        ]);
-
-        $kalender = Sop08KalenderLaporan::where('report_id', $request->report_id)->firstOrFail();
-        $feedbackId = $this->service->generateFeedbackId($request->tanggal);
-
-        Sop08Feedback::create([
-            'feedback_id' => $feedbackId,
-            'report_id' => $kalender->report_id,
-            'kode_unit' => $kalender->kode_unit,
-            'nama_unit' => $kalender->nama_unit,
-            'tanggal' => $request->tanggal,
-            'diberikan_kepada' => $kalender->resident_auditor . ' (' . $kalender->nama_unit . ')',
-            'jenis_feedback' => $request->jenis_feedback,
-            'uraian_feedback' => $request->uraian_feedback,
-            'pic' => $request->pic ?: $kalender->resident_auditor,
-            'target' => $request->target ?: null,
-            'status' => 'OPEN',
-            'verifikasi_reviewer' => 'BELUM DIVERIFIKASI',
-            'catatan' => $request->catatan,
-        ]);
-
-        return redirect()->route('pelaporan-bulanan.feedback')
-            ->with('success', "Feedback {$feedbackId} berhasil dibuat dan dikirimkan kepada RA {$kalender->nama_unit}.");
+        return redirect()->route('pelaporan-bulanan.konsolidasi');
     }
 
     public function editFeedback($id)
     {
-        $feedback = Sop08Feedback::findOrFail($id);
-        $this->authorizeUnitAccess($feedback->kode_unit);
-
-        $isRa = $this->isRa();
-        $isAdmin = $this->isAdmin();
-        $jenisList = Sop08Feedback::jenisFeedbackList();
-        $statusList = Sop08Feedback::statusList();
-        $verifikasiList = Sop08Feedback::verifikasiReviewerList();
-
-        return view('pelaporan_bulanan.feedback_edit', compact(
-            'feedback',
-            'isRa',
-            'isAdmin',
-            'jenisList',
-            'statusList',
-            'verifikasiList'
-        ));
+        return redirect()->route('pelaporan-bulanan.konsolidasi');
     }
 
     public function updateFeedback(Request $request, $id)
     {
-        $feedback = Sop08Feedback::findOrFail($id);
-        $this->authorizeUnitAccess($feedback->kode_unit);
-
-        if ($this->isRa()) {
-            // RA hanya boleh mengisi Tindakan Perbaikan, Bukti, Tanggal Selesai, dan update status ke IN PROGRESS / MENUNGGU VERIFIKASI
-            $request->validate([
-                'tindakan_perbaikan' => 'required|string',
-            ]);
-
-            $feedback->tindakan_perbaikan = $request->tindakan_perbaikan;
-            $feedback->bukti = $request->bukti;
-            $feedback->tanggal_selesai = $request->tanggal_selesai ?: now()->format('Y-m-d');
-            $feedback->status = $request->status ?: 'MENUNGGU VERIFIKASI';
-        } else {
-            // Admin / Reviewer memiliki full access
-            $feedback->tanggal = $request->tanggal ?: $feedback->tanggal;
-            $feedback->jenis_feedback = $request->jenis_feedback ?: $feedback->jenis_feedback;
-            $feedback->uraian_feedback = $request->uraian_feedback ?: $feedback->uraian_feedback;
-            $feedback->pic = $request->pic ?: $feedback->pic;
-            $feedback->target = $request->target ?: $feedback->target;
-            $feedback->tindakan_perbaikan = $request->tindakan_perbaikan ?: $feedback->tindakan_perbaikan;
-            $feedback->bukti = $request->bukti ?: $feedback->bukti;
-            $feedback->tanggal_selesai = $request->tanggal_selesai ?: $feedback->tanggal_selesai;
-            $feedback->status = $request->status ?: $feedback->status;
-            $feedback->verifikasi_reviewer = $request->verifikasi_reviewer ?: $feedback->verifikasi_reviewer;
-            $feedback->catatan = $request->catatan;
-
-            if ($feedback->verifikasi_reviewer === 'MEMADAI / CLOSED') {
-                $feedback->status = 'CLOSED';
-            }
-        }
-
-        $feedback->save();
-
-        return redirect()->route('pelaporan-bulanan.feedback')
-            ->with('success', "Data Feedback {$feedback->feedback_id} berhasil diperbarui.");
+        return redirect()->route('pelaporan-bulanan.konsolidasi');
     }
 
     // =========================================================================

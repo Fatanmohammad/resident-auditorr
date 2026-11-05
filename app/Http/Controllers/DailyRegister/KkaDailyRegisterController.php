@@ -95,8 +95,20 @@ class KkaDailyRegisterController extends Controller
             $defaultTab = 'KKA_Stok_Opname';
             $defaultTabName = 'KKA Stok Opname';
         } else {
-            $defaultTab = 'KKA_Teller_Kas';
-            $defaultTabName = 'KKA Teller & Kas';
+            $defaultTab = $request->query('source_sheet', 'KKA_Teller_Kas');
+            if ($defaultTab === 'KKA_Teller') {
+                $defaultTab = 'KKA_Teller_Kas';
+            }
+            $sheetNameMap = [
+                'KKA_Teller_Kas'   => 'KKA Teller & Kas',
+                'KKA_Teller'       => 'KKA Teller & Kas',
+                'KKA_DPK_Layanan'  => 'KKA DPK & Layanan',
+                'KKA_Kredit'       => 'KKA Kredit',
+                'KKA_Biaya_Beban'  => 'KKA Biaya & Beban',
+                'KKA_Kartu_ATM'    => 'KKA Kartu ATM',
+                'KKA_Pengaduan'    => 'KKA Pengaduan',
+            ];
+            $defaultTabName = $sheetNameMap[$defaultTab] ?? 'KKA Teller & Kas';
             $isSubmenu = false;
         }
 
@@ -288,6 +300,7 @@ class KkaDailyRegisterController extends Controller
     public function data(Request $request)
     {
         $user = auth()->user();
+        $isRa = ($user && strtolower($user->role) === 'ra');
         $query = DailyRegisterFinding::query();
 
         // KHUSUS KKA DAILY REGISTER HANYA MODERATE DAN HIGH
@@ -335,9 +348,14 @@ class KkaDailyRegisterController extends Controller
         // CLONE untuk menghitung tab counts sebelum filter spesifik UI
         $baseQueryForTabs = clone $query;
 
-        // 2. Filter Spesifik dari UI (Sheet KKA, Risk, Tanggal)
+        // 2. Filter Spesifik dari UI (Sheet KKA, Risk, Tanggal, Status Workflow)
         if ($request->filled('source_sheet')) {
-            $query->where('source_sheet', $request->source_sheet);
+            $reqSheet = $request->source_sheet;
+            if (in_array($reqSheet, ['KKA_Teller_Kas', 'KKA_Teller'])) {
+                $query->whereIn('source_sheet', ['KKA_Teller_Kas', 'KKA_Teller', 'KKA_Kas_Kecil', 'KKA_Kas_Khasanah']);
+            } else {
+                $query->where('source_sheet', $reqSheet);
+            }
         }
         if ($request->filled('risk_awal')) {
             $query->where('risk_awal', $request->risk_awal);
@@ -345,34 +363,174 @@ class KkaDailyRegisterController extends Controller
         if ($request->filled('tanggal')) {
             $query->whereDate('tanggal_data', $request->tanggal);
         }
+        if ($request->filled('review_status')) {
+            $statusParam = $request->input('review_status');
+            if ($statusParam === 'BELUM_DIUJI') {
+                $query->where(function($q) {
+                    $q->where('review_status', DailyRegisterFinding::STATUS_BELUM_DIUJI)
+                      ->orWhere(function($sub) {
+                          $sub->whereNull('review_status')
+                              ->where(function($s) {
+                                  $s->whereNull('status_review')->orWhere('status_review', 'Belum Direview');
+                              })
+                              ->whereNull('submitted_at');
+                      });
+                });
+            } elseif ($statusParam === 'MENUNGGU_KONFIRMASI') {
+                $query->where(function($q) {
+                    $q->where('review_status', DailyRegisterFinding::STATUS_MENUNGGU_KONFIRMASI)
+                      ->orWhere(function($sub) {
+                          $sub->whereNull('review_status')
+                              ->whereNotNull('submitted_at')
+                              ->where('status_review', '!=', 'Approved');
+                      });
+                });
+            } elseif ($statusParam === 'PERLU_REVISI') {
+                $query->where(function($q) {
+                    $q->where('review_status', DailyRegisterFinding::STATUS_PERLU_REVISI)
+                      ->orWhere('status_review', 'Revisi');
+                });
+            } elseif ($statusParam === 'SELESAI') {
+                $query->where(function($q) {
+                    $q->where('review_status', DailyRegisterFinding::STATUS_SELESAI)
+                      ->orWhere('status_review', 'Approved');
+                });
+            }
+        }
 
         // Hitung Summary Global (sebelum pagination)
         $summaryQuery = clone $query;
         $totalException = $summaryQuery->count();
         $totalNominal = $summaryQuery->sum('nominal_terkait');
         $highRiskCount = (clone $summaryQuery)->where('risk_awal', 'High')->count();
-        $selesaiReviewCount = (clone $summaryQuery)->where('status_review', 'Approved')->count();
+        $selesaiReviewCount = (clone $summaryQuery)->where(function($q) {
+            $q->where('review_status', DailyRegisterFinding::STATUS_SELESAI)
+              ->orWhere('status_review', 'Approved');
+        })->count();
 
-        $findings = $query->with('checklistAnswers')->latest('tanggal_data')->paginate(15);
+        // Smart Sorting:
+        // RA: PERLU_REVISI ➔ BELUM_DIUJI ➔ MENUNGGU_KONFIRMASI ➔ SELESAI
+        // Admin: MENUNGGU_KONFIRMASI ➔ PERLU_REVISI ➔ BELUM_DIUJI ➔ SELESAI
+        if ($isRa) {
+            $orderSql = "CASE 
+                WHEN review_status = 'PERLU_REVISI' OR status_review = 'Revisi' THEN 1
+                WHEN review_status = 'BELUM_DIUJI' OR review_status IS NULL OR (status_review = 'Belum Direview' AND submitted_at IS NULL) THEN 2
+                WHEN review_status = 'MENUNGGU_KONFIRMASI' OR (status_review = 'Belum Direview' AND submitted_at IS NOT NULL) THEN 3
+                WHEN review_status = 'SELESAI' OR status_review = 'Approved' THEN 4
+                ELSE 5 END ASC";
+        } else {
+            $orderSql = "CASE 
+                WHEN review_status = 'MENUNGGU_KONFIRMASI' OR (status_review = 'Belum Direview' AND submitted_at IS NOT NULL) THEN 1
+                WHEN review_status = 'PERLU_REVISI' OR status_review = 'Revisi' THEN 2
+                WHEN review_status = 'BELUM_DIUJI' OR review_status IS NULL OR (status_review = 'Belum Direview' AND submitted_at IS NULL) THEN 3
+                WHEN review_status = 'SELESAI' OR status_review = 'Approved' THEN 4
+                ELSE 5 END ASC";
+        }
 
-        $tabCounts = [
-            'KKA_Teller_Kas' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Teller_Kas')->count(),
-            'KKA_DPK_Layanan' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_DPK_Layanan')->count(),
-            'KKA_Kredit' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Kredit')->count(),
-            'KKA_Biaya_Beban' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Biaya_Beban')->count(),
-            'KKA_Kartu_ATM' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Kartu_ATM')->count(),
-            'KKA_Pengaduan' => (clone $baseQueryForTabs)->where('source_sheet', 'KKA_Pengaduan')->count(),
+        $findings = $query->with('checklistAnswers')
+            ->orderByRaw($orderSql)
+            ->latest('tanggal_data')
+            ->latest('id')
+            ->paginate(25);
+
+        // Hitung sinyal status per 6 Tab KKA Utama (Total, Perlu Revisi, Menunggu Konfirmasi, Selesai, dan 100% Selesai)
+        $sheets = [
+            'KKA_Teller_Kas',
+            'KKA_DPK_Layanan',
+            'KKA_Kredit',
+            'KKA_Biaya_Beban',
+            'KKA_Kartu_ATM',
+            'KKA_Pengaduan',
         ];
 
+        $tabCounts = [];
+        $tabStatuses = [];
+        foreach ($sheets as $sh) {
+            $shQuery = (clone $baseQueryForTabs);
+            if ($sh === 'KKA_Teller_Kas') {
+                $shQuery->whereIn('source_sheet', ['KKA_Teller_Kas', 'KKA_Teller', 'KKA_Kas_Kecil', 'KKA_Kas_Khasanah']);
+            } else {
+                $shQuery->where('source_sheet', $sh);
+            }
+            $totalSh = $shQuery->count();
+            $tabCounts[$sh] = $totalSh;
+
+            $perluRevisiSh = (clone $shQuery)->where(function($q) {
+                $q->where('review_status', DailyRegisterFinding::STATUS_PERLU_REVISI)
+                  ->orWhere('status_review', 'Revisi');
+            })->count();
+
+            $menungguSh = (clone $shQuery)->where(function($q) {
+                $q->where('review_status', DailyRegisterFinding::STATUS_MENUNGGU_KONFIRMASI)
+                  ->orWhere(function($sub) {
+                      $sub->whereNull('review_status')->whereNotNull('submitted_at')->where('status_review', '!=', 'Approved');
+                  });
+            })->count();
+
+            $selesaiSh = (clone $shQuery)->where(function($q) {
+                $q->where('review_status', DailyRegisterFinding::STATUS_SELESAI)
+                  ->orWhere('status_review', 'Approved');
+            })->count();
+
+            $belumSh = max(0, $totalSh - $perluRevisiSh - $menungguSh - $selesaiSh);
+
+            $tabStatuses[$sh] = [
+                'total'               => $totalSh,
+                'perlu_revisi'        => $perluRevisiSh,
+                'menunggu_konfirmasi' => $menungguSh,
+                'belum_diuji'         => $belumSh,
+                'selesai'             => $selesaiSh,
+                'is_all_selesai'      => ($totalSh > 0 && $selesaiSh === $totalSh),
+            ];
+        }
+
+        // Backward compatibility for legacy tests/views looking up KKA_Teller, KKA_Kas_Kecil, KKA_Kas_Khasanah
+        $tabCounts['KKA_Teller'] = $tabCounts['KKA_Teller_Kas'] ?? 0;
+        $tabStatuses['KKA_Teller'] = $tabStatuses['KKA_Teller_Kas'] ?? [];
+        $tabCounts['KKA_Kas_Kecil'] = 0;
+        $tabStatuses['KKA_Kas_Kecil'] = [];
+        $tabCounts['KKA_Kas_Khasanah'] = 0;
+        $tabStatuses['KKA_Kas_Khasanah'] = [];
+
+        $activeSheet = $request->input('source_sheet', 'KKA_Teller_Kas');
+        if ($activeSheet === 'KKA_Teller') {
+            $activeSheet = 'KKA_Teller_Kas';
+        }
+        $currentSheetCounts = $tabStatuses[$activeSheet] ?? [
+            'total'               => 0,
+            'perlu_revisi'        => 0,
+            'menunggu_konfirmasi' => 0,
+            'belum_diuji'         => 0,
+            'selesai'             => 0,
+            'is_all_selesai'      => false,
+        ];
+
+        // Backlog Kehadiran RA: Jika RA tidak masuk kerja beberapa hari, transaksi tetap wajib muncul
+        $todayStr = now()->toDateString();
+        $backlogCount = (clone $baseQueryForTabs)
+            ->whereDate('tanggal_data', '<', $todayStr)
+            ->where(function($q) {
+                $q->whereNull('review_status')
+                  ->orWhere('review_status', '!=', DailyRegisterFinding::STATUS_SELESAI);
+            })
+            ->where(function($q) {
+                $q->whereNull('status_review')
+                  ->orWhere('status_review', '!=', 'Approved');
+            })
+            ->count();
+
         return response()->json([
-            'status' => 'success',
-            'data'   => $findings,
+            'status'  => 'success',
+            'data'    => $findings,
             'summary' => [
-                'total_exception' => $totalException,
-                'total_nominal'   => (float) $totalNominal,
-                'high_risk'       => $highRiskCount,
-                'selesai_review'  => $selesaiReviewCount,
-                'tab_counts'      => $tabCounts
+                'total_exception'      => $totalException,
+                'total_nominal'        => (float) $totalNominal,
+                'high_risk'            => $highRiskCount,
+                'selesai_review'       => $selesaiReviewCount,
+                'backlog_count'        => $backlogCount,
+                'tab_counts'           => $tabCounts,
+                'tab_statuses'         => $tabStatuses,
+                'current_sheet_counts' => $currentSheetCounts,
             ]
         ]);
     }
@@ -402,8 +560,13 @@ class KkaDailyRegisterController extends Controller
         $cleanUnit = str_replace('BS-', '', $unit);
         $targetUnits = array_values(array_unique(array_filter([$unit, $cleanUnit, 'BS-' . $cleanUnit])));
 
+        $sourceSheet = $finding->source_sheet;
+        $targetSheets = in_array($sourceSheet, ['KKA_Teller', 'KKA_Teller_Kas', 'KKA_Kas_Kecil', 'KKA_Kas_Khasanah'])
+            ? ['KKA_Teller_Kas', 'KKA_Teller', 'KKA_Kas_Kecil', 'KKA_Kas_Khasanah']
+            : [$sourceSheet];
+
         $historyCount = DailyRegisterFinding::whereIn('kode_unit', $targetUnits)
-            ->where('source_sheet', $finding->source_sheet)
+            ->whereIn('source_sheet', $targetSheets)
             ->where('id', '!=', $finding->id)
             ->where(function ($q) {
                 $q->whereHas('checklistAnswers', function ($qa) {
@@ -436,15 +599,50 @@ class KkaDailyRegisterController extends Controller
         // Hitung kejadian berulang di unit & source_sheet yang sama
         $recurringCount = $this->calculateRecurringCount($finding);
 
-        $checklists = \App\Models\DailyRegister\DailyRegisterChecklist::where('source_sheet', $finding->source_sheet)
-            ->orderBy('sort_order')
-            ->get();
+        $sourceSheet = $finding->source_sheet;
+        if (in_array($sourceSheet, ['KKA_Teller', 'KKA_Teller_Kas', 'KKA_Kas_Kecil', 'KKA_Kas_Khasanah'])) {
+            $sourceSheet = 'KKA_Teller_Kas';
+        }
+
+        $checklists = \App\Models\DailyRegister\DailyRegisterChecklist::where(function($q) use ($sourceSheet) {
+            if ($sourceSheet === 'KKA_Teller_Kas') {
+                $q->whereIn('source_sheet', ['KKA_Teller_Kas', 'KKA_Teller']);
+            } else {
+                $q->where('source_sheet', $sourceSheet);
+            }
+        })->orderBy('sort_order')->get();
+
+        // Deteksi Keyword "Cek" & "TPP" (Tunjangan Perbaikan Penghasilan):
+        // Ambil teks deskripsi dari kolom Ket. Transaksi (ket_tx / rincian / deskripsi / kategori / jenis_exception_awal).
+        $ketTx = ($finding->ket_tx ?? '') . ' ' . ($finding->rincian ?? '') . ' ' . ($finding->deskripsi ?? '') . ' ' . ($finding->kategori ?? '') . ' ' . ($finding->jenis_exception_awal ?? '');
+        $hasCek = (stripos($ketTx, 'cek') !== false);
+        $hasTpp = (preg_match('/\bTPP\b/i', $ketTx) || stripos($ketTx, 'tunjangan perbaikan penghasilan') !== false || stripos($ketTx, 'tpp') !== false);
+
+        if (($hasCek || $hasTpp) && in_array($sourceSheet, ['KKA_Teller', 'KKA_Teller_Kas'])) {
+            $checklists = $checklists->map(function ($c) use ($hasCek, $hasTpp) {
+                if ($c->item_no == 1 && $c->sub_area_code === 'A1') {
+                    $prefix = '';
+                    if ($hasCek && $hasTpp) {
+                        $prefix = 'Terdapat Cek & TPP: ';
+                    } elseif ($hasCek) {
+                        $prefix = 'Terdapat Cek: ';
+                    } elseif ($hasTpp) {
+                        $prefix = 'Terdapat TPP: ';
+                    }
+                    $baseChecklist = preg_replace('/^(Terdapat (?:Cek & TPP|Cek|TPP):\s*)+/', '', $c->item_checklist);
+                    $c->item_checklist = $prefix . $baseChecklist;
+                }
+                return $c;
+            });
+        }
 
         return response()->json([
             'status'          => 'success',
             'finding'         => $finding,
             'recurring_count' => $recurringCount,
             'checklists'      => $checklists,
+            'has_cek'         => $hasCek,
+            'has_tpp'         => $hasTpp,
         ]);
     }
 
@@ -470,6 +668,23 @@ class KkaDailyRegisterController extends Controller
                     'message' => 'Akses ditolak: Anda tidak memiliki wewenang untuk mengubah data cabang ini.'
                 ], 403);
             }
+
+            // Jika status sudah SELESAI, KKA terkunci menjadi Read-Only
+            if ($finding->review_status === DailyRegisterFinding::STATUS_SELESAI || ($finding->status_review ?? '') === 'Approved') {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Akses ditolak (403 Forbidden): KKA ini telah selesai dan dikonfirmasi oleh Admin (Read-Only).'
+                ], 403);
+            }
+        }
+
+        // Ambil grup sub-area checklist yang dipilih RA
+        $rawSelectedSubAreas = $request->input('selected_sub_areas');
+        $selectedSubAreas = [];
+        if (is_string($rawSelectedSubAreas)) {
+            $selectedSubAreas = json_decode($rawSelectedSubAreas, true) ?: [];
+        } elseif (is_array($rawSelectedSubAreas)) {
+            $selectedSubAreas = $rawSelectedSubAreas;
         }
 
         // Ambil checklist answers
@@ -478,9 +693,40 @@ class KkaDailyRegisterController extends Controller
             $rawChecklist = json_decode($rawChecklist, true) ?: [];
         }
 
+        // Validasi: Jika request secara eksplisit mengirim selected_sub_areas tetapi kosong
+        if ($request->has('selected_sub_areas') && empty($selectedSubAreas)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Validasi Gagal: Anda wajib mencentang minimal 1 grup dropdown Sub-Area Checklist sebelum menyimpan pemeriksaan.'
+            ], 422);
+        }
+
+        // Jika selected_sub_areas tidak dikirim sama sekali (misal dari tes fitur legacy/pemanggilan lama):
+        if (!$request->has('selected_sub_areas') && !empty($rawChecklist) && is_array($rawChecklist)) {
+            $chkIds = collect($rawChecklist)->pluck('checklist_id')->filter()->toArray();
+            if (!empty($chkIds)) {
+                $selectedSubAreas = \App\Models\DailyRegister\DailyRegisterChecklist::whereIn('id', $chkIds)
+                    ->pluck('sub_area_code')
+                    ->unique()
+                    ->values()
+                    ->toArray();
+            }
+        }
+
         $tidakCount = 0;
-        if (is_array($rawChecklist)) {
+        $chkMap = collect();
+        if (is_array($rawChecklist) && !empty($rawChecklist)) {
+            $chkMap = \App\Models\DailyRegister\DailyRegisterChecklist::whereIn('id', collect($rawChecklist)->pluck('checklist_id')->filter())
+                ->get()
+                ->keyBy('id');
+
             foreach ($rawChecklist as $ans) {
+                $chkId = $ans['checklist_id'] ?? null;
+                $chkModel = $chkId ? ($chkMap[$chkId] ?? null) : null;
+                if (!empty($selectedSubAreas) && $chkModel && !in_array($chkModel->sub_area_code, $selectedSubAreas)) {
+                    continue;
+                }
+
                 if (($ans['jawaban'] ?? 'Ya') === 'Tidak') {
                     $tidakCount++;
                 }
@@ -618,12 +864,71 @@ class KkaDailyRegisterController extends Controller
         $finding->perlu_onsite = $perluOnsite;
         $finding->tanggal_ditemukan = $tanggalDitemukan;
         $finding->file_bukti = $fileBuktiPath;
+
+        // Simpan Langsung ke Arsip (Tanpa Tunggu Admin):
+        // Pada modul Daily Register, begitu RA menekan tombol Simpan / Selesai pada suatu pemeriksaan KKA,
+        // data langsung tersimpan final dan otomatis masuk ke menu Lihat Arsip Riwayat Selesai.
+        $noArsip = trim((string)$request->input('no_arsip'));
+        if (empty($noArsip) && empty($finding->no_arsip)) {
+            $noArsip = 'ARSIP-' . date('Ymd') . '-' . str_pad((string)$finding->id, 4, '0', STR_PAD_LEFT);
+        }
+        $finding->no_arsip = $noArsip ?: $finding->no_arsip;
+
+        if ($request->filled('tgl_keluhan')) {
+            $finding->tgl_keluhan = $request->input('tgl_keluhan');
+        }
+        if ($request->filled('tgl_buku')) {
+            $finding->tgl_buku = $request->input('tgl_buku');
+        }
+        if ($request->filled('status_keluhan')) {
+            $finding->status_keluhan = $request->input('status_keluhan');
+        }
+        if ($finding->source_sheet === 'KKA_Pengaduan' || $request->filled('tgl_keluhan') || $request->filled('status_keluhan')) {
+            $finding->lama_hari_kerja = (string) $this->calculateNetworkdays(
+                $request->input('tgl_keluhan') ?: $finding->tanggal_data,
+                $request->input('tgl_buku') ?: now()->toDateString(),
+                $request->input('status_keluhan') ?: $finding->status_keluhan
+            );
+        }
+
+        $finding->review_status = DailyRegisterFinding::STATUS_SELESAI;
+        $finding->status_review = 'Approved';
+        $finding->submitted_at = now();
+        $finding->reviewed_at = now();
+        $finding->reviewed_by = $user->name ?? 'Resident Auditor';
+
+        if (!empty($selectedSubAreas)) {
+            $finding->selected_sub_areas = array_values(array_unique($selectedSubAreas));
+        }
+
         $finding->save();
 
-        // Simpan jawaban checklist
+        // Hapus jawaban checklist lama dari sub-area yang tidak dicentang / dinonaktifkan RA
+        if (!empty($selectedSubAreas)) {
+            $sourceSheet = $finding->source_sheet;
+            $deselectedChkIds = \App\Models\DailyRegister\DailyRegisterChecklist::where(function($q) use ($sourceSheet) {
+                if (in_array($sourceSheet, ['KKA_Teller', 'KKA_Teller_Kas', 'KKA_Kas_Kecil', 'KKA_Kas_Khasanah'])) {
+                    $q->whereIn('source_sheet', ['KKA_Teller_Kas', 'KKA_Teller']);
+                } else {
+                    $q->where('source_sheet', $sourceSheet);
+                }
+            })->whereNotIn('sub_area_code', $selectedSubAreas)->pluck('id');
+
+            if ($deselectedChkIds->isNotEmpty()) {
+                \App\Models\DailyRegister\DailyRegisterChecklistAnswer::where('daily_register_finding_id', $finding->id)
+                    ->whereIn('checklist_id', $deselectedChkIds)
+                    ->delete();
+            }
+        }
+
+        // Simpan jawaban checklist (hanya untuk grup sub-area yang dipilih)
         if (is_array($rawChecklist)) {
             foreach ($rawChecklist as $ans) {
                 $chkId = $ans['checklist_id'] ?? null;
+                $chkModel = $chkId ? ($chkMap[$chkId] ?? null) : null;
+                if (!empty($selectedSubAreas) && $chkModel && !in_array($chkModel->sub_area_code, $selectedSubAreas)) {
+                    continue;
+                }
                 if ($chkId) {
                     \App\Models\DailyRegister\DailyRegisterChecklistAnswer::updateOrCreate(
                         [
@@ -648,7 +953,7 @@ class KkaDailyRegisterController extends Controller
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Review RA dan checklist berhasil disimpan.',
+            'message' => 'Review KKA berhasil disimpan langsung ke Arsip Riwayat Selesai.',
             'data'    => $finding->load('checklistAnswers')
         ]);
     }
@@ -659,8 +964,25 @@ class KkaDailyRegisterController extends Controller
     public function updateAdmin(UpdateKkaAdminRequest $request, $id)
     {
         try {
+            $user = auth()->user();
             $finding = DailyRegisterFinding::findOrFail($id);
-            $finding->update($request->validated());
+            $validated = $request->validated();
+
+            $statusReview = $validated['status_review'] ?? '';
+            if ($statusReview === 'Approved') {
+                $validated['review_status'] = DailyRegisterFinding::STATUS_SELESAI;
+                $validated['reviewed_by'] = $user->name;
+                $validated['reviewed_at'] = now();
+                $validated['reviewer_note'] = $validated['catatan_reviewer'] ?? null;
+            } elseif (in_array($statusReview, ['Need Revision', 'Revisi', 'Rejected'])) {
+                $validated['review_status'] = DailyRegisterFinding::STATUS_PERLU_REVISI;
+                $validated['status_review'] = 'Revisi';
+                $validated['reviewed_by'] = $user->name;
+                $validated['reviewed_at'] = now();
+                $validated['reviewer_note'] = $validated['catatan_reviewer'] ?? null;
+            }
+
+            $finding->update($validated);
 
             return response()->json([
                 'status'  => 'success',
@@ -673,6 +995,87 @@ class KkaDailyRegisterController extends Controller
                 'message' => 'Error Database: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Keputusan Verifikasi Otomatis oleh Admin/Reviewer (APPROVE atau REVISI)
+     */
+    public function reviewDecision(Request $request, $id)
+    {
+        $user = auth()->user();
+
+        // RBAC ketat: RA dilarang keras menembak endpoint verifikasi Admin
+        if (!in_array(strtolower($user->role), ['admin', 'kabag_ra', 'kadiv_skai', 'pimsie', 'korwas'])) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Akses ditolak (403 Forbidden): Hanya Admin / Reviewer yang berhak melakukan verifikasi keputusan KKA.'
+            ], 403);
+        }
+
+        $request->validate([
+            'decision'           => 'required|in:APPROVE,REVISI',
+            'catatan_reviewer'   => 'nullable|string',
+            'status_klarifikasi' => 'nullable|string',
+            'perluasan_sampel'   => 'nullable',
+            'keputusan_onsite'   => 'nullable|string',
+            'keputusan_eskalasi' => 'nullable|string',
+        ]);
+
+        $finding = DailyRegisterFinding::findOrFail($id);
+
+        $decision = strtoupper($request->decision);
+        $catatanReviewer = trim($request->input('catatan_reviewer', ''));
+
+        if ($decision === 'REVISI') {
+            if (empty($catatanReviewer)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Validasi Gagal: Catatan Alasan Revisi wajib diisi ketika meminta perbaikan KKA dari Resident Auditor!'
+                ], 422);
+            }
+
+            $finding->review_status = DailyRegisterFinding::STATUS_PERLU_REVISI;
+            $finding->status_review = 'Revisi';
+            $finding->reviewer_note = $catatanReviewer;
+            $finding->catatan_reviewer = $catatanReviewer;
+            $finding->reviewed_by = $user->name;
+            $finding->reviewed_at = now();
+
+            $msg = 'Permintaan revisi KKA berhasil dikirimkan ke Resident Auditor cabang.';
+        } else {
+            // APPROVE (SELESAI)
+            $finding->review_status = DailyRegisterFinding::STATUS_SELESAI;
+            $finding->status_review = 'Approved';
+            if (!empty($catatanReviewer)) {
+                $finding->reviewer_note = $catatanReviewer;
+                $finding->catatan_reviewer = $catatanReviewer;
+            }
+            $finding->reviewed_by = $user->name;
+            $finding->reviewed_at = now();
+
+            $msg = 'KKA berhasil dikonfirmasi dan diselesaikan (Status SELESAI). Form terkunci secara otomatis.';
+        }
+
+        if ($request->has('status_klarifikasi')) {
+            $finding->status_klarifikasi = $request->status_klarifikasi ?: $finding->status_klarifikasi;
+        }
+        if ($request->has('perluasan_sampel')) {
+            $finding->perluasan_sampel = $request->perluasan_sampel ? 'Ya' : 'Tidak';
+        }
+        if ($request->has('keputusan_onsite')) {
+            $finding->keputusan_onsite = $request->keputusan_onsite ?: $finding->keputusan_onsite;
+        }
+        if ($request->has('keputusan_eskalasi')) {
+            $finding->keputusan_eskalasi = $request->keputusan_eskalasi ?: $finding->keputusan_eskalasi;
+        }
+
+        $finding->save();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => $msg,
+            'data'    => $finding
+        ]);
     }
 
     /**
@@ -879,5 +1282,314 @@ class KkaDailyRegisterController extends Controller
         $result = $samplingService->runSampling($kodeUnit, $periode);
 
         return response()->json($result);
+    }
+
+    /**
+     * Hitung Hari Kerja (NETWORKDAYS) dari tanggal awal s.d. tanggal akhir (Sabtu & Minggu libur).
+     * Jika status adalah REJECT / DITOLAK, tampilkan string 'DITOLAK'.
+     */
+    public function calculateNetworkdays(?string $startDate, ?string $endDate, ?string $status = null): string|int
+    {
+        if (in_array(strtoupper(trim((string)$status)), ['REJECT', 'DITOLAK'])) {
+            return 'DITOLAK';
+        }
+        if (empty($startDate) || empty($endDate)) {
+            return '-';
+        }
+        try {
+            $start = \Carbon\Carbon::parse($startDate);
+            $end = \Carbon\Carbon::parse($endDate);
+            if ($start->gt($end)) {
+                return 0;
+            }
+            $days = 0;
+            $curr = $start->copy();
+            while ($curr->lte($end)) {
+                if (!$curr->isWeekend()) {
+                    $days++;
+                }
+                $curr->addDay();
+            }
+            return $days;
+        } catch (\Throwable $e) {
+            return '-';
+        }
+    }
+
+    /**
+     * Cetak Report Arsip Matriks KKA Harian (Tampilan Landscape)
+     */
+    public function printArsipMatriks(Request $request)
+    {
+        $user = auth()->user();
+        $query = DailyRegisterFinding::query();
+
+        // Keamanan Wilayah Cabang
+        if ($user && strtolower($user->role) === 'ra') {
+            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
+                ? $user->cabangIdYangDapatDiakses() 
+                : [$user->cabang_id];
+            $unitCodes = \App\Models\Unit::whereIn('cabang_id', $allowedCabangIds)
+                ->whereIn('unit_type', ['KC', 'KCU', 'KP'])
+                ->pluck('unit_code');
+            $query->whereIn('kode_unit', $unitCodes);
+        } elseif ($request->filled('kode_unit')) {
+            $query->where('kode_unit', $request->kode_unit);
+        }
+
+        $sourceSheet = $request->input('source_sheet', 'KKA_Teller_Kas');
+        if (in_array($sourceSheet, ['KKA_Teller_Kas', 'KKA_Teller'])) {
+            $query->whereIn('source_sheet', ['KKA_Teller_Kas', 'KKA_Teller', 'KKA_Kas_Kecil', 'KKA_Kas_Khasanah']);
+        } else {
+            $query->where('source_sheet', $sourceSheet);
+        }
+
+        // Hanya data yang sudah Selesai / Terarsip
+        $query->where(function($q) {
+            $q->where('review_status', DailyRegisterFinding::STATUS_SELESAI)
+              ->orWhere('status_review', 'Approved');
+        });
+
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal_data', $request->tanggal);
+        }
+
+        $filterSubArea = $request->input('sub_area') ?: $request->input('sub_area_code');
+        if ($filterSubArea) {
+            $query->where(function($q) use ($filterSubArea) {
+                $q->whereJsonContains('selected_sub_areas', $filterSubArea)
+                  ->orWhere('selected_sub_areas', 'like', '%"' . $filterSubArea . '"%')
+                  ->orWhereHas('checklistAnswers', function($ca) use ($filterSubArea) {
+                      $ca->whereHas('checklist', function($c) use ($filterSubArea) {
+                          $c->where('sub_area_code', $filterSubArea);
+                      });
+                  });
+            });
+        }
+
+        $findings = $query->with('checklistAnswers')
+            ->latest('tanggal_data')
+            ->latest('id')
+            ->get();
+
+        $sheetToQuery = in_array($sourceSheet, ['KKA_Teller_Kas', 'KKA_Teller']) ? 'KKA_Teller_Kas' : $sourceSheet;
+        $checklists = \App\Models\DailyRegister\DailyRegisterChecklist::where(function($q) use ($sheetToQuery) {
+            if ($sheetToQuery === 'KKA_Teller_Kas') {
+                $q->whereIn('source_sheet', ['KKA_Teller_Kas', 'KKA_Teller']);
+            } else {
+                $q->where('source_sheet', $sheetToQuery);
+            }
+        })->orderBy('sort_order')->get();
+
+        if ($filterSubArea) {
+            $checklists = $checklists->where('sub_area_code', $filterSubArea)->values();
+        }
+
+        $sheetNameMap = [
+            'KKA_Teller_Kas'   => 'KKA Teller & Kas',
+            'KKA_Teller'       => 'KKA Teller & Kas',
+            'KKA_DPK_Layanan'  => 'KKA DPK & Layanan',
+            'KKA_Kredit'       => 'KKA Kredit',
+            'KKA_Biaya_Beban'  => 'KKA Biaya & Beban',
+            'KKA_Kartu_ATM'    => 'KKA Kartu ATM',
+            'KKA_Pengaduan'    => 'KKA Pengaduan',
+        ];
+        $namaSheet = $sheetNameMap[$sourceSheet] ?? $sourceSheet;
+        $kodeUnit = $request->input('kode_unit', '');
+
+        return view('daily_register.arsip_matriks_print', compact('findings', 'checklists', 'namaSheet', 'kodeUnit', 'sourceSheet', 'filterSubArea'));
+    }
+
+    /**
+     * Export Excel Arsip Matriks KKA Harian
+     */
+    public function exportExcelArsipMatriks(Request $request)
+    {
+        $user = auth()->user();
+        $query = DailyRegisterFinding::query();
+
+        if ($user && strtolower($user->role) === 'ra') {
+            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
+                ? $user->cabangIdYangDapatDiakses() 
+                : [$user->cabang_id];
+            $unitCodes = \App\Models\Unit::whereIn('cabang_id', $allowedCabangIds)
+                ->whereIn('unit_type', ['KC', 'KCU', 'KP'])
+                ->pluck('unit_code');
+            $query->whereIn('kode_unit', $unitCodes);
+        } elseif ($request->filled('kode_unit')) {
+            $query->where('kode_unit', $request->kode_unit);
+        }
+
+        $sourceSheet = $request->input('source_sheet', 'KKA_Teller_Kas');
+        if (in_array($sourceSheet, ['KKA_Teller_Kas', 'KKA_Teller'])) {
+            $query->whereIn('source_sheet', ['KKA_Teller_Kas', 'KKA_Teller', 'KKA_Kas_Kecil', 'KKA_Kas_Khasanah']);
+        } else {
+            $query->where('source_sheet', $sourceSheet);
+        }
+
+        $query->where(function($q) {
+            $q->where('review_status', DailyRegisterFinding::STATUS_SELESAI)
+              ->orWhere('status_review', 'Approved');
+        });
+
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal_data', $request->tanggal);
+        }
+
+        $filterSubArea = $request->input('sub_area') ?: $request->input('sub_area_code');
+        if ($filterSubArea) {
+            $query->where(function($q) use ($filterSubArea) {
+                $q->whereJsonContains('selected_sub_areas', $filterSubArea)
+                  ->orWhere('selected_sub_areas', 'like', '%"' . $filterSubArea . '"%')
+                  ->orWhereHas('checklistAnswers', function($ca) use ($filterSubArea) {
+                      $ca->whereHas('checklist', function($c) use ($filterSubArea) {
+                          $c->where('sub_area_code', $filterSubArea);
+                      });
+                  });
+            });
+        }
+
+        $findings = $query->with('checklistAnswers')
+            ->latest('tanggal_data')
+            ->latest('id')
+            ->get();
+
+        $sheetToQuery = in_array($sourceSheet, ['KKA_Teller_Kas', 'KKA_Teller']) ? 'KKA_Teller_Kas' : $sourceSheet;
+        $checklists = \App\Models\DailyRegister\DailyRegisterChecklist::where(function($q) use ($sheetToQuery) {
+            if ($sheetToQuery === 'KKA_Teller_Kas') {
+                $q->whereIn('source_sheet', ['KKA_Teller_Kas', 'KKA_Teller']);
+            } else {
+                $q->where('source_sheet', $sheetToQuery);
+            }
+        })->orderBy('sort_order')->get();
+
+        if ($filterSubArea) {
+            $checklists = $checklists->where('sub_area_code', $filterSubArea)->values();
+        }
+
+        $sheetNameMap = [
+            'KKA_Teller_Kas'   => 'KKA Teller & Kas',
+            'KKA_Teller'       => 'KKA Teller & Kas',
+            'KKA_DPK_Layanan'  => 'KKA DPK & Layanan',
+            'KKA_Kredit'       => 'KKA Kredit',
+            'KKA_Biaya_Beban'  => 'KKA Biaya & Beban',
+            'KKA_Kartu_ATM'    => 'KKA Kartu ATM',
+            'KKA_Pengaduan'    => 'KKA Pengaduan',
+        ];
+        $namaSheet = $sheetNameMap[$sourceSheet] ?? $sourceSheet;
+
+        $filename = 'Arsip_Matriks_' . $sourceSheet . '_' . date('Ymd_His') . '.xls';
+        $viewContent = view('daily_register.arsip_matriks_print', [
+            'findings'      => $findings,
+            'checklists'    => $checklists,
+            'namaSheet'     => $namaSheet,
+            'kodeUnit'      => $request->input('kode_unit', ''),
+            'sourceSheet'   => $sourceSheet,
+            'filterSubArea' => $filterSubArea,
+            'isExcel'       => true,
+        ])->render();
+
+        return response($viewContent, 200, [
+            'Content-Type'        => 'application/vnd.ms-excel; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
+     * Tambah Mandiri Pemeriksaan Kas Kecil & Kas / Khasanah (Sub-Area A2 & A3)
+     */
+    public function storeMandiri(Request $request)
+    {
+        $user = auth()->user();
+
+        $request->validate([
+            'kode_unit'       => 'required|string',
+            'tanggal_data'    => 'required|date',
+            'sub_area'        => 'required|in:A2,A3,BOTH',
+            'nominal_terkait' => 'nullable|numeric|min:0',
+            'no_arsip'        => 'nullable|string',
+            'deskripsi'       => 'nullable|string',
+        ]);
+
+        $kodeUnit = $request->kode_unit;
+        $cleanUnit = str_replace('BS-', '', $kodeUnit);
+        $unit = \App\Models\Unit::where('unit_code', $kodeUnit)
+            ->orWhere('unit_code', $cleanUnit)
+            ->orWhere('unit_code', 'BS-' . $cleanUnit)
+            ->first();
+
+        if (!$unit) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Unit dengan kode ' . $kodeUnit . ' tidak ditemukan.'
+            ], 404);
+        }
+
+        // Cek wewenang jika RA
+        if ($user && strtolower($user->role) === 'ra') {
+            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
+                ? $user->cabangIdYangDapatDiakses() 
+                : [$user->cabang_id];
+            $allowedUnitCodes = \App\Models\Unit::whereIn('cabang_id', $allowedCabangIds)->pluck('unit_code')->toArray();
+            $allowedUnitVariants = [];
+            foreach ($allowedUnitCodes as $auc) {
+                $c = str_replace('BS-', '', $auc);
+                $allowedUnitVariants[] = $auc;
+                $allowedUnitVariants[] = $c;
+                $allowedUnitVariants[] = 'BS-' . $c;
+            }
+
+            if (!in_array($unit->unit_code, $allowedUnitCodes) && !in_array($kodeUnit, $allowedUnitVariants)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Akses ditolak: Anda tidak memiliki wewenang untuk menambahkan data pada cabang ini.'
+                ], 403);
+            }
+        }
+
+        $subAreaChoice = $request->sub_area;
+        if ($subAreaChoice === 'A2') {
+            $selectedSubAreas = ['A2'];
+            $labelSub = 'Kas Kecil (A2)';
+            $defaultDesc = 'Pemeriksaan Mandiri Fisik Kas Kecil';
+        } elseif ($subAreaChoice === 'A3') {
+            $selectedSubAreas = ['A3'];
+            $labelSub = 'Kas / Khasanah (A3)';
+            $defaultDesc = 'Pemeriksaan Mandiri Fisik Kas Khasanah / Brankas';
+        } else {
+            $selectedSubAreas = ['A2', 'A3'];
+            $labelSub = 'Kas Kecil & Khasanah (A2 & A3)';
+            $defaultDesc = 'Pemeriksaan Mandiri Fisik Kas Kecil dan Kas Khasanah';
+        }
+
+        $tanggal = $request->tanggal_data;
+        $desc = $request->filled('deskripsi') ? $request->deskripsi : $defaultDesc;
+        $noArsip = $request->filled('no_arsip') 
+            ? $request->no_arsip 
+            : ('ARSIP-KAS-' . $kodeUnit . '-' . date('Ymd', strtotime($tanggal)) . '-' . strtoupper(substr(uniqid(), -4)));
+
+        $finding = DailyRegisterFinding::create([
+            'tanggal_data'         => $tanggal,
+            'periode'              => date('Y-m-01', strtotime($tanggal)),
+            'kode_unit'            => $unit->unit_code,
+            'nama_unit'            => $unit->unit_name,
+            'source_sheet'         => 'KKA_Teller_Kas',
+            'nominal_terkait'      => $request->nominal_terkait ?: 0,
+            'risk_awal'            => 'Moderate',
+            'jenis_exception_awal' => 'Pemeriksaan Mandiri: ' . $labelSub,
+            'deskripsi'            => $desc,
+            'rincian'              => $desc,
+            'selected_sub_areas'   => $selectedSubAreas,
+            'no_arsip'             => $noArsip,
+            'review_status'        => DailyRegisterFinding::STATUS_BELUM_DIUJI,
+            'status_review'        => 'Belum Direview',
+            'status_klarifikasi'   => 'Belum Selesai',
+        ]);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Pemeriksaan mandiri ' . $labelSub . ' berhasil ditambahkan.',
+            'finding' => $finding,
+        ]);
     }
 }

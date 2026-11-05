@@ -19,14 +19,34 @@ class UpdateKkaRaRequest extends FormRequest
                 $this->merge(['checklist_answers' => $decoded]);
             }
         }
+
+        if ($this->has('selected_sub_areas') && is_string($this->selected_sub_areas)) {
+            $decodedSub = json_decode($this->selected_sub_areas, true);
+            if (is_array($decodedSub)) {
+                $this->merge(['selected_sub_areas' => $decodedSub]);
+            }
+        }
     }
 
     public function rules(): array
     {
+        $rawSelected = $this->input('selected_sub_areas');
+        $selectedSubAreas = is_array($rawSelected) ? $rawSelected : [];
+
         $hasTidak = false;
         $answers = $this->input('checklist_answers');
         if (is_array($answers)) {
+            $chkIds = collect($answers)->pluck('checklist_id')->filter()->toArray();
+            $chkMap = !empty($chkIds) 
+                ? \App\Models\DailyRegister\DailyRegisterChecklist::whereIn('id', $chkIds)->get()->keyBy('id')
+                : collect();
+
             foreach ($answers as $ans) {
+                $chkId = $ans['checklist_id'] ?? null;
+                $chkModel = $chkId ? ($chkMap[$chkId] ?? null) : null;
+                if (!empty($selectedSubAreas) && $chkModel && !in_array($chkModel->sub_area_code, $selectedSubAreas)) {
+                    continue;
+                }
                 if (($ans['jawaban'] ?? '') === 'Tidak') {
                     $hasTidak = true;
                     break;
@@ -36,11 +56,17 @@ class UpdateKkaRaRequest extends FormRequest
 
         $rules = [
             'bukti_referensi'    => 'nullable|string',
+            'no_arsip'           => 'nullable|string|max:100',
+            'tgl_keluhan'        => 'nullable|date',
+            'tgl_buku'           => 'nullable|date',
+            'status_keluhan'     => 'nullable|string|max:50',
+            'lama_hari_kerja'    => 'nullable|string|max:50',
             'critical_trigger'   => 'nullable|in:Ya,Tidak',
             'perlu_onsite'       => 'nullable|string',
             'tanggal_ditemukan'  => 'nullable|date',
             'file_bukti'         => 'nullable|file|mimes:pdf|max:5120',
             'checklist_answers'  => 'nullable',
+            'selected_sub_areas' => 'nullable',
         ];
 
         // Validasi penguncian Tanggal Ditemukan / Diuji

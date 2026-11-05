@@ -41,4 +41,9 @@ class PhysicalKka extends Model
     {
         return $this->hasMany(PhysicalKkaBarangCetakanDetail::class, 'physical_kka_id');
     }
+
+    public function atmMachines()
+    {
+        return $this->hasMany(PhysicalKkaAtmMachine::class, 'physical_kka_id');
+    }
 }

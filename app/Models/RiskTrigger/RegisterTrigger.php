@@ -28,6 +28,7 @@ class RegisterTrigger extends Model
         'likelihood' => 'integer',
         'impact' => 'integer',
         'risk_score_reassessment' => 'float',
+        'waktu_tindak_lanjut_alarm' => 'datetime',
     ];
 
     // 13 Standar Area SOP 06
@@ -92,6 +93,9 @@ class RegisterTrigger extends Model
         'Informasi Manajemen',
     ];
 
+    // Ambang Batas Pemicu Alarm Akumulasi Temuan (> 10 temuan Moderate-to-High / High)
+    public const ACCUMULATION_ALARM_THRESHOLD = 10;
+
     // Relations
     public function user()
     {
@@ -106,6 +110,11 @@ class RegisterTrigger extends Model
     public function programKerjaData()
     {
         return $this->hasOne(ProgramKerjaData::class, 'register_trigger_id');
+    }
+
+    public function kkaInduk()
+    {
+        return $this->hasOne(\App\Models\RiskTrigger\Kka\RiskTriggerKkaInduk::class, 'register_trigger_id');
     }
 
     /**
@@ -248,7 +257,7 @@ class RegisterTrigger extends Model
             default => 'RENDAH',
         };
 
-        // Jika ada alarm akumulasi (> 5 temuan High/Moderate di area yang sama), otomatis tandai Perlu Verifikasi Lapangan = "Ya"
+        // Jika ada alarm akumulasi (> 10 temuan High/Moderate di area yang sama), otomatis tandai Perlu Verifikasi Lapangan = "Ya"
         if ($alarmAccumulationActive) {
             $this->perlu_verifikasi_lapangan = 'Ya';
         }
@@ -322,7 +331,9 @@ class RegisterTrigger extends Model
         }
 
         // 32. Status Workflow (Persis Formula Excel Kolom AF):
-        if ($this->status_duplikat === 'DUPLIKAT - REVIEW') {
+        if (in_array($this->status_workflow, ['DALAM PANTAUAN ALARM', 'SELESAI/DALAM TL', 'SELESAI'])) {
+            // Pertahankan status tindak lanjut alarm yang telah diproses Admin
+        } elseif ($this->status_duplikat === 'DUPLIKAT - REVIEW') {
             $this->status_workflow = 'REVIEW DUPLIKAT';
         } elseif ($this->keputusan_final === 'RISK TRIGGER VISIT') {
             // Jika belum di-assign atau baru masuk status visit

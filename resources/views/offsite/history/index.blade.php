@@ -61,7 +61,9 @@
                     <th>KODE UNIT</th>
                     <th>JENIS FILE</th>
                     <th>NAMA FILE</th>
+                    <th>FINGERPRINT</th>
                     <th style="text-align:center;">STATUS</th>
+                    <th style="text-align:center;">VERIFIKASI</th>
                     <th style="text-align:right;">LOW</th>
                     <th style="text-align:right;">MODERATE</th>
                     <th style="text-align:right;">HIGH</th>
@@ -75,6 +77,19 @@
                     <td><span class="badge badge-gray" style="font-family:monospace;">{{ $log->kode_unit }}</span></td>
                     <td><span class="badge badge-info">{{ $log->jenis_file }}</span></td>
                     <td style="font-size:0.82rem; color:var(--text-muted);">{{ $log->nama_file }}</td>
+                    <td style="font-size:0.82rem; white-space:nowrap;">
+                        @if($log->file_hash)
+                            <code class="text-dark" 
+                                  title="{{ $log->file_hash }}" 
+                                  style="cursor:help; font-size:0.78rem; font-family:monospace; background:#f1f5f9; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; display:inline-block;"
+                                  data-bs-toggle="tooltip" 
+                                  data-bs-placement="top">
+                                {{ substr($log->file_hash, 0, 8) }}...{{ substr($log->file_hash, -4) }}
+                            </code>
+                        @else
+                            <span class="text-muted">—</span>
+                        @endif
+                    </td>
                     <td style="text-align:center;">
                         @if($log->status === 'Berhasil')
                             <span class="badge badge-success">Berhasil</span>
@@ -84,13 +99,39 @@
                             <span class="badge badge-gray">{{ $log->status }}</span>
                         @endif
                     </td>
+                    <td style="text-align:center; white-space:nowrap;">
+                        <div style="display:inline-flex; align-items:center; gap:0.4rem; justify-content:center;">
+                            <a href="{{ route('offsite.history.verify', $log->id) }}" 
+                               class="btn btn-outline btn-sm btn-verify" 
+                               data-id="{{ $log->id }}"
+                               data-url="{{ route('offsite.history.verify', $log->id) }}"
+                               title="Verifikasi integritas file di storage terhadap fingerprint database"
+                               style="padding:2px 8px; font-size:0.75rem; line-height:1.2;">
+                                <i class="bi bi-shield-check"></i> Verifikasi
+                            </a>
+                            <span id="verify-badge-{{ $log->id }}" class="verify-badge-container">
+                                @if(session('verify_id') == $log->id)
+                                    <span class="badge {{ session('verify_badge') }}">
+                                        @if(session('verify_badge') === 'badge-success')
+                                            <i class="bi bi-check-circle me-1"></i>
+                                        @elseif(session('verify_badge') === 'badge-danger')
+                                            <i class="bi bi-exclamation-triangle me-1"></i>
+                                        @else
+                                            <i class="bi bi-dash-circle me-1"></i>
+                                        @endif
+                                        {{ session('verify_label') }}
+                                    </span>
+                                @endif
+                            </span>
+                        </div>
+                    </td>
                     <td style="text-align:right; font-family:monospace;">{{ $log->total_low }}</td>
                     <td style="text-align:right; font-family:monospace;">{{ $log->total_moderate }}</td>
                     <td style="text-align:right; font-family:monospace;">{{ $log->total_high }}</td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="9">
+                    <td colspan="11">
                         <div class="empty-state">
                             <i class="bi bi-inbox"></i>
                             <p>Belum ada riwayat upload untuk filter ini.</p>
@@ -107,4 +148,58 @@
     </div>
     @endif
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const buttons = document.querySelectorAll('.btn-verify');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (this.dataset.loading === 'true') return;
+            this.dataset.loading = 'true';
+
+            const id = this.getAttribute('data-id');
+            const url = this.getAttribute('data-url') || this.getAttribute('href');
+            const badgeContainer = document.getElementById('verify-badge-' + id);
+            
+            const originalHtml = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width:0.75rem; height:0.75rem;"></span>';
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.innerHTML = originalHtml;
+                this.dataset.loading = 'false';
+                if (badgeContainer) {
+                    let icon = '';
+                    if (data.badge === 'badge-success') {
+                        icon = '<i class="bi bi-check-circle me-1"></i>';
+                    } else if (data.badge === 'badge-danger') {
+                        icon = '<i class="bi bi-exclamation-triangle me-1"></i>';
+                    } else {
+                        icon = '<i class="bi bi-dash-circle me-1"></i>';
+                    }
+                    badgeContainer.innerHTML = '<span class="badge ' + data.badge + '" title="' + (data.message || '') + '">' + icon + data.label + '</span>';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                this.innerHTML = originalHtml;
+                this.dataset.loading = 'false';
+                if (badgeContainer) {
+                    badgeContainer.innerHTML = '<span class="badge badge-gray"><i class="bi bi-dash-circle me-1"></i>Belum Ada Hash</span>';
+                }
+            });
+        });
+    });
+});
+</script>
+@endpush
 @endsection

@@ -16,9 +16,14 @@ use App\Models\PelaporanBulanan\Sop08ReviewLaporan;
 use App\Models\PelaporanBulanan\Sop08KoreksiApproval;
 use App\Models\PelaporanBulanan\Sop08IsuSignifikan;
 use App\Models\PelaporanBulanan\Sop08DistribusiQuality;
-use App\Models\PelaporanBulanan\Sop08Feedback;
 use App\Models\PelaporanBulanan\Sop08MasterRa;
 use App\Models\PelaporanBulanan\Sop08LogHarianRa;
+use App\Models\PelaporanBulanan\Sop08KkaBranchStatus;
+use App\Models\DailyRegister\DailyRegisterFinding;
+use App\Models\DailyRegister\PhysicalKka;
+use App\Models\Sop07RegisterTl;
+use App\Models\RawMetric;
+use App\Models\Unit;
 
 class Sop08Service
 {
@@ -543,7 +548,7 @@ class Sop08Service
                         'high_risk' => $triggers->where('risk_level_reassessment', 'HIGH')->count(),
                         'referensi_wp_kka' => 'WP-SOP06-TRIGGERS',
                         'status_kegiatan' => 'SELESAI',
-                        'catatan' => "Sinkronisasi otomatis Risk Trigger Visit ({$triggers->count()} trigger).",
+                        'catatan' => "Sinkronisasi otomatis Risk Trigger Visit ({$triggers->count()} trigger" . ($triggers->count() > \App\Models\RiskTrigger\RegisterTrigger::ACCUMULATION_ALARM_THRESHOLD ? ' - Melebihi ambang batas alarm > 10 temuan' : '') . ").",
                     ]
                 );
                 $syncedKegiatanCount++;
@@ -1782,4 +1787,814 @@ class Sop08Service
             'status_bulanan' => 'BELUM ADA DATA',
         ];
     }
+
+    // =========================================================================
+    // OVERHAUL SOP 08: 100% DATABASE PULL, KONSOLIDASI REAL-TIME, WYSIWYG
+    // =========================================================================
+
+    /**
+     * Sanitasi konten HTML WYSIWYG untuk mencegah XSS namun tetap mempertahankan format teks & tabel.
+     */
+    public function sanitizeWysiwygHtml(?string $html): string
+    {
+        if (empty($html)) {
+            return '';
+        }
+
+        // 1. Bersihkan elemen berbahaya script, style, iframe, object, embed, applet
+        $clean = preg_replace('/<(script|style|iframe|object|embed|applet)\b[^>]*>.*?<\/\1>/is', '', $html);
+        $clean = preg_replace('/<(script|style|iframe|object|embed|applet)\b[^>]*>/is', '', $clean);
+
+        // 2. Hapus inline event handlers (onerror, onload, onclick, dll)
+        $clean = preg_replace('/\s*on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $clean);
+
+        // 3. Hapus protokol berbahaya seperti javascript:
+        $clean = preg_replace('/(href|src)\s*=\s*("javascript:[^"]*"|\'javascript:[^\']*\'|javascript:[^\s>]+)/i', '', $clean);
+
+        // 4. Batasi tag yang diizinkan (teks terformat, headings, lists, dan tabel)
+        $allowedTags = '<p><br><b><strong><i><em><u><s><h1><h2><h3><h4><h5><h6><ul><ol><li><table><thead><tbody><tfoot><tr><th><td><span><div><blockquote><hr>';
+        $clean = strip_tags($clean, $allowedTags);
+
+        return trim($clean);
+    }
+
+    /**
+     * Simpan narasi WYSIWYG Admin untuk laporan bulanan tertentu.
+     */
+    public function saveWysiwygAdmin(string $reportId, ?string $catatanEksekutif, ?string $rencanaBulanDepan, ?int $adminId = null): Sop08NarasiLaporan
+    {
+        $narasi = Sop08NarasiLaporan::firstOrCreate(['report_id' => $reportId]);
+
+        $sanitizedCatatan = $this->sanitizeWysiwygHtml($catatanEksekutif);
+        $sanitizedRencana = $this->sanitizeWysiwygHtml($rencanaBulanDepan);
+
+        $narasi->catatan_eksekutif = $sanitizedCatatan;
+        $narasi->rencana_bulan_depan = $sanitizedRencana;
+        $narasi->admin_editor_id = $adminId ?: auth()->id();
+        $narasi->is_consolidated = true;
+
+        // Kompatibilitas dengan pembaca lama
+        if (!empty($sanitizedCatatan)) {
+            $narasi->ringkasan_eksekutif = $sanitizedCatatan;
+        }
+        if (!empty($sanitizedRencana)) {
+            $narasi->rencana_bulan_berikut = $sanitizedRencana;
+        }
+
+        $narasi->save();
+
+        return $narasi;
+    }
+
+    /**
+     * Hitung & rekam status kepatuhan KKA per cabang untuk periode berjalan.
+     * Aturan:
+     * 🟢 HIJAU (Tuntas / Patuh):
+     *   Populasi data KKA > 0 DAN seluruh item KKA tersebut sudah selesai dikerjakan / diupload oleh RA; ATAU
+     *   Populasi data KKA == 0 (nihil transaksi) DAN RA sudah mengunggah / mengonfirmasi KKA nihilnya.
+     * 🔴 MERAH (Belum Selesai / Tertunggak):
+     *   Terdapat populasi data KKA (>= 1) yang belum selesai dikerjakan / belum diupload oleh RA! (atau nihil belum dikonfirmasi)
+     */
+    public function getKkaComplianceStatus(string $kodeUnit, string $periodeDate): array
+    {
+        $carbon = Carbon::parse($periodeDate);
+        $startMonth = $carbon->copy()->startOfMonth()->format('Y-m-d');
+        $endMonth = $carbon->copy()->endOfMonth()->format('Y-m-d');
+
+        $existingRecords = collect();
+        if (DB::getSchemaBuilder()->hasTable('sop08_kka_branch_statuses')) {
+            $existingRecords = Sop08KkaBranchStatus::where('kode_unit', $kodeUnit)
+                ->whereDate('periode', $startMonth)
+                ->get()
+                ->keyBy('area');
+        }
+
+        // Standard 5 KKA Areas
+        $areas = [
+            'KKA Daily Register',
+            'Cash Opname & Kas Fisik',
+            'KKA Fisik & Observasi',
+            'Offsite Review',
+            'Risk Trigger SOP 06',
+        ];
+
+        $details = [];
+        $totalPopulasi = 0;
+        $totalSelesai = 0;
+        $totalTertunggak = 0;
+        $hasAnyMerah = false;
+
+        foreach ($areas as $area) {
+            $rec = $existingRecords->get($area);
+
+            $populasi = 0;
+            $uncompleted = 0;
+
+            if ($area === 'KKA Daily Register') {
+                if (class_exists(DailyRegisterFinding::class) && DB::getSchemaBuilder()->hasTable('daily_register_findings')) {
+                    $findings = DailyRegisterFinding::where('kode_unit', $kodeUnit)
+                        ->where(function($q) use ($startMonth, $endMonth) {
+                            $q->whereBetween('tanggal_data', [$startMonth, $endMonth])
+                              ->orWhereBetween('tanggal_ditemukan', [$startMonth, $endMonth]);
+                        })->get();
+                    $populasi = $findings->count();
+                    $uncompleted = $findings->filter(function($f) {
+                        $s = strtolower($f->review_status ?? $f->status_review ?? '');
+                        return !in_array($s, ['approved', 'selesai', 'closed']);
+                    })->count();
+                }
+            } elseif ($area === 'Cash Opname & Kas Fisik') {
+                if (DB::getSchemaBuilder()->hasTable('physical_kka_cash_details')) {
+                    $cashKkas = DB::table('physical_kka_cash_details')
+                        ->whereExists(function($sq) use ($kodeUnit, $startMonth, $endMonth) {
+                            $sq->select(DB::raw(1))->from('physical_kkas')
+                                ->whereColumn('physical_kkas.id', 'physical_kka_cash_details.physical_kka_id')
+                                ->where('physical_kkas.kode_unit', $kodeUnit)
+                                ->whereBetween('physical_kkas.tanggal_pemeriksaan', [$startMonth, $endMonth]);
+                        })->get();
+                    $populasi = $cashKkas->count();
+                    $uncompleted = DB::table('physical_kka_cash_details')
+                        ->whereExists(function($sq) use ($kodeUnit, $startMonth, $endMonth) {
+                            $sq->select(DB::raw(1))->from('physical_kkas')
+                                ->whereColumn('physical_kkas.id', 'physical_kka_cash_details.physical_kka_id')
+                                ->where('physical_kkas.kode_unit', $kodeUnit)
+                                ->whereBetween('physical_kkas.tanggal_pemeriksaan', [$startMonth, $endMonth])
+                                ->where('physical_kkas.status_final', '!=', 'Final');
+                        })->count();
+                }
+            } elseif ($area === 'KKA Fisik & Observasi') {
+                if (class_exists(PhysicalKka::class) && DB::getSchemaBuilder()->hasTable('physical_kkas')) {
+                    $kkas = PhysicalKka::where('kode_unit', $kodeUnit)
+                        ->whereBetween('tanggal_pemeriksaan', [$startMonth, $endMonth])
+                        ->get();
+                    $populasi = $kkas->count();
+                    $uncompleted = $kkas->filter(function($k) {
+                        return strtolower($k->status_final ?? '') !== 'final';
+                    })->count();
+                }
+            } elseif ($area === 'Offsite Review') {
+                if (DB::getSchemaBuilder()->hasTable('wp_offsite')) {
+                    $offsite = DB::table('wp_offsite')->where('kode_unit', $kodeUnit)
+                        ->whereYear('periode_mulai', $carbon->year)
+                        ->whereMonth('periode_mulai', $carbon->month)
+                        ->first();
+                    if ($offsite) {
+                        $populasi = 1;
+                        if (!in_array(strtolower($offsite->status_review ?? ''), ['approved', 'selesai', 'final'])) {
+                            $uncompleted = 1;
+                        }
+                    }
+                }
+            } elseif ($area === 'Risk Trigger SOP 06') {
+                if (DB::getSchemaBuilder()->hasTable('register_triggers')) {
+                    $triggers = DB::table('register_triggers')->where('kode_unit', $kodeUnit)
+                        ->whereBetween('tanggal_trigger', [$startMonth, $endMonth])
+                        ->get();
+                    $totalTriggers = $triggers->count();
+                    // SOP 06 hanya memicu alarm jika akumulasi temuan cabang > 10
+                    if ($totalTriggers > 10) {
+                        $populasi = 1;
+                        $hasUninformed = $triggers->filter(function($t) {
+                            $wf = strtoupper($t->status_workflow ?? '');
+                            $tl = strtoupper($t->status_tindak_lanjut_alarm ?? '');
+                            return !in_array($wf, ['SELESAI/DALAM TL', 'SELESAI', 'DALAM PANTAUAN ALARM'])
+                                && $tl !== 'TELAH DITINDAKLANJUTI';
+                        })->isNotEmpty();
+                        $uncompleted = $hasUninformed ? 1 : 0;
+                    } else {
+                        $populasi = 0;
+                        $uncompleted = 0;
+                    }
+                }
+            }
+
+            // Jika ada override record status di database (misal dari fixture atau konfirmasi manual sebelumnya)
+            if ($rec && $area !== 'Risk Trigger SOP 06') {
+                if ($rec->populasi > 0 || $rec->is_nihil) {
+                    $populasi = (int)$rec->populasi;
+                    $itemSelesai = (int)$rec->item_selesai;
+                    $uncompleted = max(0, $populasi - $itemSelesai);
+                }
+                $isNihil = (bool)$rec->is_nihil || ($populasi === 0);
+                $isConfirmedNihil = (bool)$rec->is_confirmed_nihil;
+            } else {
+                $isNihil = ($populasi === 0);
+                // Khusus SOP 06: RA tidak mengisi form di modul ini. Jika tidak ada alarm (> 10), otomatis patuh
+                $isConfirmedNihil = ($area === 'Risk Trigger SOP 06') ? true : false;
+            }
+
+            if (!$isNihil) {
+                $isPatuh = ($uncompleted === 0);
+            } else {
+                $isPatuh = ($area === 'Risk Trigger SOP 06') ? true : $isConfirmedNihil;
+            }
+
+            $areaStatus = $isPatuh ? 'HIJAU' : 'MERAH';
+            if ($areaStatus === 'MERAH') {
+                $hasAnyMerah = true;
+            }
+
+            $itemSelesai = max(0, $populasi - $uncompleted);
+
+            $details[$area] = [
+                'area' => $area,
+                'populasi' => $populasi,
+                'item_selesai' => $itemSelesai,
+                'item_tertunggak' => $uncompleted,
+                'is_nihil' => $isNihil,
+                'is_confirmed_nihil' => $isConfirmedNihil,
+                'status_kepatuhan' => $areaStatus,
+            ];
+
+            $totalPopulasi += $populasi;
+            $totalSelesai += $itemSelesai;
+            $totalTertunggak += $uncompleted;
+
+            // Persist area record
+            if (DB::getSchemaBuilder()->hasTable('sop08_kka_branch_statuses')) {
+                if (!$rec) {
+                    $rec = new Sop08KkaBranchStatus();
+                    $rec->kode_unit = $kodeUnit;
+                    $rec->periode = $startMonth;
+                    $rec->area = $area;
+                }
+                $rec->populasi = $populasi;
+                $rec->item_selesai = $itemSelesai;
+                $rec->is_nihil = $isNihil;
+                $rec->is_confirmed_nihil = $isConfirmedNihil;
+                $rec->status_kepatuhan = $areaStatus;
+                $rec->save();
+            }
+        }
+
+        $overallStatus = $hasAnyMerah ? 'MERAH' : 'HIJAU';
+
+        // Update overall ALL record
+        if (DB::getSchemaBuilder()->hasTable('sop08_kka_branch_statuses')) {
+            $allRec = $existingRecords->get('ALL');
+            if (!$allRec) {
+                $allRec = new Sop08KkaBranchStatus();
+                $allRec->kode_unit = $kodeUnit;
+                $allRec->periode = $startMonth;
+                $allRec->area = 'ALL';
+            }
+            $allRec->populasi = $totalPopulasi;
+            $allRec->item_selesai = $totalSelesai;
+            $allRec->is_nihil = ($totalPopulasi === 0);
+            $allRec->is_confirmed_nihil = !$hasAnyMerah;
+            $allRec->status_kepatuhan = $overallStatus;
+            $allRec->save();
+        }
+
+        return [
+            'status' => $overallStatus,
+            'badge' => $overallStatus === 'HIJAU' ? '🟢 Tuntas / Patuh' : '🔴 Belum Selesai / Tertunggak',
+            'summary' => $overallStatus === 'HIJAU' ? 'Lengkap / Tuntas' : 'Belum Selesai / Tertunggak',
+            'is_nihil' => ($totalPopulasi === 0),
+            'is_confirmed_nihil' => !$hasAnyMerah,
+            'populasi' => $totalPopulasi,
+            'item_selesai' => $totalSelesai,
+            'item_tertunggak' => $totalTertunggak,
+            'details' => $details,
+            'branch_status' => $existingRecords->get('ALL') ?? $existingRecords->first(),
+        ];
+    }
+
+    /**
+     * Konfirmasi KKA Nihil oleh Resident Auditor atau Sistem.
+     */
+    public function confirmNihilKka(string $kodeUnit, string $periodeDate, ?int $userId = null, string $area = 'ALL', ?string $catatan = null): Sop08KkaBranchStatus
+    {
+        $startMonth = Carbon::parse($periodeDate)->startOfMonth()->format('Y-m-d');
+        $branchStatus = Sop08KkaBranchStatus::where('kode_unit', $kodeUnit)
+            ->whereDate('periode', $startMonth)
+            ->where('area', $area)
+            ->first();
+
+        if (!$branchStatus) {
+            $branchStatus = new Sop08KkaBranchStatus();
+            $branchStatus->kode_unit = $kodeUnit;
+            $branchStatus->periode = $startMonth;
+            $branchStatus->area = $area;
+        }
+
+        $branchStatus->is_nihil = true;
+        $branchStatus->is_confirmed_nihil = true;
+        $branchStatus->status_kepatuhan = 'HIJAU';
+        $branchStatus->confirmed_by = $userId ?: auth()->id();
+        $branchStatus->confirmed_at = now();
+        $branchStatus->catatan = $catatan ?: 'KKA nihil transaksi telah dikonfirmasi oleh Resident Auditor.';
+        $branchStatus->save();
+
+        return $branchStatus;
+    }
+
+    /**
+     * Mengambil data Tabel Matriks Konsolidasi Bulanan Seluruh Cabang (7 Kolom Ringkas, Padat, Presisi).
+     */
+    public function getMonthlyBranchMatrix(string $periodeDate, ?array $allowedUnits = null, array $filters = []): array
+    {
+        $carbon = Carbon::parse($periodeDate);
+        $startMonth = $carbon->copy()->startOfMonth()->format('Y-m-d');
+        $endMonth = $carbon->copy()->endOfMonth()->format('Y-m-d');
+
+        // Daftar Seluruh Cabang / KCP PT. Bank Sulteng
+        $unitsQuery = Sop08MasterUnit::where('is_active', true);
+        if ($allowedUnits !== null) {
+            $unitsQuery->whereIn('kode_unit', $allowedUnits);
+        }
+        $masterUnits = $unitsQuery->orderBy('kode_unit')->get();
+
+        if ($masterUnits->isEmpty()) {
+            $units = Unit::whereIn('unit_type', ['KC', 'KCU', 'KCP', 'KCPLK'])->where('unit_code', '!=', '000')->orderBy('unit_code')->get();
+            $masterUnits = $units->map(function($u) {
+                return (object)[
+                    'kode_unit' => $u->unit_code,
+                    'nama_unit' => $u->unit_name,
+                    'assigned_ra' => 'Resident Auditor',
+                    'resident_auditor' => 'Resident Auditor',
+                ];
+            });
+        }
+
+        $rows = [];
+
+        foreach ($masterUnits as $unit) {
+            $uCode = $unit->kode_unit;
+
+            // 1. Status Kepatuhan KKA (Badge 🟢 Hijau / 🔴 Merah)
+            $compliance = $this->getKkaComplianceStatus($uCode, $startMonth);
+
+            // 2. Jumlah Transaksi Reversal
+            $revCount = 0;
+            if (DB::getSchemaBuilder()->hasTable('daily_registers')) {
+                $revCount += DB::table('daily_registers')
+                    ->where('kode_unit', $uCode)
+                    ->whereBetween('tanggal_data', [$startMonth, $endMonth])
+                    ->where(function($q) {
+                        $q->where('kategori', 'like', '%REVERSAL%')
+                          ->orWhere('rincian', 'like', '%reversal%')
+                          ->orWhere('source_sheet', 'like', '%reversal%');
+                    })->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('daily_register_findings')) {
+                $revCount += DB::table('daily_register_findings')
+                    ->where('kode_unit', $uCode)
+                    ->where(function($q) use ($startMonth, $endMonth) {
+                        $q->whereBetween('tanggal_data', [$startMonth, $endMonth])
+                          ->orWhereBetween('tanggal_ditemukan', [$startMonth, $endMonth]);
+                    })
+                    ->where(function($q) {
+                        $q->where('kategori', 'like', '%reversal%')
+                          ->orWhere('jenis_exception_awal', 'like', '%reversal%')
+                          ->orWhere('jenis_exception_ra', 'like', '%reversal%')
+                          ->orWhere('rincian', 'like', '%reversal%')
+                          ->orWhere('deskripsi', 'like', '%reversal%');
+                    })->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('risk_trigger_kka_kas_tellars')) {
+                $revCount += DB::table('risk_trigger_kka_kas_tellars')
+                    ->where('reversal_match', 'Tidak')
+                    ->whereExists(function($sq) use ($uCode, $startMonth, $endMonth) {
+                        $sq->select(DB::raw(1))->from('register_triggers')
+                            ->whereColumn('register_triggers.id', 'risk_trigger_kka_kas_tellars.register_trigger_id')
+                            ->where('register_triggers.kode_unit', $uCode)
+                            ->whereBetween('register_triggers.tanggal_trigger', [$startMonth, $endMonth]);
+                    })->count();
+            }
+            if (class_exists(RawMetric::class) && DB::getSchemaBuilder()->hasTable('raw_metrics')) {
+                $rawM = RawMetric::whereHas('unit', fn($q) => $q->where('unit_code', $uCode))
+                    ->where('period', $carbon->year)
+                    ->first();
+                if ($rawM && $rawM->reversal_correction_txn > 0 && $revCount === 0) {
+                    $revCount = (int)$rawM->reversal_correction_txn;
+                }
+            }
+
+            // 3. Jumlah Selisih Kas
+            $selisihKasCount = 0;
+            if (DB::getSchemaBuilder()->hasTable('physical_kka_cash_details')) {
+                $selisihKasCount += DB::table('physical_kka_cash_details')
+                    ->whereRaw('ABS(selisih) > 0')
+                    ->whereExists(function($sq) use ($uCode, $startMonth, $endMonth) {
+                        $sq->select(DB::raw(1))->from('physical_kkas')
+                            ->whereColumn('physical_kkas.id', 'physical_kka_cash_details.physical_kka_id')
+                            ->where('physical_kkas.kode_unit', $uCode)
+                            ->whereBetween('physical_kkas.tanggal_pemeriksaan', [$startMonth, $endMonth]);
+                    })->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('physical_kka_atm_machines')) {
+                $selisihKasCount += DB::table('physical_kka_atm_machines')
+                    ->whereRaw('ABS(selisih) > 0')
+                    ->whereExists(function($sq) use ($uCode, $startMonth, $endMonth) {
+                        $sq->select(DB::raw(1))->from('physical_kkas')
+                            ->whereColumn('physical_kkas.id', 'physical_kka_atm_machines.physical_kka_id')
+                            ->where('physical_kkas.kode_unit', $uCode)
+                            ->whereBetween('physical_kkas.tanggal_pemeriksaan', [$startMonth, $endMonth]);
+                    })->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('physical_kkas')) {
+                $selisihKasCount += DB::table('physical_kkas')
+                    ->where('kode_unit', $uCode)
+                    ->whereBetween('tanggal_pemeriksaan', [$startMonth, $endMonth])
+                    ->whereRaw('ABS(COALESCE(selisih_kas_khasanah, 0)) > 0')
+                    ->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('daily_registers')) {
+                $selisihKasCount += DB::table('daily_registers')
+                    ->where('kode_unit', $uCode)
+                    ->whereBetween('tanggal_data', [$startMonth, $endMonth])
+                    ->where(function($q) {
+                        $q->where('kategori', 'like', '%SELISIH%')
+                          ->orWhere('rincian', 'like', '%selisih%');
+                    })->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('daily_register_findings')) {
+                $selisihKasCount += DB::table('daily_register_findings')
+                    ->where('kode_unit', $uCode)
+                    ->where(function($q) use ($startMonth, $endMonth) {
+                        $q->whereBetween('tanggal_data', [$startMonth, $endMonth])
+                          ->orWhereBetween('tanggal_ditemukan', [$startMonth, $endMonth]);
+                    })
+                    ->where(function($q) {
+                        $q->where('kategori', 'like', '%selisih%')
+                          ->orWhere('rincian', 'like', '%selisih%')
+                          ->orWhere('deskripsi', 'like', '%selisih%');
+                    })->count();
+            }
+            if (class_exists(RawMetric::class) && DB::getSchemaBuilder()->hasTable('raw_metrics')) {
+                $rawM = RawMetric::whereHas('unit', fn($q) => $q->where('unit_code', $uCode))
+                    ->where('period', $carbon->year)
+                    ->first();
+                if ($rawM && $rawM->cash_discrepancy > 0 && $selisihKasCount === 0) {
+                    $selisihKasCount = (int)$rawM->cash_discrepancy;
+                }
+            }
+
+            // 4. Jumlah Pelampauan Limit / Biaya Besar
+            $limitBiayaCount = 0;
+            if (DB::getSchemaBuilder()->hasTable('daily_registers')) {
+                $limitBiayaCount += DB::table('daily_registers')
+                    ->where('kode_unit', $uCode)
+                    ->whereBetween('tanggal_data', [$startMonth, $endMonth])
+                    ->where(function($q) {
+                        $q->whereIn('kategori', ['LIMIT_TARIK_TUNAI', 'BIAYA_HARIAN', 'JURNAL_MANUAL'])
+                          ->orWhere('kategori', 'like', '%LIMIT%')
+                          ->orWhere('kategori', 'like', '%BIAYA%');
+                    })->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('daily_register_findings')) {
+                $limitBiayaCount += DB::table('daily_register_findings')
+                    ->where('kode_unit', $uCode)
+                    ->where(function($q) use ($startMonth, $endMonth) {
+                        $q->whereBetween('tanggal_data', [$startMonth, $endMonth])
+                          ->orWhereBetween('tanggal_ditemukan', [$startMonth, $endMonth]);
+                    })
+                    ->where(function($q) {
+                        $q->where('source_sheet', 'KKA_Biaya_Beban')
+                          ->orWhere('kategori', 'like', '%limit%')
+                          ->orWhere('kategori', 'like', '%biaya%')
+                          ->orWhere('nominal_terkait', '>=', 100000000);
+                    })->count();
+            }
+            if (class_exists(RawMetric::class) && DB::getSchemaBuilder()->hasTable('raw_metrics')) {
+                $rawM = RawMetric::whereHas('unit', fn($q) => $q->where('unit_code', $uCode))
+                    ->where('period', $carbon->year)
+                    ->first();
+                if ($rawM && ($rawM->unusual_cost_journal > 0 || $rawM->large_risky_cash_txn > 0) && $limitBiayaCount === 0) {
+                    $limitBiayaCount = (int)($rawM->unusual_cost_journal + $rawM->large_risky_cash_txn);
+                }
+            }
+
+            // 5. Jumlah Temuan Moderate-to-High & High
+            $modHighCount = 0;
+            if (DB::getSchemaBuilder()->hasTable('daily_register_findings')) {
+                $modHighCount += DB::table('daily_register_findings')
+                    ->where('kode_unit', $uCode)
+                    ->where(function($q) use ($startMonth, $endMonth) {
+                        $q->whereBetween('tanggal_data', [$startMonth, $endMonth])
+                          ->orWhereBetween('tanggal_ditemukan', [$startMonth, $endMonth]);
+                    })
+                    ->where(function($q) {
+                        $q->whereIn('risk_awal', ['Moderate', 'High', 'MODERATE', 'HIGH', 'MODERATE TO HIGH'])
+                          ->orWhereIn('risk_final', ['Moderate', 'High', 'MODERATE', 'HIGH', 'MODERATE TO HIGH'])
+                          ->orWhere('skor_dampak', '>=', 4);
+                    })->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('kka_findings')) {
+                $modHighCount += DB::table('kka_findings')
+                    ->where('kode_unit', $uCode)
+                    ->whereIn('risk_awal', ['Moderate', 'High', 'MODERATE', 'HIGH'])
+                    ->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('register_triggers')) {
+                $modHighCount += DB::table('register_triggers')
+                    ->where('kode_unit', $uCode)
+                    ->whereBetween('tanggal_trigger', [$startMonth, $endMonth])
+                    ->whereIn('risk_level_reassessment', ['Moderate', 'High', 'MODERATE', 'HIGH'])
+                    ->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('sop08_rekap_isu_tls')) {
+                $modHighCount += DB::table('sop08_rekap_isu_tls')
+                    ->where('kode_unit', $uCode)
+                    ->whereBetween('periode', [$startMonth, $endMonth])
+                    ->whereIn('risk_level', ['MODERATE', 'HIGH', 'Moderate', 'High', 'MODERATE TO HIGH'])
+                    ->count();
+            }
+
+            // 6. Status Tindak Lanjut Aktif / Overdue
+            $tlAktif = 0;
+            $tlOverdue = 0;
+            if (DB::getSchemaBuilder()->hasTable('sop07_register_tls')) {
+                $tls = DB::table('sop07_register_tls')->where('kode_unit', $uCode)->get();
+                $tlOverdue = $tls->filter(function($t) {
+                    return $t->status_final === 'OVERDUE' || ($t->status_final !== 'CLOSED' && !empty($t->target_penyelesaian) && Carbon::parse($t->target_penyelesaian)->isPast());
+                })->count();
+                $tlAktif = $tls->filter(function($t) {
+                    return in_array(strtoupper($t->status_final ?? ''), ['OPEN', 'IN PROGRESS', 'BELUM SELESAI', 'PENDING']);
+                })->count();
+            }
+            if ($tlAktif === 0 && $tlOverdue === 0 && DB::getSchemaBuilder()->hasTable('sop08_rekap_isu_tls')) {
+                $isus = DB::table('sop08_rekap_isu_tls')->where('kode_unit', $uCode)->whereBetween('periode', [$startMonth, $endMonth])->get();
+                $tlOverdue = $isus->where('status_tl', 'OVERDUE')->count();
+                $tlAktif = $isus->whereIn('status_tl', ['OPEN', 'IN PROGRESS'])->count();
+            }
+
+            // 7. Status Approval & Isu Signifikan
+            $kalender = Sop08KalenderLaporan::where('kode_unit', $uCode)->whereDate('periode', $startMonth)->first();
+            $statusApproval = $kalender?->status_final ?: 'UNDER REVIEW';
+            $hasIsuSignifikan = ($modHighCount > 0) || (
+                DB::getSchemaBuilder()->hasTable('sop08_rekap_isu_tls') && 
+                DB::table('sop08_rekap_isu_tls')->where('kode_unit', $uCode)->whereBetween('periode', [$startMonth, $endMonth])->where('flag_signifikan', 'YA')->exists()
+            );
+
+            $row = [
+                'kode_unit' => $uCode,
+                'nama_unit' => $unit->nama_unit,
+                'resident_auditor' => $unit->assigned_ra ?? ($unit->resident_auditor ?? 'Resident Auditor'),
+                'kepatuhan_status' => $compliance['status'],
+                'status_kepatuhan' => $compliance['status'],
+                'kepatuhan_badge' => $compliance['badge'],
+                'status_kepatuhan_badge' => $compliance['badge'],
+                'kepatuhan_detail' => $compliance['summary'] ?? ($compliance['status'] === 'HIJAU' ? 'Lengkap / Tuntas' : 'Belum Selesai / Tertunggak'),
+                'compliance_data' => $compliance,
+                'reversal_count' => $revCount,
+                'selisih_kas_count' => $selisihKasCount,
+                'limit_biaya_count' => $limitBiayaCount,
+                'mod_to_high_count' => $modHighCount,
+                'temuan_mod_high_count' => $modHighCount,
+                'tl_active_count' => $tlAktif,
+                'tl_aktif_count' => $tlAktif,
+                'tl_overdue_count' => $tlOverdue,
+                'status_approval' => $statusApproval,
+                'has_isu_signifikan' => $hasIsuSignifikan,
+                'has_significant_issue' => $hasIsuSignifikan,
+                'report_id' => $kalender?->report_id,
+                'kalender' => $kalender,
+            ];
+
+            // Filter Cepat (Smart Filters)
+            if (!empty($filters['kode_unit']) && $filters['kode_unit'] !== $uCode) {
+                continue;
+            }
+
+            if (!empty($filters['kepatuhan'])) {
+                $fKep = strtoupper($filters['kepatuhan']);
+                if ($fKep === 'MERAH' && $compliance['status'] !== 'MERAH') {
+                    continue;
+                }
+                if ($fKep === 'HIJAU' && $compliance['status'] !== 'HIJAU') {
+                    continue;
+                }
+            }
+
+            if (!empty($filters['status_approval'])) {
+                $sa = strtoupper($filters['status_approval']);
+                if (in_array($sa, ['ADA_KOREKSI', 'KOREKSI', 'REVISION REQUIRED']) && !in_array($statusApproval, ['REVISION REQUIRED', 'REVISED', 'KOREKSI'])) {
+                    continue;
+                }
+                if (in_array($sa, ['MENUNGGU', 'MENUNGGU_APPROVAL', 'UNDER REVIEW']) && !in_array($statusApproval, ['MENUNGGU REVIEW', 'UNDER REVIEW', 'SUBMITTED', 'DRAFT'])) {
+                    continue;
+                }
+                if (in_array($sa, ['APPROVED', 'SELESAI', 'FINAL', 'APPROVED/FINAL']) && !in_array($statusApproval, ['APPROVED/FINAL', 'SELESAI', 'FINAL', 'APPROVED'])) {
+                    continue;
+                }
+            }
+
+            if (!empty($filters['isu_signifikan'])) {
+                $fIsu = strtoupper($filters['isu_signifikan']);
+                if (in_array($fIsu, ['YA', 'ADA', 'TRUE']) && !$hasIsuSignifikan) {
+                    continue;
+                }
+                if (in_array($fIsu, ['TIDAK', 'TIDAK_ADA', 'FALSE']) && $hasIsuSignifikan) {
+                    continue;
+                }
+            }
+
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Mengambil bagian Hasil Utama & Temuan Kunci (Otomatis Level Moderate-to-High & High).
+     */
+    public function getHasilUtamaTemuanKunci(string $periodeDate, ?string $kodeUnit = null): array
+    {
+        $carbon = Carbon::parse($periodeDate);
+        $startMonth = $carbon->copy()->startOfMonth()->format('Y-m-d');
+        $endMonth = $carbon->copy()->endOfMonth()->format('Y-m-d');
+
+        $findingsList = [];
+
+        // 1. Dari DailyRegisterFinding
+        if (class_exists(DailyRegisterFinding::class) && DB::getSchemaBuilder()->hasTable('daily_register_findings')) {
+            $query = DailyRegisterFinding::where(function($q) use ($startMonth, $endMonth) {
+                $q->whereBetween('tanggal_data', [$startMonth, $endMonth])
+                  ->orWhereBetween('tanggal_ditemukan', [$startMonth, $endMonth]);
+            })->where(function($q) {
+                $q->whereIn('risk_awal', ['Moderate', 'High', 'MODERATE', 'HIGH', 'MODERATE TO HIGH'])
+                  ->orWhereIn('risk_final', ['Moderate', 'High', 'MODERATE', 'HIGH', 'MODERATE TO HIGH'])
+                  ->orWhere('skor_dampak', '>=', 4);
+            });
+
+            if ($kodeUnit) {
+                $query->where('kode_unit', $kodeUnit);
+            }
+
+            foreach ($query->get() as $f) {
+                $area = str_replace(['KKA_', '_'], ['', ' '], $f->source_sheet ?: 'Teller Kas');
+                $nominal = (float)($f->nominal_terkait ?? 0);
+                $isBerulang = ((int)($f->skor_kemungkinan ?? 1) >= 2) || 
+                              DailyRegisterFinding::where('kode_unit', $f->kode_unit)
+                                ->where('id', '!=', $f->id)
+                                ->where('source_sheet', $f->source_sheet)
+                                ->exists();
+
+                $findingsList[] = [
+                    'id' => (string)$f->id,
+                    'source' => 'Daily Register',
+                    'kode_unit' => $f->kode_unit,
+                    'nama_unit' => $f->nama_unit ?? "Cabang {$f->kode_unit}",
+                    'area' => $area,
+                    'uraian' => $f->deskripsi ?: ($f->rincian ?: 'Temuan Ketidaksesuaian Operasional Harian'),
+                    'nominal' => $nominal,
+                    'nominal_formatted' => $nominal > 0 ? 'Rp ' . number_format($nominal, 0, ',', '.') : '-',
+                    'is_berulang' => $isBerulang,
+                    'is_temuan_berulang' => $isBerulang,
+                    'rekomendasi' => $f->simpulan_ra ?: 'Tingkatkan kontrol kepatuhan internal dan lakukan pembinaan staf pelaksana.',
+                    'pic' => $f->kategori ? "PIC {$f->kategori}" : 'Pemimpin Cabang / Seksi Operasional',
+                    'target_tl' => Carbon::parse($endMonth)->addDays(14)->format('d/m/Y'),
+                    'target_date' => Carbon::parse($endMonth)->addDays(14)->format('Y-m-d'),
+                    'risk_level' => in_array(strtoupper($f->risk_final ?? $f->risk_awal ?? ''), ['HIGH']) ? 'HIGH' : 'MODERATE TO HIGH',
+                ];
+            }
+        }
+
+        // 2. Dari RegisterTrigger (SOP 06)
+        if (class_exists(\App\Models\RiskTrigger\RegisterTrigger::class) && DB::getSchemaBuilder()->hasTable('register_triggers')) {
+            $query = \App\Models\RiskTrigger\RegisterTrigger::whereBetween('tanggal_trigger', [$startMonth, $endMonth])
+                ->whereIn('risk_level_reassessment', ['Moderate', 'High', 'MODERATE', 'HIGH', 'MODERATE TO HIGH']);
+            if ($kodeUnit) {
+                $query->where('kode_unit', $kodeUnit);
+            }
+            foreach ($query->get() as $t) {
+                $isBerulang = ($t->jumlah_kejadian > 1) 
+                    || ($t->status_duplikat === 'DUPLIKAT - REVIEW')
+                    || \App\Models\RiskTrigger\RegisterTrigger::where('kode_unit', $t->kode_unit)
+                        ->where('id', '!=', $t->id)
+                        ->where('area', $t->area)
+                        ->exists();
+                $nominal = (float)($t->eksposur_nominal ?? $t->nominal ?? 0);
+                $uraian = $t->uraian_trigger ?: ($t->indikasi_anomali ?: 'Penyimpangan ambang batas risiko / alarm risk trigger terlampaui.');
+                $findingsList[] = [
+                    'id' => (string)($t->trigger_id ?: $t->id),
+                    'source' => 'Risk Trigger',
+                    'kode_unit' => $t->kode_unit,
+                    'nama_unit' => $t->nama_unit ?? "Cabang {$t->kode_unit}",
+                    'area' => $t->area ?? 'Risk Trigger',
+                    'uraian' => $uraian,
+                    'nominal' => $nominal,
+                    'nominal_formatted' => $nominal > 0 ? 'Rp ' . number_format($nominal, 0, ',', '.') : '-',
+                    'is_berulang' => $isBerulang,
+                    'is_temuan_berulang' => $isBerulang,
+                    'rekomendasi' => 'Pemeriksaan lapangan terarah dan penyesuaian parameter toleransi limit cabang.',
+                    'pic' => $t->assigned_ra ?: 'Pemimpin Cabang / Korwas',
+                    'target_tl' => $t->sla_deadline ? Carbon::parse($t->sla_deadline)->format('d/m/Y') : Carbon::parse($endMonth)->addDays(7)->format('d/m/Y'),
+                    'target_date' => $t->sla_deadline ? Carbon::parse($t->sla_deadline)->format('Y-m-d') : Carbon::parse($endMonth)->addDays(7)->format('Y-m-d'),
+                    'risk_level' => strtoupper($t->risk_level_reassessment) === 'HIGH' ? 'HIGH' : 'MODERATE TO HIGH',
+                ];
+            }
+        }
+
+        // 3. Dari Sop08RekapIsuTl
+        if (DB::getSchemaBuilder()->hasTable('sop08_rekap_isu_tls')) {
+            $query = Sop08RekapIsuTl::whereBetween('periode', [$startMonth, $endMonth])
+                ->whereIn('risk_level', ['MODERATE', 'HIGH', 'Moderate', 'High', 'MODERATE TO HIGH']);
+            if ($kodeUnit) {
+                $query->where('kode_unit', $kodeUnit);
+            }
+            foreach ($query->get() as $isu) {
+                $already = collect($findingsList)->contains(fn($item) => $item['kode_unit'] === $isu->kode_unit && $item['area'] === $isu->area && $item['uraian'] === $isu->uraian_isu);
+                if (!$already) {
+                    $nominal = (float)($isu->nilai_dampak ?? 0);
+                    $isBerulang = ($isu->berulang === 'YA');
+                    $findingsList[] = [
+                        'id' => (string)($isu->issue_id ?: $isu->id),
+                        'source' => $isu->sumber_sop ?: 'SOP 08',
+                        'kode_unit' => $isu->kode_unit,
+                        'nama_unit' => $isu->nama_unit ?? "Cabang {$isu->kode_unit}",
+                        'area' => $isu->area,
+                        'uraian' => $isu->uraian_isu,
+                        'nominal' => $nominal,
+                        'nominal_formatted' => $nominal > 0 ? 'Rp ' . number_format($nominal, 0, ',', '.') : '-',
+                        'is_berulang' => $isBerulang,
+                        'is_temuan_berulang' => $isBerulang,
+                        'rekomendasi' => $isu->rekomendasi ?: 'Eskalasi ke Manajemen Cabang & Korwas',
+                        'pic' => $isu->pic ?: 'Pemimpin Cabang',
+                        'target_tl' => $isu->target_tl ? Carbon::parse($isu->target_tl)->format('d/m/Y') : Carbon::parse($endMonth)->addDays(14)->format('d/m/Y'),
+                        'target_date' => $isu->target_tl ? Carbon::parse($isu->target_tl)->format('Y-m-d') : Carbon::parse($endMonth)->addDays(14)->format('Y-m-d'),
+                        'risk_level' => strtoupper($isu->risk_level) === 'HIGH' ? 'HIGH' : 'MODERATE TO HIGH',
+                    ];
+                }
+            }
+        }
+
+        return $findingsList;
+    }
+
+    /**
+     * Tarikan terpadu 100% database Rekap Kegiatan + Log Harian RA.
+     */
+    public function getUnifiedDailyActivities(string $periodeDate, ?string $kodeUnit = null): array
+    {
+        $carbon = Carbon::parse($periodeDate);
+        $startMonth = $carbon->copy()->startOfMonth()->format('Y-m-d');
+        $endMonth = $carbon->copy()->endOfMonth()->format('Y-m-d');
+
+        $activities = [];
+
+        // 1. Sop08LogHarianRa
+        if (DB::getSchemaBuilder()->hasTable('sop08_log_harian_ras')) {
+            $logQuery = Sop08LogHarianRa::whereBetween('tanggal', [$startMonth, $endMonth]);
+            if ($kodeUnit) {
+                $logQuery->where('kode_unit', $kodeUnit);
+            }
+            foreach ($logQuery->orderBy('tanggal', 'desc')->get() as $log) {
+                $detailStr = $log->output_referensi_wp 
+                    ? "Area: {$log->area} ({$log->output_referensi_wp})" 
+                    : ($log->area ? "Area: {$log->area}" : 'Pemeriksaan Aktivitas Harian');
+                $activities[] = [
+                    'tanggal' => Carbon::parse($log->tanggal)->format('d/m/Y'),
+                    'tanggal_raw' => Carbon::parse($log->tanggal)->format('Y-m-d'),
+                    'kode_unit' => $log->kode_unit,
+                    'nama_unit' => $log->nama_unit,
+                    'nama_ra' => $log->nama_ra,
+                    'sumber_sop' => $log->sumber_sop ?: 'SOP 08 - Log Harian',
+                    'jenis_aktivitas' => $log->jenis_aktivitas ?: 'Aktivitas Pengawasan Rutin',
+                    'kegiatan' => $log->jenis_aktivitas ?: 'Aktivitas Pengawasan Rutin',
+                    'area' => $log->area,
+                    'output_wp' => $log->output_referensi_wp,
+                    'detail' => $detailStr,
+                    'status_penyelesaian' => $log->status_penyelesaian ?: 'COMPLETED',
+                    'status' => $log->status_penyelesaian ?: 'COMPLETED',
+                    'hasil_review' => $log->hasil_review ?: 'MEMADAI',
+                ];
+            }
+        }
+
+        // 2. PhysicalKka (Daily Review)
+        if (class_exists(PhysicalKka::class) && DB::getSchemaBuilder()->hasTable('physical_kkas')) {
+            $pkQuery = PhysicalKka::whereBetween('tanggal_pemeriksaan', [$startMonth, $endMonth]);
+            if ($kodeUnit) {
+                $pkQuery->where('kode_unit', $kodeUnit);
+            }
+            foreach ($pkQuery->orderBy('tanggal_pemeriksaan', 'desc')->get() as $pk) {
+                $already = collect($activities)->contains(fn($a) => ($a['output_wp'] ?? '') === "KKA-PHYSICAL-{$pk->id}");
+                if (!$already) {
+                    $statusStr = (strtolower($pk->status_final ?? '') === 'final' || ($pk->status_approval ?? '') === 'Approved') ? 'COMPLETED' : 'IN PROGRESS';
+                    $activities[] = [
+                        'tanggal' => Carbon::parse($pk->tanggal_pemeriksaan)->format('d/m/Y'),
+                        'tanggal_raw' => Carbon::parse($pk->tanggal_pemeriksaan)->format('Y-m-d'),
+                        'kode_unit' => $pk->kode_unit,
+                        'nama_unit' => $pk->nama_unit ?? "Cabang {$pk->kode_unit}",
+                        'nama_ra' => $pk->auditor_name ?? 'Resident Auditor',
+                        'sumber_sop' => 'SOP 03 - Daily Review',
+                        'jenis_aktivitas' => 'Pemeriksaan Register Fisik Harian Kas & Dokumen',
+                        'kegiatan' => 'Pemeriksaan Register Fisik Harian Kas & Dokumen',
+                        'area' => 'Cash Opname',
+                        'output_wp' => "KKA-PHYSICAL-{$pk->id}",
+                        'detail' => "Cash Opname & Register Dokumen [KKA-PHYSICAL-{$pk->id}]",
+                        'status_penyelesaian' => $statusStr,
+                        'status' => $statusStr,
+                        'hasil_review' => $pk->status_final ?: ($pk->status_approval ?: 'MEMADAI'),
+                    ];
+                }
+            }
+        }
+
+        return collect($activities)->sortByDesc('tanggal_raw')->values()->all();
+    }
 }
+

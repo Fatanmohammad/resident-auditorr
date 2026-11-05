@@ -450,7 +450,7 @@
                                             </div>
 
                                             <div class="col-12">
-                                                <label class="form-label small fw-bold text-dark text-uppercase mb-1">Analisis Profesional RA (Kolom M)</label>
+                                                <label class="form-label small fw-bold text-dark text-uppercase mb-1">Analisis RA (Kolom M)</label>
                                                 <textarea name="analisis_ra" class="form-control" rows="2" placeholder="Analisis auditor atas tanggapan dan bukti..." {{ $isLockedForRa ? 'readonly' : '' }}>{{ $klar->analisis_ra }}</textarea>
                                             </div>
 
@@ -575,8 +575,8 @@
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label small fw-bold text-dark text-uppercase mb-1">Analisis Profesional RA (Kolom M)</label>
-                                <textarea name="analisis_ra" class="form-control" rows="2" placeholder="Analisis profesional auditor atas jawaban dan bukti auditee..."></textarea>
+                                <label class="form-label small fw-bold text-dark text-uppercase mb-1">Analisis RA (Kolom M)</label>
+                                <textarea name="analisis_ra" class="form-control" rows="2" placeholder="Analisis auditor atas jawaban dan bukti auditee..."></textarea>
                             </div>
 
                             @if(!$isRa)
@@ -629,7 +629,7 @@
                             </span>
                             @endif
                         </label>
-                        <textarea name="simpulan_akhir" class="form-control" rows="3" placeholder="Uraikan simpulan profesional RA atas pengujian dan klarifikasi..." required {{ $isLockedForRa ? 'readonly' : '' }}>{{ $simpulan->simpulan_akhir }}</textarea>
+                        <textarea name="simpulan_akhir" class="form-control" rows="3" placeholder="Uraikan simpulan akhir RA atas pengujian dan klarifikasi..." required {{ $isLockedForRa ? 'readonly' : '' }}>{{ $simpulan->simpulan_akhir }}</textarea>
                     </div>
 
                     {{-- Klasifikasi Hasil (Kolom J - Dropdown Wajib) --}}

@@ -87,16 +87,21 @@
     </div>
 </div>
 
-<!-- NOTIFIKASI ALARM RINGKAS & TERINTEGRASI NAVBAR -->
+<!-- NOTIFIKASI ALARM RINGKAS & TERINTEGRASI NAVBAR (> 10 TEMUAN) -->
 @if(!empty($alarms))
-    <div class="alert alert-danger d-flex align-items-center justify-content-between flex-wrap gap-2 py-2 px-3 mb-3 border-danger-subtle rounded-3 shadow-xs" style="background: #fff5f5; border: 1px solid #fecaca;">
+    <div class="alert alert-danger d-flex align-items-center justify-content-between flex-wrap gap-2 py-2.5 px-3 mb-3 border-danger-subtle rounded-3 shadow-xs" style="background: #fff5f5; border: 1.5px solid #f87171;">
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="badge bg-danger text-white px-2 py-1" style="font-size: 0.72rem; font-weight: 700;">
+            <span class="badge bg-danger text-white px-2 py-1" style="font-size: 0.75rem; font-weight: 700;">
                 <i class="bi bi-bell-fill me-1"></i> {{ count($alarms) }} ALARM AKTIF
             </span>
-            <span style="font-size: 0.84rem; color: #991b1b;">
-                Terdeteksi akumulasi <strong>&gt; 5 temuan</strong> pada {{ count($alarms) }} Area Risiko. Peringatan lengkap telah disematkan pada <strong>Lonceng Notifikasi Navbar</strong>.
+            <span style="font-size: 0.86rem; color: #991b1b;">
+                Terdeteksi akumulasi <strong>&gt; 10 temuan</strong> pada {{ count($alarms) }} Area Risiko. Peringatan lengkap telah disematkan pada <strong>Lonceng Notifikasi Navbar</strong>.
             </span>
+            @if($isRa)
+                <span class="badge bg-light text-muted border ms-1" style="font-size: 0.72rem;">
+                    <i class="bi bi-eye me-1"></i> Mode Pantauan RA (Hanya Informasi Pantauan)
+                </span>
+            @endif
         </div>
         <div class="d-flex align-items-center gap-2">
             @if(request('area'))
@@ -112,25 +117,93 @@
     <div id="collapseAlarmsArea" style="display: none;" class="mb-3">
         <div class="card border-danger-subtle shadow-sm p-3 rounded-3" style="background: #fffafa; border: 1px solid #fee2e2;">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="small fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Rincian Area Risiko Terpicu (&gt; 5 Temuan Akumulasi):</span>
+                <span class="small fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Rincian Area Risiko Terpicu (&gt; 10 Temuan Akumulasi):</span>
                 <span class="text-muted small" style="font-size: 0.75rem;">(Bisa ditutup kapan saja agar layar tetap lega)</span>
             </div>
             <div class="row g-2">
                 @foreach($alarms as $alarm)
+                    @php
+                        $regModalId = 'modalRegAlarm_' . \Illuminate\Support\Str::slug($alarm['kode_unit'] . '_' . $alarm['area']);
+                    @endphp
                     <div class="col-md-4">
                         <div class="p-2.5 rounded border border-danger-subtle bg-white h-100 d-flex flex-column justify-content-between shadow-2xs">
                             <div>
-                                <div class="fw-bold text-danger" style="font-size: 0.85rem;">{{ $alarm['nama_unit'] }} ({{ $alarm['kode_unit'] }})</div>
-                                <div class="text-dark fw-bold mt-1" style="font-size: 0.82rem;">Area: {{ $alarm['area'] }} <span class="badge bg-danger text-white ms-1" style="font-size: 0.68rem;">{{ $alarm['count'] }} Temuan</span></div>
-                                <div class="text-muted mt-1" style="font-size: 0.74rem;">Daily: {{ $alarm['dr_count'] }} &bull; Offsite: {{ $alarm['off_count'] }} &bull; Onsite: {{ $alarm['on_count'] }}</div>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="fw-bold text-danger" style="font-size: 0.85rem;">{{ $alarm['nama_unit'] }} ({{ $alarm['kode_unit'] }})</div>
+                                    <span class="badge bg-danger text-white ms-1" style="font-size: 0.68rem;">{{ $alarm['count'] }} Temuan</span>
+                                </div>
+                                <div class="text-dark fw-bold mt-1" style="font-size: 0.82rem;">Area: <span class="text-primary">{{ $alarm['area'] }}</span></div>
+                                <div class="text-muted mt-1" style="font-size: 0.74rem;">Rincian: Daily: {{ $alarm['dr_count'] }} &bull; Offsite: {{ $alarm['off_count'] }} &bull; Onsite: {{ $alarm['on_count'] }}</div>
+                                @if(!empty($alarm['is_followed_up']) && !empty($alarm['catatan_tindak_lanjut']))
+                                    <div class="mt-1.5 p-1.5 bg-success-subtle rounded border border-success-subtle text-success small" style="font-size: 0.72rem;">
+                                        <i class="bi bi-info-circle me-1"></i>{{ Str::limit($alarm['catatan_tindak_lanjut'], 55) }}
+                                    </div>
+                                @endif
                             </div>
-                            <div class="mt-2 pt-2 border-top text-end">
-                                <a href="{{ route('risk-trigger.register', ['kode_unit' => $alarm['kode_unit'], 'area' => $alarm['area']]) }}" class="btn btn-sm btn-outline-danger py-0.5 px-2.5 rounded-pill" style="font-size: 0.74rem;">
-                                    Fokus Area Ini &rarr;
-                                </a>
+                            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                                @if($isRa)
+                                    <span class="badge bg-light text-muted border" style="font-size: 0.7rem;">Status Pantauan RA</span>
+                                @else
+                                    @if(!empty($alarm['is_followed_up']))
+                                        <span class="badge bg-success text-white" style="font-size: 0.7rem;"><i class="bi bi-check-circle me-0.5"></i> Telah Ditindaklanjuti</span>
+                                    @else
+                                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;"><i class="bi bi-clock me-0.5"></i> Perlu Tindak Lanjut Admin</span>
+                                    @endif
+                                @endif
+                                <div class="d-flex gap-1">
+                                    @if(!$isRa)
+                                        <button type="button" class="btn btn-sm {{ !empty($alarm['is_followed_up']) ? 'btn-outline-success' : 'btn-outline-danger' }} py-0.5 px-2 rounded-pill" style="font-size: 0.74rem;" data-bs-toggle="modal" data-bs-target="#{{ $regModalId }}">
+                                            Tindak Lanjut &rarr;
+                                        </button>
+                                    @endif
+                                    <a href="{{ route('risk-trigger.register', ['kode_unit' => $alarm['kode_unit'], 'area' => $alarm['area']]) }}" class="btn btn-sm btn-outline-secondary py-0.5 px-2 rounded-pill" style="font-size: 0.74rem;">
+                                        Fokus
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    {{-- MODAL TINDAK LANJUT ALARM REGISTER --}}
+                    @if(!$isRa)
+                    <div class="modal fade" id="{{ $regModalId }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <form action="{{ route('risk-trigger.alarm.follow-up') }}" method="POST" class="modal-content text-start">
+                                @csrf
+                                <input type="hidden" name="kode_unit" value="{{ $alarm['kode_unit'] }}">
+                                <input type="hidden" name="area" value="{{ $alarm['area'] }}">
+                                <div class="modal-header bg-danger text-white py-2.5 px-3">
+                                    <h6 class="modal-title fs-6 fw-bold">
+                                        <i class="bi bi-bell-fill me-1"></i> Tindak Lanjut Alarm: {{ $alarm['area'] }}
+                                    </h6>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body p-3">
+                                    <div class="alert alert-light border p-2.5 mb-3 small">
+                                        <div><strong>Kantor Unit:</strong> {{ $alarm['nama_unit'] }} ({{ $alarm['kode_unit'] }})</div>
+                                        <div><strong>Akumulasi Temuan:</strong> <span class="badge bg-danger text-white">{{ $alarm['count'] }} Temuan (&gt; 10)</span></div>
+                                        <div class="text-muted mt-1">Daily Review: {{ $alarm['dr_count'] }} &bull; Offsite: {{ $alarm['off_count'] }} &bull; Onsite: {{ $alarm['on_count'] }}</div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold text-dark mb-1">
+                                            Catatan Tindak Lanjut / Disposisi Admin SKAI <span class="text-danger">*</span>
+                                        </label>
+                                        <textarea name="catatan" class="form-control" rows="3" required placeholder="Tuliskan catatan tindak lanjut atau arahan pendalaman...">{{ old('catatan', $alarm['catatan_tindak_lanjut'] ?? 'Telah diinformasikan dan diteruskan oleh Admin SKAI untuk pendalaman lebih lanjut.') }}</textarea>
+                                        <div class="form-text small text-muted">
+                                            Status workflow pemicu akan diperbarui menjadi 'DALAM PANTAUAN ALARM' secara langsung.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer py-2 px-3">
+                                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Batal</button>
+                                    <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3 fw-bold">
+                                        <i class="bi bi-check2-circle me-1"></i> Simpan &amp; Teruskan Alarm
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    @endif
                 @endforeach
             </div>
         </div>
@@ -239,7 +312,7 @@
 <div class="rtv-table-container">
     <div class="rtv-table-header">
         <h6 class="rtv-table-title">
-            <i class="bi bi-journal-check text-primary"></i> Data Register Trigger (37 Kolom SOP 06)
+            <i class="bi bi-journal-check text-primary"></i> Data Register Trigger (36 Kolom SOP 06)
         </h6>
         <div class="d-flex align-items-center gap-2">
             <span class="badge-role-scope">
@@ -337,9 +410,18 @@
                             <div class="fw-bold text-primary mb-1" style="font-size: 0.86rem;">
                                 {{ $t->objek_key }}
                             </div>
-                            <div class="text-secondary small" style="line-height: 1.45; max-width: 280px;" title="{{ $t->uraian_trigger }}">
-                                {{ Str::limit($t->uraian_trigger, 85) }}
-                            </div>
+                            @php
+                                $uText = trim((string)$t->uraian_trigger);
+                                if (!empty($t->objek_key) && str_starts_with(strtolower($uText), strtolower($t->objek_key))) {
+                                    $uText = trim(substr($uText, strlen($t->objek_key)));
+                                    $uText = ltrim($uText, " :-–—\t\n\r\0\x0B");
+                                }
+                            @endphp
+                            @if(!empty($uText) && strtolower($uText) !== strtolower(trim((string)$t->objek_key)))
+                                <div class="text-secondary small" style="line-height: 1.45; max-width: 280px;" title="{{ $t->uraian_trigger }}">
+                                    {{ Str::limit($uText, 85) }}
+                                </div>
+                            @endif
                             <div class="d-flex flex-wrap gap-1 mt-1.5">
                                 @if(strtoupper((string)$t->indikasi_fraud) === 'YA')
                                     <span class="badge-status badge-status-danger" style="font-size: 0.7rem;">

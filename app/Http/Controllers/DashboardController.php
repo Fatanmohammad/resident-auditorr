@@ -39,10 +39,17 @@ public function index()
             'draft'    => FinalAuditPlan::where('period', $period)->where('plan_status', 'Draft - Lengkapi Mapping RA')->count(),
         ];
 
+        $riskTriggerAlarms = [];
+        try {
+            if (class_exists(\App\Services\RiskTrigger\RiskTriggerService::class)) {
+                $riskTriggerAlarms = app(\App\Services\RiskTrigger\RiskTriggerService::class)->getActiveAlarms($user);
+            }
+        } catch (\Throwable $e) {}
+
         return view('dashboard', compact(
             'user', 'totalRa', 'totalUnit',
             'jadwalAktif', 'totalJadwal', 'jadwalSelesai', 'totalFinalPlan',
-            'riskDist', 'typeDist', 'freqDist', 'planStats'
+            'riskDist', 'typeDist', 'freqDist', 'planStats', 'riskTriggerAlarms'
         ));
     }
 }

@@ -12,251 +12,207 @@ class DailyRegisterChecklistSeeder extends Seeder
     {
         $items = [
             // ==========================================
-            // TAB 1: KKA Teller & Kas (30 Item)
+            // TAB 1: KKA Teller & Kas (13 Item)
             // ==========================================
-            // Sub-Area A1. Transaksi Teller (Offsite & Onsite) (No. 1–10)
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 1, 'Voucher/slip setoran tunai'],
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 2, 'Voucher/slip penarikan tunai'],
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 3, 'Slip pemindahbukuan'],
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 4, 'Nota debet/kredit'],
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 5, 'Bukti otorisasi transaksi (tanda tangan pejabat berwenang)'],
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 6, 'Kesesuaian nominal voucher dengan sistem/register'],
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 7, 'Validasi mesin teller pada voucher'],
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 8, 'Urutan nomor voucher (sequence control)'],
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 9, 'Tanda tangan nasabah di voucher'],
-            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller (Offsite & Onsite)', 10, 'Fotokopi identitas nasabah (transaksi ≥ Rp100 juta)'],
+            // Sub-Area A1. Transaksi Teller (No. 1–6)
+            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller', 1, 'Voucher slip setoran / slip penarikan / pemindahbukuan (nota debet/kredit)'],
+            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller', 2, 'Bukti otorisasi transaksi (tanda tangan pejabat berwenang)'],
+            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller', 3, 'Kesesuaian nominal voucher dengan sistem/register'],
+            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller', 4, 'Validasi mesin teller pada voucher'],
+            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller', 5, 'Tanda tangan nasabah di voucher'],
+            ['KKA_Teller_Kas', 'A1', 'Transaksi Teller', 6, 'Fotokopi identitas nasabah (transaksi ≥ Rp100 juta)'],
 
-            // Sub-Area A2. Kas Kecil (No. 11–15)
-            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 11, 'Buku kas kecil / register kas kecil'],
-            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 12, 'Bukti pengeluaran kas kecil (kuitansi, nota)'],
-            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 13, 'Otorisasi pengeluaran kas kecil'],
-            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 14, 'Berita acara opname kas kecil'],
-            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 15, 'Kesesuaian saldo fisik dengan catatan'],
+            // Sub-Area A2. Kas Kecil (No. 1–5)
+            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 1, 'Buku kas kecil / register kas kecil'],
+            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 2, 'Bukti pengeluaran kas kecil (kuitansi, nota)'],
+            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 3, 'Otorisasi pengeluaran kas kecil'],
+            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 4, 'Berita acara opname kas kecil'],
+            ['KKA_Teller_Kas', 'A2', 'Kas Kecil', 5, 'Kesesuaian saldo fisik dengan catatan'],
 
-            // Sub-Area A3. Kas Opname Khasanah (Onsite & Surprise) (No. 16–25)
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 16, 'Fisik uang tunai dalam khasanah (hitung fisik)'],
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 17, 'Register kas / buku khasanah'],
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 18, 'Saldo sistem CBS vs saldo fisik'],
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 19, 'Berita acara opname khasanah (BA harian)'],
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 20, 'Akses kunci khasanah (siapa pemegang kunci)'],
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 21, 'Kombinasi brankas (dual control — 2 orang berbeda)'],
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 22, 'Batas limit kas teller sesuai ketentuan'],
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 23, 'Batas limit kas khasanah sesuai ketentuan'],
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 24, 'Kesesuaian pengamanan khasanah (CCTV, alarm, gembok)'],
-            ['KKA_Teller_Kas', 'A3', 'Kas Opname Khasanah (Onsite & Surprise)', 25, 'Selisih kas (jika ada → catat nominal, penyebab, tindak lanjut)'],
-
-            // Sub-Area A4. Observasi Khasanah (No. 26–30)
-            ['KKA_Teller_Kas', 'A4', 'Observasi Khasanah', 26, 'Kondisi fisik ruang khasanah (pintu, dinding, ventilasi)'],
-            ['KKA_Teller_Kas', 'A4', 'Observasi Khasanah', 27, 'CCTV berfungsi dan merekam'],
-            ['KKA_Teller_Kas', 'A4', 'Observasi Khasanah', 28, 'Brankas terkunci saat tidak digunakan'],
-            ['KKA_Teller_Kas', 'A4', 'Observasi Khasanah', 29, 'Log akses khasanah (buku tamu/catatan akses)'],
-            ['KKA_Teller_Kas', 'A4', 'Observasi Khasanah', 30, 'Prosedur buka-tutup khasanah (jam buka, jam tutup, saksi)'],
+            // Sub-Area A3. Kas / Khasanah (No. 1–2)
+            ['KKA_Teller_Kas', 'A3', 'Kas / Khasanah', 1, 'Berita acara opname khasanah (BA harian)'],
+            ['KKA_Teller_Kas', 'A3', 'Kas / Khasanah', 2, 'Akses kunci khasanah & Kombinasi brankas (dual control — 2 orang berbeda)'],
 
             // ==========================================
-            // TAB 2: KKA DPK & Layanan (29 Item)
+            // TAB 4: KKA DPK & Layanan (29 Item)
             // ==========================================
             // Sub-Area D1. Pembukaan Rekening & CIF (Perorangan) (No. 1–10)
             ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 1, 'Formulir pembukaan rekening (ditandatangani nasabah)'],
             ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 2, 'KTP nasabah (fotokopi, verifikasi keaslian)'],
-            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 3, 'NPWP nasabah (jika ada)'],
-            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 4, 'Kartu contoh tanda tangan (specimen)'],
-            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 5, 'Setoran awal minimum sesuai ketentuan'],
-            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 6, 'CIF (Customer Information File) terisi lengkap di sistem'],
-            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 7, 'Tidak ada CIF ganda (1 nasabah = 1 CIF)'],
-            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 8, 'Kategori risiko nasabah (APU-PPT: low/medium/high)'],
-            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 9, 'Bukti verifikasi data nasabah'],
-            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 10, 'Surat pernyataan beneficial owner (jika bukan milik sendiri)'],
+            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 3, 'NPWP nasabah (jika ada / surat pernyataan tidak memiliki NPWP)'],
+            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 4, 'Verifikasi data nasabah (face match / Dukcapil)'],
+            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 5, 'Spesimen tanda tangan nasabah'],
+            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 6, 'Formulir profil risiko nasabah (CDD/EDD)'],
+            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 7, 'Setoran awal sesuai ketentuan jenis tabungan'],
+            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 8, 'Buku tabungan / sertifikat deposito diserahkan ke nasabah'],
+            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 9, 'Tanda terima buku tabungan / kartu ATM'],
+            ['KKA_DPK_Layanan', 'D1', 'Pembukaan Rekening & CIF (Perorangan)', 10, 'Otorisasi pembukaan rekening oleh pejabat berwenang'],
 
-            // Sub-Area D2. Pembukaan Rekening Badan Usaha (No. 11–17)
-            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening Badan Usaha', 11, 'Akta pendirian + perubahan terakhir'],
-            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening Badan Usaha', 12, 'SIUP / NIB'],
-            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening Badan Usaha', 13, 'NPWP badan usaha'],
-            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening Badan Usaha', 14, 'KTP pengurus yang tercantum di akta'],
-            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening Badan Usaha', 15, 'Surat kuasa (jika yang membuka bukan pengurus)'],
-            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening Badan Usaha', 16, 'Formulir pembukaan rekening badan'],
-            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening Badan Usaha', 17, 'Specimen tanda tangan pengurus'],
+            // Sub-Area D2. Pembukaan Rekening & CIF (Badan Usaha / Non-Perorangan) (No. 11–18)
+            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening & CIF (Badan Usaha)', 11, 'Akta pendirian perusahaan + perubahan terakhir'],
+            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening & CIF (Badan Usaha)', 12, 'SK Kemenkumham (pengesahan badan hukum)'],
+            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening & CIF (Badan Usaha)', 13, 'NIB / SIUP / TDP / Izin usaha yang masih berlaku'],
+            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening & CIF (Badan Usaha)', 14, 'NPWP badan usaha'],
+            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening & CIF (Badan Usaha)', 15, 'KTP pengurus / direksi yang berwenang'],
+            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening & CIF (Badan Usaha)', 16, 'Surat kuasa penunjukan pengelola rekening (jika dikuasakan)'],
+            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening & CIF (Badan Usaha)', 17, 'Formulir EDD (Enhanced Due Diligence) badan usaha'],
+            ['KKA_DPK_Layanan', 'D2', 'Pembukaan Rekening & CIF (Badan Usaha)', 18, 'Otorisasi pembukaan rekening badan usaha'],
 
-            // Sub-Area D3. Perubahan Data Nasabah (No. 18–22)
-            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data Nasabah', 18, 'Formulir perubahan data'],
-            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data Nasabah', 19, 'Bukti identitas baru (KTP baru jika ganti alamat/nama)'],
-            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data Nasabah', 20, 'Otorisasi perubahan oleh pejabat berwenang'],
-            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data Nasabah', 21, 'Log perubahan di sistem (audit trail)'],
-            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data Nasabah', 22, 'Alasan perubahan tercatat'],
+            // Sub-Area D3. Perubahan Data Nasabah & Rekening Dorman (No. 19–25)
+            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data & Rekening Dorman', 19, 'Formulir permohonan perubahan data (alamat, no telp, dll)'],
+            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data & Rekening Dorman', 20, 'Dokumen pendukung perubahan data'],
+            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data & Rekening Dorman', 21, 'Otorisasi perubahan data di sistem'],
+            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data & Rekening Dorman', 22, 'Permohonan pengaktifan rekening dorman (oleh nasabah sendiri)'],
+            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data & Rekening Dorman', 23, 'Verifikasi identitas nasabah saat reaktivasi dorman'],
+            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data & Rekening Dorman', 24, 'Transaksi pertama setelah reaktivasi dorman (setoran/penarikan)'],
+            ['KKA_DPK_Layanan', 'D3', 'Perubahan Data & Rekening Dorman', 25, 'Otorisasi reaktivasi rekening dorman'],
 
-            // Sub-Area D4. Penutupan Rekening (No. 23–29)
-            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 23, 'Formulir penutupan rekening (tanda tangan nasabah)'],
-            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 24, 'KTP nasabah'],
-            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 25, 'Buku tabungan dikembalikan'],
-            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 26, 'Kartu ATM dikembalikan dan dipotong/dimusnahkan'],
-            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 27, 'Saldo terakhir ditarik/ditransfer'],
-            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 28, 'Biaya penutupan dipotong sesuai ketentuan'],
-            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 29, "Status rekening berubah 'Closed' di sistem"],
-
-            // ==========================================
-            // TAB 3: KKA Kredit (99 Item)
-            // ==========================================
-            // Sub-Area C1. Berkas Debitur — Kredit Konsumtif PNS (No. 1–18)
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 1, 'KTP pemohon (suami/istri)'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 2, 'Kartu Keluarga (KK)'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 3, 'Surat Nikah / Akta Cerai'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 4, 'NPWP'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 5, 'Slip gaji 3 bulan terakhir'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 6, 'SK PNS / SK pengangkatan terakhir'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 7, 'SK kenaikan pangkat terakhir'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 8, 'Surat keterangan masih aktif bekerja'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 9, 'Surat rekomendasi/persetujuan atasan/bendahara'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 10, 'Surat kuasa potong gaji'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 11, 'Rekening koran/tabungan 3 bulan terakhir'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 12, 'Pas foto pemohon'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 13, 'Formulir aplikasi kredit (lengkap, ditandatangani)'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 14, 'Hasil BI-Checking / SLIK OJK'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 15, 'Memorandum analisis kredit (MAK)'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 16, 'Nota persetujuan kredit (pejabat berwenang)'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 17, 'Perjanjian kredit (PK) ditandatangani kedua pihak'],
-            ['KKA_Kredit', 'C1', 'Berkas Debitur — Kredit Konsumtif PNS', 18, 'Jadwal angsuran'],
-
-            // Sub-Area C2. Berkas Debitur — Kredit Konsumtif Umum/Swasta (No. 19–34)
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 19, 'KTP pemohon (suami/istri)'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 20, 'Kartu Keluarga (KK)'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 21, 'Surat Nikah / Akta Cerai'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 22, 'NPWP'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 23, 'Slip gaji 3 bulan terakhir'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 24, 'Surat keterangan kerja dari perusahaan'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 25, 'Rekening koran/tabungan 3-6 bulan terakhir'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 26, 'Formulir aplikasi kredit'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 27, 'Hasil SLIK OJK'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 28, 'MAK (Memorandum Analisis Kredit)'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 29, 'Nota persetujuan kredit'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 30, 'Perjanjian kredit (PK)'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 31, 'Dokumen agunan (lihat sub-area C7)'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 32, 'Pengikatan agunan (SKMHT/APHT, Fidusia)'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 33, 'Asuransi jiwa debitur'],
-            ['KKA_Kredit', 'C2', 'Berkas Debitur — Kredit Konsumtif Umum/Swasta', 34, 'Asuransi kebakaran (jika agunan bangunan)'],
-
-            // Sub-Area C3. Berkas Debitur — Kredit Modal Kerja (KMK) (No. 35–50)
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 35, 'KTP pengurus / pemilik perusahaan'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 36, 'NPWP perusahaan dan pribadi'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 37, 'Akta pendirian perusahaan + perubahan terakhir'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 38, 'SIUP / NIB (Nomor Induk Berusaha)'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 39, 'TDP / SKU (Surat Keterangan Usaha)'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 40, 'Laporan keuangan 2 tahun terakhir (audited jika ada)'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 41, 'Rekening koran 6 bulan terakhir'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 42, 'Rencana usaha / business plan'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 43, 'Data agunan (SHM/SHGB, BPKB, deposito)'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 44, 'Hasil SLIK OJK'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 45, 'MAK / proposal kredit'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 46, 'Nota persetujuan kredit'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 47, 'Perjanjian kredit (PK)'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 48, 'Pengikatan agunan'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 49, 'Asuransi agunan'],
-            ['KKA_Kredit', 'C3', 'Berkas Debitur — Kredit Modal Kerja (KMK)', 50, 'Foto lokasi usaha dan agunan'],
-
-            // Sub-Area C4. Berkas Debitur — KUR (Kredit Usaha Rakyat) (No. 51–63)
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 51, 'KTP pemohon (suami/istri)'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 52, 'Kartu Keluarga (KK)'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 53, 'Surat Nikah / Akta Cerai'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 54, 'Surat Keterangan Usaha (SKU) dari kelurahan/desa'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 55, 'NPWP (jika plafon > ketentuan)'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 56, 'Formulir aplikasi KUR'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 57, 'Hasil SLIK OJK'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 58, 'Foto lokasi usaha'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 59, 'MAK / catatan analisis'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 60, 'Nota persetujuan kredit'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 61, 'Perjanjian kredit (PK)'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 62, 'Sertifikat penjaminan KUR (Jamkrindo/Askrindo)'],
-            ['KKA_Kredit', 'C4', 'Berkas Debitur — KUR (Kredit Usaha Rakyat)', 63, 'Jadwal angsuran'],
-
-            // Sub-Area C5. Pencairan Kredit (No. 64–70)
-            ['KKA_Kredit', 'C5', 'Pencairan Kredit', 64, 'Nota pencairan / instruksi pencairan'],
-            ['KKA_Kredit', 'C5', 'Pencairan Kredit', 65, 'Otorisasi pencairan (tanda tangan pejabat berwenang)'],
-            ['KKA_Kredit', 'C5', 'Pencairan Kredit', 66, 'Kesesuaian nominal pencairan dengan PK'],
-            ['KKA_Kredit', 'C5', 'Pencairan Kredit', 67, 'Biaya-biaya yang dibebankan (provisi, admin, notaris, asuransi)'],
-            ['KKA_Kredit', 'C5', 'Pencairan Kredit', 68, 'Bukti transfer pencairan ke rekening debitur'],
-            ['KKA_Kredit', 'C5', 'Pencairan Kredit', 69, 'Kesesuaian tanggal pencairan dengan jadwal'],
-            ['KKA_Kredit', 'C5', 'Pencairan Kredit', 70, 'Checklist kelengkapan berkas sebelum pencairan (compliance)'],
-
-            // Sub-Area C6. Administrasi Kredit & Penutupan (No. 71–77)
-            ['KKA_Kredit', 'C6', 'Administrasi Kredit & Penutupan', 71, 'Buku register kredit (pembukaan s.d. pelunasan)'],
-            ['KKA_Kredit', 'C6', 'Administrasi Kredit & Penutupan', 72, 'Kartu angsuran / history pembayaran'],
-            ['KKA_Kredit', 'C6', 'Administrasi Kredit & Penutupan', 73, 'Surat peringatan (SP1, SP2, SP3) jika NPL'],
-            ['KKA_Kredit', 'C6', 'Administrasi Kredit & Penutupan', 74, 'Surat pelunasan kredit'],
-            ['KKA_Kredit', 'C6', 'Administrasi Kredit & Penutupan', 75, 'Berita acara pengembalian agunan'],
-            ['KKA_Kredit', 'C6', 'Administrasi Kredit & Penutupan', 76, 'Bukti penutupan rekening kredit di sistem'],
-            ['KKA_Kredit', 'C6', 'Administrasi Kredit & Penutupan', 77, 'Surat kuasa jual agunan (jika ada)'],
-
-            // Sub-Area C7. Dokumen Agunan (No. 78–92)
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 78, 'SHM / SHGB / SHMRS (asli, cek keaslian)'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 79, 'IMB (Izin Mendirikan Bangunan)'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 80, 'PBB tahun terakhir (bukti bayar)'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 81, 'BPKB kendaraan (asli) + STNK'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 82, 'Faktur kendaraan'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 83, 'Bilyet deposito (asli, jika agunan deposito)'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 84, 'SKMHT / APHT (Surat Kuasa / Akta Pemberian Hak Tanggungan)'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 85, 'Sertifikat Hak Tanggungan (SHT) dari BPN'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 86, 'Akta Fidusia + Sertifikat Fidusia'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 87, 'Laporan penilaian agunan / taksasi'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 88, 'Foto agunan (eksterior dan interior)'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 89, 'Kesesuaian identitas di agunan dengan identitas debitur'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 90, 'Peta lokasi agunan'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 91, 'Register penyimpanan dokumen agunan'],
-            ['KKA_Kredit', 'C7', 'Dokumen Agunan', 92, 'Berita acara serah terima dokumen agunan'],
-
-            // Sub-Area C8. Klaim Asuransi Kredit (No. 93–99)
-            ['KKA_Kredit', 'C8', 'Klaim Asuransi Kredit', 93, 'Polis asuransi jiwa debitur'],
-            ['KKA_Kredit', 'C8', 'Klaim Asuransi Kredit', 94, 'Polis asuransi kebakaran/kerugian'],
-            ['KKA_Kredit', 'C8', 'Klaim Asuransi Kredit', 95, 'Surat klaim ke perusahaan asuransi'],
-            ['KKA_Kredit', 'C8', 'Klaim Asuransi Kredit', 96, 'Bukti pengajuan klaim (tanggal, nomor surat)'],
-            ['KKA_Kredit', 'C8', 'Klaim Asuransi Kredit', 97, 'Surat persetujuan klaim dari asuransi'],
-            ['KKA_Kredit', 'C8', 'Klaim Asuransi Kredit', 98, 'Bukti pencairan klaim'],
-            ['KKA_Kredit', 'C8', 'Klaim Asuransi Kredit', 99, 'Register klaim asuransi (tanggal ajuan, status, jumlah)'],
+            // Sub-Area D4. Penutupan Rekening (No. 26–29)
+            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 26, 'Formulir permohonan penutupan rekening'],
+            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 27, 'Buku tabungan asli diserahkan dan digunting'],
+            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 28, 'Kartu ATM dikembalikan dan dipotong/dimusnahkan'],
+            ['KKA_DPK_Layanan', 'D4', 'Penutupan Rekening', 29, 'Saldo sisa ditarik/ditransfer & status rekening closed'],
 
             // ==========================================
-            // TAB 4: KKA Biaya & Beban (22 Item)
+            // TAB 5: KKA Kredit (Resmi Bank Sulteng: 3 Kategori) (83 Item)
             // ==========================================
-            // Sub-Area E1. Biaya Operasional (No. 1–7)
-            ['KKA_Biaya_Beban', 'E1', 'Biaya Operasional', 1, 'Kuitansi/nota/faktur asli'],
-            ['KKA_Biaya_Beban', 'E1', 'Biaya Operasional', 2, 'Otorisasi pengeluaran (tanda tangan pejabat berwenang)'],
-            ['KKA_Biaya_Beban', 'E1', 'Biaya Operasional', 3, 'Kesesuaian pos pembukuan (kode akun GL)'],
-            ['KKA_Biaya_Beban', 'E1', 'Biaya Operasional', 4, 'Kewajaran nominal biaya'],
-            ['KKA_Biaya_Beban', 'E1', 'Biaya Operasional', 5, 'Bukti pendukung tambahan (SPK, kontrak, BA serah terima)'],
-            ['KKA_Biaya_Beban', 'E1', 'Biaya Operasional', 6, 'Pajak yang dipungut/dipotong (PPh, PPN — bukti potong)'],
-            ['KKA_Biaya_Beban', 'E1', 'Biaya Operasional', 7, 'Kesesuaian dengan anggaran/budget'],
+            // Kategori 1: Kredit PNS / ASN (80% & 100%) (No. 1–20)
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 1, 'Surat Permohonan Kredit PNS / ASN'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 2, 'Fotokopi KTP Pemohon (Debitur) dan Pasangan'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 3, 'Fotokopi Kartu Keluarga (KK)'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 4, 'Fotokopi Surat Nikah / Akta Cerai'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 5, 'Fotokopi NPWP Pribadi'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 6, 'SK Pengangkatan CPNS (80%)'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 7, 'SK Pengangkatan PNS (100%)'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 8, 'SK Kenaikan Pangkat / Golongan Terakhir'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 9, 'Kartu Pegawai (Karpeg)'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 10, 'Kartu Peserta Taspen'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 11, 'Slip Gaji / Daftar Gaji Terakhir yang Dilegalisir Bendahara'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 12, 'Surat Pernyataan Kuasa Memotong Gaji (Debitur & Bendahara)'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 13, 'Surat Rekomendasi / Persetujuan Atasan Langsung & Bendahara Gaji'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 14, 'Hasil Penilaian BI-Checking / SLIK OJK'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 15, 'NPU (Nota Permohonan Usulan / Analisis Kredit)'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 16, 'SPPK (Surat Penawaran Persetujuan Kredit)'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 17, 'PK (Perjanjian Kredit) ditandatangani Debitur dan Pejabat Bank'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 18, 'BA Serah Terima Jaminan (Debitur -> Analis -> Admin)'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 19, 'Asuransi Jiwa Kredit & Bukti Pembayaran Premi'],
+            ['KKA_Kredit', 'C1', 'Kredit PNS / ASN (80% & 100%)', 20, 'Pas Foto Pemohon dan Pasangan'],
 
-            // Sub-Area E2. Biaya Pengadaan Kecil (No. 8–12)
-            ['KKA_Biaya_Beban', 'E2', 'Biaya Pengadaan Kecil', 8, 'Nota pembelian / faktur'],
-            ['KKA_Biaya_Beban', 'E2', 'Biaya Pengadaan Kecil', 9, 'Surat permintaan pembelian'],
-            ['KKA_Biaya_Beban', 'E2', 'Biaya Pengadaan Kecil', 10, 'Perbandingan harga (minimal 2-3 penyedia untuk jumlah tertentu)'],
-            ['KKA_Biaya_Beban', 'E2', 'Biaya Pengadaan Kecil', 11, 'Berita acara serah terima barang'],
-            ['KKA_Biaya_Beban', 'E2', 'Biaya Pengadaan Kecil', 12, 'Otorisasi pembelian'],
+            // Kategori 2: KPR / FLPP (37 syarat + NPU, SPPK, PK, BA Serah Terima Jaminan) (No. 1–41)
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 1, 'Formulir Aplikasi Permohonan KPR Sejahtera FLPP'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 2, 'Pas Foto Pemohon dan Pasangan'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 3, 'Fotokopi e-KTP Pemohon dan Pasangan'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 4, 'Fotokopi Kartu Keluarga (KK)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 5, 'Fotokopi Buku Nikah / Akta Cerai / Surat Keterangan Belum Menikah'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 6, 'Fotokopi NPWP Pribadi'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 7, 'Fotokopi SPT Tahunan PPh Orang Pribadi'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 8, 'Surat Pernyataan Pemohon belum pernah memiliki rumah'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 9, 'Surat Pernyataan Pemohon belum pernah menerima subsidi perumahan pemerintah'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 10, 'Surat Keterangan Penghasilan / Slip Gaji Asli 3 bulan terakhir'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 11, 'Rekening Koran / Tabungan Bank Sulteng 3 bulan terakhir'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 12, 'Surat Keterangan Kerja / SK Pegawai Aktif'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 13, 'Surat Keterangan Domisili dari Kelurahan/Desa'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 14, 'Hasil Verifikasi Aplikasi SiKasep / BP Tapera'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 15, 'Formulir Konfirmasi Pemohon KPR Sejahtera FLPP'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 16, 'Salinan Sertifikat Pecahan / Induk (SHM / SHGB) atas nama Pengembang/Debitur'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 17, 'IMB (Izin Mendirikan Bangunan) / PBG (Persetujuan Bangunan Gedung)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 18, 'Salinan PBB tahun berjalan beserta Bukti Lunas'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 19, 'Surat Penawaran Rumah dari Pengembang (Developer)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 20, 'Site plan perumahan yang telah disahkan dinas berwenang'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 21, 'Sertifikat Laik Fungsi (SLF) Bangunan Rumah'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 22, 'Berita Acara Pemeriksaan Fisik Bangunan (Opname Fisik 100%)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 23, 'Gambar denah dan spesifikasi teknis bangunan rumah'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 24, 'Dokumentasi foto fisik bangunan rumah (depan, ruang dalam, toilet, jalan lingkungan)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 25, 'Data titik koordinat GPS lokasi rumah subsidi'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 26, 'Kuitansi Asli Pembayaran Uang Muka (Down Payment / DP)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 27, 'Perjanjian Pengikatan Jual Beli (PPJB)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 28, 'Akta Jual Beli (AJB) dari Notaris / PPAT'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 29, 'Surat Kuasa Membebankan Hak Tanggungan (SKMHT) / Akta Pemberian Hak Tanggungan (APHT)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 30, 'Polis Asuransi Jiwa Kredit Debitur'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 31, 'Polis Asuransi Kebakaran atas Objek Agunan Rumah'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 32, 'Sertifikat Hak Tanggungan (SHT) dari Kantor Pertanahan (BPN)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 33, 'Surat Tanda Terima Berkas Pendaftaran Hak Tanggungan ke BPN'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 34, 'Surat Pernyataan Debitur wajib menghuni rumah subsidi min. 5 tahun'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 35, 'Surat Pernyataan Kesanggupan Membayar Angsuran melalui Autodebet'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 36, 'Bukti Pembukaan Rekening Tabungan & Rekening Titipan Subsidi di Bank Sulteng'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 37, 'Surat Rekomendasi Asosiasi Pengembang Perumahan (REI/Apersi/Himperra)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 38, 'NPU (Nota Permohonan Usulan / Analisis Kredit)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 39, 'SPPK (Surat Penawaran Persetujuan Kredit)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 40, 'PK (Perjanjian Kredit KPR FLPP)'],
+            ['KKA_Kredit', 'C2', 'KPR / FLPP', 41, 'BA Serah Terima Jaminan (Debitur -> Analis -> Admin)'],
 
-            // Sub-Area E3. Biaya Perjalanan Dinas (No. 13–18)
-            ['KKA_Biaya_Beban', 'E3', 'Biaya Perjalanan Dinas', 13, 'Surat tugas / surat perintah perjalanan dinas (SPPD)'],
-            ['KKA_Biaya_Beban', 'E3', 'Biaya Perjalanan Dinas', 14, 'Tiket transportasi (pesawat, kereta, dll)'],
-            ['KKA_Biaya_Beban', 'E3', 'Biaya Perjalanan Dinas', 15, 'Boarding pass'],
-            ['KKA_Biaya_Beban', 'E3', 'Biaya Perjalanan Dinas', 16, 'Bukti penginapan (kuitansi hotel)'],
-            ['KKA_Biaya_Beban', 'E3', 'Biaya Perjalanan Dinas', 17, 'Laporan hasil perjalanan dinas'],
-            ['KKA_Biaya_Beban', 'E3', 'Biaya Perjalanan Dinas', 18, 'Kesesuaian biaya dengan ketentuan uang harian'],
-
-            // Sub-Area E4. Pos Pembukuan & Transaksi Tidak Biasa (No. 19–22)
-            ['KKA_Biaya_Beban', 'E4', 'Pos Pembukuan & Transaksi Tidak Biasa', 19, 'Jurnal koreksi / reversal — alasan dan otorisasi'],
-            ['KKA_Biaya_Beban', 'E4', 'Pos Pembukuan & Transaksi Tidak Biasa', 20, 'Transaksi antar kantor (RAK) — rekonsiliasi'],
-            ['KKA_Biaya_Beban', 'E4', 'Pos Pembukuan & Transaksi Tidak Biasa', 21, 'Biaya yang tidak lazim / nominal besar tanpa kontrak'],
-            ['KKA_Biaya_Beban', 'E4', 'Pos Pembukuan & Transaksi Tidak Biasa', 22, 'Pola transaksi biaya yang berulang ke pihak yang sama'],
+            // Kategori 3: Kredit Usaha / Konstruksi (22 syarat termasuk Cessie, Termyn, IUJKN, SBUJPK) (No. 1–22)
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 1, 'Formulir Permohonan Kredit Usaha / Jasa Konstruksi'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 2, 'Profil Perusahaan (Company Profile) dan Riwayat Pengalaman Kerja Proyek'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 3, 'Fotokopi e-KTP Pengurus, Direksi, Komisaris, dan Pemegang Saham'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 4, 'NPWP Perusahaan dan NPWP Pengurus'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 5, 'Akta Pendirian Perusahaan beserta Perubahan Terakhir dan Pengesahan Kemenkumham'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 6, 'Nomor Induk Berusaha (NIB) / SIUP / TDP yang masih berlaku'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 7, 'IUJKN (Izin Usaha Jasa Konstruksi Nasional) yang masih berlaku'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 8, 'SBUJPK (Sertifikat Badan Usaha Jasa Pelaksana Konstruksi) dari LPJK'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 9, 'Sertifikat Keahlian (SKA) / Sertifikat Keterampilan (SKT) Tenaga Ahli'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 10, 'Rekening Koran Perusahaan 6 Bulan Terakhir'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 11, 'Laporan Keuangan Perusahaan 2 Tahun Terakhir (Audited / In-house)'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 12, 'Kontrak Kerja / Surat Perjanjian Pemborongan / Surat Perintah Kerja (SPK)'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 13, 'Surat Pengumuman Pemenang Tender / Surat Penunjukan Penyedia Barang/Jasa (SPPBJ)'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 14, 'Jadwal Pelaksanaan Proyek (Time Schedule / Kurva S)'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 15, 'Rencana Anggaran Biaya (RAB) Proyek Konstruksi'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 16, 'Akta Notariil Cessie (Pengalihan Hak Tagih Pembayaran Proyek ke Bank Sulteng)'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 17, 'Surat Pemberitahuan dan Persetujuan Cessie dari Pemilik Proyek (Bouwheer / PPK)'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 18, 'Berita Acara Prestasi / Kemajuan Fisik Proyek dan Berita Acara Pembayaran Termyn'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 19, 'Mekanisme Pembayaran Proyek melalui Rekening Penampung (Escrow Account di Bank Sulteng)'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 20, 'Dokumen Agunan Tambahan (SHM/SHGB/BPKB/Deposito) & Laporan Penilaian Agunan (Appraisal)'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 21, 'Pengikatan Agunan secara Notariil (APHT / SKMHT / Fidusia)'],
+            ['KKA_Kredit', 'C3', 'Kredit Usaha / Konstruksi', 22, 'Polis Asuransi Konstruksi (Contractor\'s All Risks / CAR) & Polis Asuransi Agunan'],
 
             // ==========================================
-            // TAB 5: KKA Kartu ATM (30 Item)
+            // TAB 6: KKA Biaya & Beban (25 Item)
             // ==========================================
-            // Sub-Area B1. Kondisi Gardu ATM (No. 1–7)
-            ['KKA_Kartu_ATM', 'B1', 'Kondisi Gardu ATM', 1, 'Foto kondisi fisik gardu ATM (eksterior dan interior)'],
-            ['KKA_Kartu_ATM', 'B1', 'Kondisi Gardu ATM', 2, 'Mesin ATM berfungsi normal (layar, keypad, printer)'],
-            ['KKA_Kartu_ATM', 'B1', 'Kondisi Gardu ATM', 3, 'CCTV di gardu ATM berfungsi'],
-            ['KKA_Kartu_ATM', 'B1', 'Kondisi Gardu ATM', 4, 'Penerangan gardu ATM memadai'],
-            ['KKA_Kartu_ATM', 'B1', 'Kondisi Gardu ATM', 5, 'Kebersihan dan keamanan lingkungan gardu'],
-            ['KKA_Kartu_ATM', 'B1', 'Kondisi Gardu ATM', 6, 'Stiker informasi call center / pengaduan terpasang'],
-            ['KKA_Kartu_ATM', 'B1', 'Kondisi Gardu ATM', 7, 'Anti-skimming device terpasang (jika ada)'],
+            // Sub-Area E1. Beban Operasional Non-Bunga (No. 1–10)
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 1, 'Kuitansi / invoice / bukti tagihan pihak ketiga'],
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 2, 'Kesesuaian otorisasi pengeluaran beban (limit wewenang)'],
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 3, 'Kesesuaian akun COA / pos biaya yang didebet'],
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 4, 'Kelengkapan dokumen pendukung (PO, SPK, BA serah terima)'],
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 5, 'Kesesuaian nominal transaksi dengan anggaran (budget vs aktual)'],
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 6, 'Perhitungan dan pemotongan pajak (PPh 21, PPh 23, PPN)'],
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 7, 'Bukti potong pajak dan bukti setor pajak (NTPN)'],
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 8, 'Kewajaran harga pengadaan barang/jasa (prinsip efisiensi)'],
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 9, 'Realisasi biaya promosi / iklan / CSR sesuai ketentuan'],
+            ['KKA_Biaya_Beban', 'E1', 'Beban Operasional Non-Bunga', 10, 'Bukti pembayaran (transfer / cek / bilyet giro)'],
 
-            // Sub-Area B2. Kas Opname ATM & Replenishment (No. 8–16)
-            ['KKA_Kartu_ATM', 'B2', 'Kas Opname ATM & Replenishment', 8, 'Berita acara replenishment ATM'],
+            // Sub-Area E2. Biaya Perjalanan Dinas (No. 11–17)
+            ['KKA_Biaya_Beban', 'E2', 'Biaya Perjalanan Dinas', 11, 'Surat Perintah Perjalanan Dinas (SPPD) ditandatangani pejabat'],
+            ['KKA_Biaya_Beban', 'E2', 'Biaya Perjalanan Dinas', 12, 'Tiket transportasi (pesawat, kereta, travel) asli / e-ticket'],
+            ['KKA_Biaya_Beban', 'E2', 'Biaya Perjalanan Dinas', 13, 'Boarding pass / bukti perjalanan asli'],
+            ['KKA_Biaya_Beban', 'E2', 'Biaya Perjalanan Dinas', 14, 'Tagihan / invoice hotel/penginapan asli'],
+            ['KKA_Biaya_Beban', 'E2', 'Biaya Perjalanan Dinas', 15, 'Kesesuaian uang harian / lumpsum dengan standar tarif'],
+            ['KKA_Biaya_Beban', 'E2', 'Biaya Perjalanan Dinas', 16, 'Laporan hasil perjalanan dinas'],
+            ['KKA_Biaya_Beban', 'E2', 'Biaya Perjalanan Dinas', 17, 'Formulir pertanggungjawaban panjar kerja dinas'],
+
+            // Sub-Area E3. Biaya Pemeliharaan & Umum (No. 18–25)
+            ['KKA_Biaya_Beban', 'E3', 'Biaya Pemeliharaan & Umum', 18, 'Tagihan listrik (PLN), air (PDAM), telepon/internet'],
+            ['KKA_Biaya_Beban', 'E3', 'Biaya Pemeliharaan & Umum', 19, 'Kesesuaian bukti bayar utilitas dengan meteran/faktur'],
+            ['KKA_Biaya_Beban', 'E3', 'Biaya Pemeliharaan & Umum', 20, 'Surat perjanjian sewa gedung / kantor (jika status sewa)'],
+            ['KKA_Biaya_Beban', 'E3', 'Biaya Pemeliharaan & Umum', 21, 'Pembayaran sewa gedung dan pemotongan PPh 4 ayat (2)'],
+            ['KKA_Biaya_Beban', 'E3', 'Biaya Pemeliharaan & Umum', 22, 'SPK pemeliharaan gedung / kendaraan / peralatan kantor'],
+            ['KKA_Biaya_Beban', 'E3', 'Biaya Pemeliharaan & Umum', 23, 'Kuitansi servis kendaraan dinas + rincian spare part'],
+            ['KKA_Biaya_Beban', 'E3', 'Biaya Pemeliharaan & Umum', 24, 'Log book penggunaan kendaraan dinas dan BBM'],
+            ['KKA_Biaya_Beban', 'E3', 'Biaya Pemeliharaan & Umum', 25, 'Biaya premi asuransi aset (gedung, kendaraan, kas/CIS)'],
+
+            // ==========================================
+            // TAB 7: KKA Kartu ATM (30 Item)
+            // ==========================================
+            // Sub-Area B1. Pengelolaan Fisik ATM (Offsite & Onsite) (No. 1–8)
+            ['KKA_Kartu_ATM', 'B1', 'Pengelolaan Fisik ATM', 1, 'Kondisi fisik mesin ATM (bersih, tidak rusak, keypad utuh)'],
+            ['KKA_Kartu_ATM', 'B1', 'Pengelolaan Fisik ATM', 2, 'CCTV ATM berfungsi dan mengarah ke area aman (bukan keypad)'],
+            ['KKA_Kartu_ATM', 'B1', 'Pengelolaan Fisik ATM', 3, 'Skimming detection / pin guard terpasang'],
+            ['KKA_Kartu_ATM', 'B1', 'Pengelolaan Fisik ATM', 4, 'Stiker call center resmi terpasang (bukan nomor palsu)'],
+            ['KKA_Kartu_ATM', 'B1', 'Pengelolaan Fisik ATM', 5, 'Kondisi ruang ATM (penerangan, AC, pintu kaca)'],
+            ['KKA_Kartu_ATM', 'B1', 'Pengelolaan Fisik ATM', 6, 'APAR (alat pemadam api) tersedia dan belum expire'],
+            ['KKA_Kartu_ATM', 'B1', 'Pengelolaan Fisik ATM', 7, 'Kunci fascia dan brankas ATM dipegang petugas berbeda (dual control)'],
+            ['KKA_Kartu_ATM', 'B1', 'Pengelolaan Fisik ATM', 8, 'Kombinasi brankas ATM diubah secara berkala'],
+
+            // Sub-Area B2. Kas Opname ATM & Replenishment (No. 9–16)
             ['KKA_Kartu_ATM', 'B2', 'Kas Opname ATM & Replenishment', 9, 'Fisik uang dalam cassette ATM'],
             ['KKA_Kartu_ATM', 'B2', 'Kas Opname ATM & Replenishment', 10, 'Saldo ATM di sistem vs fisik'],
             ['KKA_Kartu_ATM', 'B2', 'Kas Opname ATM & Replenishment', 11, 'Selisih kas ATM (jika ada)'],
@@ -285,17 +241,17 @@ class DailyRegisterChecklistSeeder extends Seeder
             ['KKA_Kartu_ATM', 'B4', 'Kontrol TI Dasar', 30, 'Keamanan server room / perangkat TI kantor'],
 
             // ==========================================
-            // TAB 6: KKA Pengaduan (8 Item)
+            // TAB 8: KKA Pengaduan (E.4.5 KELUHAN NASABAH) (9 Item)
             // ==========================================
-            // Sub-Area D5. Pengaduan/Keluhan Nasabah (No. 1–8 / Item 30–37 Excel)
-            ['KKA_Pengaduan', 'D5', 'Pengaduan/Keluhan Nasabah', 1, 'Register pengaduan nasabah'],
-            ['KKA_Pengaduan', 'D5', 'Pengaduan/Keluhan Nasabah', 2, 'Formulir pengaduan (tertulis)'],
-            ['KKA_Pengaduan', 'D5', 'Pengaduan/Keluhan Nasabah', 3, 'Bukti identitas pengadu'],
-            ['KKA_Pengaduan', 'D5', 'Pengaduan/Keluhan Nasabah', 4, 'Tanggal terima pengaduan'],
-            ['KKA_Pengaduan', 'D5', 'Pengaduan/Keluhan Nasabah', 5, 'Tindak lanjut penyelesaian pengaduan'],
-            ['KKA_Pengaduan', 'D5', 'Pengaduan/Keluhan Nasabah', 6, 'Surat jawaban/tanggapan ke nasabah'],
-            ['KKA_Pengaduan', 'D5', 'Pengaduan/Keluhan Nasabah', 7, 'Jangka waktu penyelesaian (maks 20 hari kerja, perpanjangan maks 20 hari)'],
-            ['KKA_Pengaduan', 'D5', 'Pengaduan/Keluhan Nasabah', 8, 'Bukti penyelesaian (pengembalian dana, koreksi, dll)'],
+            ['KKA_Pengaduan', 'D5', 'Pengaduan / Keluhan Nasabah (E.4.5)', 1, 'Register Buku Keluhan Nasabah (No. Registrasi / No. Arsip)'],
+            ['KKA_Pengaduan', 'D5', 'Pengaduan / Keluhan Nasabah (E.4.5)', 2, 'Formulir Pengaduan / Surat Pengaduan Tertulis dari Nasabah'],
+            ['KKA_Pengaduan', 'D5', 'Pengaduan / Keluhan Nasabah (E.4.5)', 3, 'Identitas Pengadu (KTP, Buku Rekening / Bukti Kepemilikan Rekening)'],
+            ['KKA_Pengaduan', 'D5', 'Pengaduan / Keluhan Nasabah (E.4.5)', 4, 'Tanggal Penerimaan Pengaduan (Tgl Keluhan)'],
+            ['KKA_Pengaduan', 'D5', 'Pengaduan / Keluhan Nasabah (E.4.5)', 5, 'Bukti Investigasi Transaksi / Log Jurnal Core Banking System (CBS)'],
+            ['KKA_Pengaduan', 'D5', 'Pengaduan / Keluhan Nasabah (E.4.5)', 6, 'Tanggal Pembukuan / Penyelesaian Pengaduan (Tgl Buku)'],
+            ['KKA_Pengaduan', 'D5', 'Pengaduan / Keluhan Nasabah (E.4.5)', 7, 'Surat Jawaban / Tanggapan Resmi Penyelesaian kepada Nasabah'],
+            ['KKA_Pengaduan', 'D5', 'Pengaduan / Keluhan Nasabah (E.4.5)', 8, 'Perhitungan Lama Hari Kerja Penyelesaian (NETWORKDAYS) ≤ SLA Ketentuan'],
+            ['KKA_Pengaduan', 'D5', 'Pengaduan / Keluhan Nasabah (E.4.5)', 9, 'Status Pengaduan (Selesai / Reject / Ditolak) beserta Berita Acara Hasil Penyelesaian'],
         ];
 
         DB::beginTransaction();

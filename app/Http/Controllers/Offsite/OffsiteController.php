@@ -191,8 +191,40 @@ class OffsiteController extends Controller
             }
         }
 
-        $filePath = $file->storeAs('offsite_staging', time() . '_' . $file->getClientOriginalName(), 'local');
+        // 1. Hitung SHA-256 fingerprint dari FILE ASLI secara streaming sebelum diproses parser/staging
+        $fileHash = null;
+        try {
+            $rawPath = $file->getRealPath();
+            if ($rawPath && file_exists($rawPath)) {
+                $calculated = @hash_file('sha256', $rawPath);
+                if ($calculated !== false && strlen($calculated) === 64) {
+                    $fileHash = strtolower($calculated);
+                } else {
+                    \Illuminate\Support\Facades\Log::warning("Gagal menghitung file_hash: hash_file mengembalikan false untuk file {$file->getClientOriginalName()}");
+                }
+            } else {
+                \Illuminate\Support\Facades\Log::warning("Gagal menghitung file_hash: file getRealPath() tidak ditemukan.");
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Gagal menghitung file_hash untuk file {$file->getClientOriginalName()}: " . $e->getMessage());
+            $fileHash = null;
+        }
+
+        $tempFileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+        $filePath = $file->storeAs('offsite_staging', $tempFileName, 'local');
         $fullPath = Storage::disk('local')->path($filePath);
+
+        // Fallback perhitungan file_hash dari file tersimpan jika rawPath belum sempat terbaca
+        if ($fileHash === null && file_exists($fullPath)) {
+            try {
+                $fallbackHash = @hash_file('sha256', $fullPath);
+                if ($fallbackHash !== false && strlen($fallbackHash) === 64) {
+                    $fileHash = strtolower($fallbackHash);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Fallback perhitungan file_hash gagal: " . $e->getMessage());
+            }
+        }
 
         DB::beginTransaction();
         try {
@@ -213,11 +245,12 @@ class OffsiteController extends Controller
             $totalModerate = is_array($parseResult) ? ($parseResult['total_moderate'] ?? 0) : 0;
             $totalHigh     = is_array($parseResult) ? ($parseResult['total_high'] ?? 0) : 0;
 
-            AuditLog::create([
+            $auditLog = AuditLog::create([
                 'user_id'        => $user->id,
                 'kode_unit'      => $kodeUnitDipilih,
                 'jenis_file'     => $jenisFile,
                 'nama_file'      => $file->getClientOriginalName(),
+                'file_hash'      => $fileHash,
                 'status'         => 'Berhasil',
                 'total_low'      => $totalLow,
                 'total_moderate' => $totalModerate,
@@ -226,7 +259,16 @@ class OffsiteController extends Controller
 
             DB::commit();
 
-            if (file_exists($fullPath)) unlink($fullPath);
+            // Simpan file secara permanen di storage agar integritasnya dapat diverifikasi di kemudian hari
+            Storage::disk('local')->makeDirectory('offsite_staging');
+            $permanentFileName = $auditLog->id . '_' . $file->getClientOriginalName();
+            $permanentPath = Storage::disk('local')->path('offsite_staging/' . $permanentFileName);
+            if (file_exists($fullPath) && $fullPath !== $permanentPath) {
+                if (!@rename($fullPath, $permanentPath)) {
+                    copy($fullPath, $permanentPath);
+                    @unlink($fullPath);
+                }
+            }
 
             // JALANKAN MESIN SAMPLING OTOMATIS
             $samplingResult = $samplingEngine->runSampling($kodeUnitDipilih, $periode);
@@ -237,20 +279,30 @@ class OffsiteController extends Controller
 
             return redirect()->back()->with('success', 'File ' . $jenisFile . ' untuk Unit ' . $kodeUnitDipilih . ' berhasil diproses.' . $msgExtra);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
 
-
-            if (file_exists($fullPath)) unlink($fullPath);
-
-            AuditLog::create([
+            $auditLog = AuditLog::create([
                 'user_id'     => $user->id,
                 'kode_unit'   => $kodeUnitDipilih,
                 'jenis_file'  => $jenisFile,
                 'nama_file'   => $file->getClientOriginalName(),
+                'file_hash'   => $fileHash,
                 'status'      => 'Gagal',
                 'pesan_error' => \Illuminate\Support\Str::limit($e->getMessage(), 250),
             ]);
+
+            if (isset($fullPath) && file_exists($fullPath)) {
+                Storage::disk('local')->makeDirectory('offsite_staging');
+                $permanentFileName = $auditLog->id . '_' . $file->getClientOriginalName();
+                $permanentPath = Storage::disk('local')->path('offsite_staging/' . $permanentFileName);
+                if ($fullPath !== $permanentPath) {
+                    if (!@rename($fullPath, $permanentPath)) {
+                        copy($fullPath, $permanentPath);
+                        @unlink($fullPath);
+                    }
+                }
+            }
 
             return redirect()->back()->with('error', 'Gagal memproses file: ' . $e->getMessage());
         }

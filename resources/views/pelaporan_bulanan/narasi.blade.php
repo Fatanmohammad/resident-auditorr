@@ -1,7 +1,10 @@
 @extends('layouts.app')
-@section('title', 'Narasi Laporan Bulanan')
+@section('title', 'Editor WYSIWYG & Catatan Eksekutif (SOP 08)')
 
 @section('content')
+<!-- Quill CSS -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+
 <style>
     .selector-card {
         background: #ffffff;
@@ -11,19 +14,45 @@
         margin-bottom: 1.25rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
-    .narasi-card {
+    .wysiwyg-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 12px;
         margin-bottom: 1.25rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
-    .narasi-header {
+    .wysiwyg-header {
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
         padding: 0.85rem 1.25rem;
         border-top-left-radius: 12px;
         border-top-right-radius: 12px;
+    }
+    .ql-editor {
+        min-height: 220px;
+        font-family: inherit;
+        font-size: 0.92rem;
+        line-height: 1.6;
+    }
+    .ql-toolbar.ql-snow {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        border-color: #e2e8f0;
+        background: #f8fafc;
+    }
+    .ql-container.ql-snow {
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        border-color: #e2e8f0;
+    }
+    .preview-box {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.25rem;
+        min-height: 120px;
+        line-height: 1.6;
+        font-size: 0.92rem;
     }
 </style>
 
@@ -32,16 +61,16 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <div>
             <h4 class="fw-bold mb-1" style="color: #1e3a8a;">
-                <i class="bi bi-journal-text me-2"></i>Pengisian Narasi Kualitatif Laporan Bulanan
+                <i class="bi bi-pencil-square me-2"></i>Editor WYSIWYG &amp; Catatan Eksekutif Laporan Bulanan
             </h4>
             <p class="text-muted small mb-0">
-                Penyusunan 6 Blok Narasi Formal untuk Lembar Laporan Bulanan Eksekutif
+                Penyusunan Catatan Eksekutif Bebas &amp; Rencana Kerja Konsolidasi Menggunakan Rich Text Editor (Bebas Narasi Kaku)
             </p>
         </div>
         <div class="d-flex gap-2 mt-2 mt-md-0">
             @if($kalender)
-            <a href="{{ route('pelaporan-bulanan.laporan-bulanan', $kalender->report_id) }}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
-                <i class="bi bi-printer me-1"></i> Cetak Laporan Bulanan
+            <a href="{{ route('pelaporan-bulanan.laporan-bulanan', $kalender->report_id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
+                <i class="bi bi-eye me-1"></i> Preview Laporan Bulanan
             </a>
             @endif
         </div>
@@ -64,6 +93,19 @@
         </div>
     @endif
 
+    {{-- Mode Preview Notice for RA --}}
+    @if($isRa)
+        <div class="alert alert-info border-0 shadow-sm rounded-3 mb-3 d-flex align-items-center">
+            <i class="bi bi-info-circle-fill fs-4 me-3 text-primary"></i>
+            <div>
+                <h6 class="fw-bold mb-0">Mode Preview (Read-Only) Resident Auditor</h6>
+                <small class="text-muted">
+                    Sesuai SOP 08 revisi, Resident Auditor tidak lagi dibebani pengisian 6 narasi kaku. Catatan dan analisis eksekutif dikelola langsung oleh Admin/Reviewer SKAI melalui Editor WYSIWYG.
+                </small>
+            </div>
+        </div>
+    @endif
+
     {{-- Selector Report ID --}}
     <div class="selector-card">
         <form method="GET" action="{{ route('pelaporan-bulanan.narasi') }}" class="row g-2 align-items-center">
@@ -81,7 +123,8 @@
             </div>
             <div class="col-md-5 text-md-end mt-2 mt-md-0">
                 @if($kalender)
-                    <span class="badge bg-light text-dark border px-2 py-1">Resident Auditor: {{ $kalender->resident_auditor }}</span>
+                    <span class="badge bg-light text-dark border px-2 py-1">Cabang: {{ $kalender->nama_unit }} ({{ $kalender->kode_unit }})</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 ms-1">RA: {{ $kalender->resident_auditor }}</span>
                 @endif
             </div>
         </form>
@@ -93,106 +136,162 @@
             Silakan inisiasi kalender laporan terlebih dahulu pada menu <a href="{{ route('pelaporan-bulanan.kalender') }}" class="fw-bold">Kalender Laporan</a>.
         </div>
     @else
-        @php
-            $isLocked = ($kalender->status_final === 'APPROVED/FINAL') && !in_array(auth()->user()->role ?? '', ['admin', 'kabag_ra', 'kadiv_skai', 'reviewer']);
-        @endphp
+        @if(!$isRa)
+            {{-- ADMIN WYSIWYG FORM --}}
+            <form id="wysiwygForm" method="POST" action="{{ route('pelaporan-bulanan.wysiwyg.update', $kalender->report_id) }}">
+                @csrf
 
-        @if($isLocked)
-            <div class="alert alert-success border-0 shadow-sm rounded-3 mb-3 d-flex align-items-center">
-                <i class="bi bi-lock-fill fs-4 me-3 text-success"></i>
-                <div>
-                    <h6 class="fw-bold mb-0">Laporan Telah Berstatus APPROVED/FINAL</h6>
-                    <small>Dokumen narasi laporan telah disetujui final oleh Pengawas/Reviewer SKAI. Pengeditan narasi telah dikunci.</small>
+                {{-- Hidden Inputs for Editor Content --}}
+                <input type="hidden" name="catatan_eksekutif" id="catatanEksekutifInput">
+                <input type="hidden" name="rencana_bulan_depan" id="rencanaBulanDepanInput">
+
+                <div class="row g-3">
+                    {{-- 1. Catatan / Analisis Eksekutif Bebas Admin (WYSIWYG) --}}
+                    <div class="col-12">
+                        <div class="wysiwyg-card">
+                            <div class="wysiwyg-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold text-dark"><i class="bi bi-file-earmark-richtext me-1 text-primary"></i> 1. Catatan &amp; Analisis Eksekutif Bebas (Admin WYSIWYG)</span>
+                                    <div class="small text-muted" style="font-size: 0.75rem;">
+                                        Bebas memformat heading, bold/italic, bullet/numbered list, kutipan, dan tabel ringkas.
+                                    </div>
+                                </div>
+                                <span class="badge bg-primary">Rich HTML Editor</span>
+                            </div>
+                            <div class="p-3">
+                                <div id="editorCatatan" contenteditable="true" class="form-control border-1 p-3" style="min-height: 220px; overflow-y: auto;">
+                                    {!! $narasi->catatan_eksekutif ?: $narasi->ringkasan_eksekutif ?: '' !!}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- 2. Rencana Bulan Berikutnya (WYSIWYG Admin) --}}
+                    <div class="col-12">
+                        <div class="wysiwyg-card">
+                            <div class="wysiwyg-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold text-dark"><i class="bi bi-calendar-check me-1 text-primary"></i> 2. Rencana Kerja Pengawasan Bulan Berikutnya (Admin WYSIWYG)</span>
+                                    <div class="small text-muted" style="font-size: 0.75rem;">
+                                        Fokus area pemeriksaan, tindak lanjut temuan kritis, dan target pengawasan konsolidasi.
+                                    </div>
+                                </div>
+                                <span class="badge bg-secondary">Rich HTML Editor</span>
+                            </div>
+                            <div class="p-3">
+                                <div id="editorRencana" contenteditable="true" class="form-control border-1 p-3" style="min-height: 220px; overflow-y: auto;">
+                                    {!! $narasi->rencana_bulan_depan ?: $narasi->rencana_bulan_berikut ?: '' !!}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+                    <span class="small text-muted">
+                        Report ID: <strong>{{ $kalender->report_id }}</strong> | Terakhir disimpan: {{ $narasi->updated_at ? $narasi->updated_at->diffForHumans() : '-' }}
+                    </span>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm fw-bold">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Simpan Catatan Eksekutif (WYSIWYG)
+                    </button>
+                </div>
+            </form>
+        @else
+            {{-- RESIDENT AUDITOR READ-ONLY PREVIEW --}}
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="wysiwyg-card">
+                        <div class="wysiwyg-header">
+                            <span class="fw-bold text-dark"><i class="bi bi-file-earmark-richtext me-1 text-primary"></i> 1. Catatan &amp; Analisis Eksekutif Laporan Bulanan</span>
+                        </div>
+                        <div class="p-3">
+                            <div class="preview-box">
+                                @if(!empty($narasi->catatan_eksekutif))
+                                    {!! $narasi->catatan_eksekutif !!}
+                                @elseif(!empty($narasi->ringkasan_eksekutif))
+                                    {!! nl2br(e($narasi->ringkasan_eksekutif)) !!}
+                                @else
+                                    <span class="text-muted fst-italic">Belum ada catatan eksekutif yang ditambahkan oleh Admin/SKAI.</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="wysiwyg-card">
+                        <div class="wysiwyg-header">
+                            <span class="fw-bold text-dark"><i class="bi bi-calendar-check me-1 text-primary"></i> 2. Rencana Kerja Pengawasan Bulan Berikutnya</span>
+                        </div>
+                        <div class="p-3">
+                            <div class="preview-box">
+                                @if(!empty($narasi->rencana_bulan_depan))
+                                    {!! $narasi->rencana_bulan_depan !!}
+                                @elseif(!empty($narasi->rencana_bulan_berikut))
+                                    {!! nl2br(e($narasi->rencana_bulan_berikut)) !!}
+                                @else
+                                    <span class="text-muted fst-italic">Melanjutkan pengawasan rutin harian, offsite review, dan monitoring tindak lanjut SKAI.</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         @endif
-
-        <form method="POST" action="{{ route('pelaporan-bulanan.narasi.update', $kalender->report_id) }}">
-            @csrf
-
-            <div class="row g-3">
-                {{-- 1. Ringkasan Eksekutif --}}
-                <div class="col-md-6">
-                    <div class="narasi-card">
-                        <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-card-text me-1 text-primary"></i> 1. Ringkasan Eksekutif</span>
-                        </div>
-                        <div class="p-3">
-                            <textarea name="ringkasan_eksekutif" rows="4" class="form-control form-control-sm" placeholder="Rangkuman umum pelaksanaan tugas audit dan kondisi pengawasan cabang..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->ringkasan_eksekutif }}</textarea>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- 2. Hasil Utama --}}
-                <div class="col-md-6">
-                    <div class="narasi-card">
-                        <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-trophy me-1 text-primary"></i> 2. Hasil Utama & Temuan Kunci</span>
-                        </div>
-                        <div class="p-3">
-                            <textarea name="hasil_utama" rows="4" class="form-control form-control-sm" placeholder="Temuan paling signifikan, kelemahan kontrol internal, dan hasil pengujian sampel..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->hasil_utama }}</textarea>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- 3. Analisis Risiko / Tren --}}
-                <div class="col-md-6">
-                    <div class="narasi-card">
-                        <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-graph-up-arrow me-1 text-primary"></i> 3. Analisis Risiko & Tren</span>
-                        </div>
-                        <div class="p-3">
-                            <textarea name="analisis_risiko_tren" rows="4" class="form-control form-control-sm" placeholder="Perkembangan tren risiko operasional, kepatuhan, atau penyimpangan berulang..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->analisis_risiko_tren }}</textarea>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- 4. Kendala Pelaksanaan --}}
-                <div class="col-md-6">
-                    <div class="narasi-card">
-                        <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-exclamation-triangle me-1 text-primary"></i> 4. Kendala Pengawasan</span>
-                        </div>
-                        <div class="p-3">
-                            <textarea name="kendala" rows="4" class="form-control form-control-sm" placeholder="Hambatan operasional lapangan, ketersediaan data, atau respon auditee..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->kendala }}</textarea>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- 5. Rencana Bulan Berikut --}}
-                <div class="col-md-6">
-                    <div class="narasi-card">
-                        <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-calendar-check me-1 text-primary"></i> 5. Rencana Bulan Berikut</span>
-                        </div>
-                        <div class="p-3">
-                            <textarea name="rencana_bulan_berikut" rows="4" class="form-control form-control-sm" placeholder="Fokus area pemeriksaan dan target sampling untuk bulan berikutnya..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->rencana_bulan_berikut }}</textarea>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- 6. Arahan yang Diperlukan --}}
-                <div class="col-md-6">
-                    <div class="narasi-card">
-                        <div class="narasi-header d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark small"><i class="bi bi-megaphone me-1 text-primary"></i> 6. Arahan yang Diperlukan</span>
-                        </div>
-                        <div class="p-3">
-                            <textarea name="arahan_diperlukan" rows="4" class="form-control form-control-sm" placeholder="Dukungan manajemen SKAI / Korwas yang diperlukan terkait eskalasi atau tindak lanjut..." {{ $isLocked ? 'disabled' : '' }}>{{ $narasi->arahan_diperlukan }}</textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                <span class="small text-muted">
-                    Laporan: <strong>{{ $kalender->report_id }}</strong> | Terakhir disimpan: {{ $narasi->updated_at ? $narasi->updated_at->diffForHumans() : '-' }}
-                </span>
-                <button type="submit" class="btn btn-primary px-4 shadow-sm" {{ $isLocked ? 'disabled' : '' }}>
-                    <i class="bi bi-save me-1"></i> Simpan Seluruh Narasi Laporan
-                </button>
-            </div>
-        </form>
     @endif
 </div>
+
+@if(!$isRa)
+<!-- Quill JS and Initialization -->
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toolbarOptions = [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'color': [] }, { 'background': [] }],
+            ['blockquote', 'code-block'],
+            ['clean']
+        ];
+
+        let quillCatatan = null;
+        let quillRencana = null;
+
+        if (typeof Quill !== 'undefined') {
+            quillCatatan = new Quill('#editorCatatan', {
+                theme: 'snow',
+                modules: { toolbar: toolbarOptions }
+            });
+
+            quillRencana = new Quill('#editorRencana', {
+                theme: 'snow',
+                modules: { toolbar: toolbarOptions }
+            });
+        }
+
+        const form = document.getElementById('wysiwygForm');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                const inputCatatan = document.getElementById('catatanEksekutifInput');
+                const inputRencana = document.getElementById('rencanaBulanDepanInput');
+
+                if (quillCatatan) {
+                    inputCatatan.value = quillCatatan.root.innerHTML;
+                } else {
+                    const el = document.getElementById('editorCatatan');
+                    inputCatatan.value = el ? el.innerHTML : '';
+                }
+
+                if (quillRencana) {
+                    inputRencana.value = quillRencana.root.innerHTML;
+                } else {
+                    const el = document.getElementById('editorRencana');
+                    inputRencana.value = el ? el.innerHTML : '';
+                }
+            });
+        }
+    });
+</script>
+@endif
 @endsection

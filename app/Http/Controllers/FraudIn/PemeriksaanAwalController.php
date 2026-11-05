@@ -126,6 +126,22 @@ class PemeriksaanAwalController extends Controller
             ->with('success', 'Register indikasi fraud [' . $data['indikasi_id'] . '] berhasil dicatatkan.');
     }
 
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status_kasus' => 'required|in:OPEN,INVESTIGASI,CLOSED,PEMBINAAN',
+        ]);
+
+        $indikasi = Sop09RegisterIndikasi::findOrFail($id);
+        $oldStatus = $indikasi->status_kasus;
+        $indikasi->update([
+            'status_kasus' => $request->status_kasus,
+        ]);
+
+        return redirect()->route('pemeriksaan_awal.register')
+            ->with('success', "Status kasus [{$indikasi->indikasi_id}] berhasil diperbarui dari {$oldStatus} menjadi {$request->status_kasus}.");
+    }
+
     /**
      * WP-RA-09-B: Triase Awal
      */

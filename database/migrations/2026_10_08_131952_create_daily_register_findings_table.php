@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('nama_unit')->nullable();
             $table->string('source_sheet'); // Misal: KKA_Teller_Kas, KKA_Kredit
             $table->decimal('nominal_terkait', 20, 2)->nullable();
-            $table->enum('risk_awal', ['Low', 'Moderate', 'High']); // Modified to include Low
+            $table->string('risk_awal', 50)->nullable();
             $table->string('jenis_exception_awal')->nullable();
             
             // Khusus Low Risk (Dari DailyRegister sebelumnya)
@@ -34,12 +34,12 @@ return new class extends Migration
             $table->string('jenis_exception_ra')->nullable();
             $table->integer('skor_dampak')->nullable();
             $table->integer('skor_kemungkinan')->nullable();
-            $table->enum('perlu_onsite', ['Ya', 'Tidak'])->nullable();
+            $table->string('perlu_onsite', 50)->nullable();
             $table->text('simpulan_ra')->nullable();
             $table->date('tanggal_ditemukan')->nullable();
             
             // --- 3. INPUT ADMIN/PIMSIE (Dropdown Kaku & Text) ---
-            $table->enum('status_klarifikasi', ['Belum Selesai', 'Selesai'])->default('Belum Selesai');
+            $table->string('status_klarifikasi', 50)->default('Belum Selesai');
             $table->enum('perluasan_sampel', ['Ya', 'Tidak'])->default('Tidak');
             $table->enum('keputusan_onsite', ['Ya', 'Tidak'])->nullable();
             $table->enum('keputusan_eskalasi', ['Ya', 'Tidak'])->nullable();

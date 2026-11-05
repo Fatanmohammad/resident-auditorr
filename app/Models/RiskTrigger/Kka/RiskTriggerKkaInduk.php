@@ -38,10 +38,16 @@ class RiskTriggerKkaInduk extends Model
         'ra_pelaksana',
         'reviewer',
         'status_review',
+        'file_ringkasan_bukti',
+        'klausul_covenant',
+        'status_covenant',
+        'catatan_covenant',
+        'komparasi_sistem_data',
     ];
 
     protected $casts = [
         'exception_area' => 'integer',
+        'komparasi_sistem_data' => 'array',
     ];
 
     public function assignment()
@@ -57,5 +63,10 @@ class RiskTriggerKkaInduk extends Model
     public function programKerja()
     {
         return $this->hasOne(ProgramKerjaData::class, 'visit_id', 'visit_id');
+    }
+
+    public function covenants()
+    {
+        return $this->hasMany(\App\Models\RiskTrigger\RiskTriggerCovenant::class, 'risk_trigger_kka_induk_id');
     }
 }

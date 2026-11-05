@@ -54,7 +54,8 @@ class DailyRegisterTmpService
         $today = Carbon::today()->format('Y-m-d');
         $dir = self::getDirectoryPath();
 
-        // 1. Hapus file tmp sebelum tanggal hari ini
+        // 1. Hapus file tmp berumur lebih dari 14 hari (menjaga backlog cuti/absen RA)
+        $retentionCutoff = Carbon::today()->subDays(14)->format('Y-m-d');
         if (File::isDirectory($dir)) {
             $files = File::files($dir);
             foreach ($files as $file) {
@@ -62,15 +63,16 @@ class DailyRegisterTmpService
                 // Format: low_risk_{kode_unit}_{YYYY-MM-DD}.json
                 if (preg_match('/low_risk_([A-Za-z0-9_-]+)_(\d{4}-\d{2}-\d{2})\.json$/', $filename, $matches)) {
                     $fileDate = $matches[2];
-                    if ($fileDate < $today) {
+                    if ($fileDate < $retentionCutoff) {
                         File::delete($file->getPathname());
                     }
                 }
             }
         }
 
-        // 2. Bersihkan sisa data unreviewed low-risk lama di tabel daily_register_findings (hanya data mentah dump yang belum pernah di-review)
+        // 2. Bersihkan sisa data unreviewed low-risk usang (>14 hari) di database (data backlog aktif tetap dipertahankan)
         DailyRegisterFinding::where('risk_awal', 'Low')
+            ->whereDate('tanggal_data', '<', $retentionCutoff)
             ->whereDoesntHave('checklistAnswers')
             ->whereNull('status_review')
             ->whereNull('tanggal_ditemukan')
@@ -85,7 +87,6 @@ class DailyRegisterTmpService
     {
         self::cleanupExpired();
 
-        $targetDate = $selectedDate ?: Carbon::today()->format('Y-m-d');
         $dir = self::getDirectoryPath();
         $allData = collect();
 
@@ -100,8 +101,9 @@ class DailyRegisterTmpService
                 $unitCode = $matches[1];
                 $fileDate = $matches[2];
 
-                // Hanya ambil file sesuai target tanggal (default hari ini)
-                if ($fileDate !== $targetDate) {
+                // Jika tanggal spesifik diminta, filter berdasarkan tanggal tersebut.
+                // Jika tidak diminta (default), seluruh transaksi backlog aktif (cuti/absen RA) tetap dimuat.
+                if (!empty($selectedDate) && $fileDate !== $selectedDate) {
                     continue;
                 }
 

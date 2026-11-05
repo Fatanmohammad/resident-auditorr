@@ -111,26 +111,50 @@
                             $riskLevel = $k->source->severity_level ?? 'Rendah';
                             $penyebab = $k->source->penyebab ?? 'Tidak ada penyebab dilampirkan.';
                             
-                            if (str_contains($k->source_type, 'CashDetail')) {
-                                $tipeKka = 'Cash Opname';
-                                $objek = $k->source->objek_persediaan . ' (' . $k->source->pecahan . ')';
-                                $selisih = 'Selisih Rp ' . number_format($k->source->selisih, 0, ',', '.');
+                            if (str_contains($k->source_type, 'AtmMachine')) {
+                                $tipeKka = 'Cash Opname ATM';
+                                $objek = 'Mesin ATM ' . ($k->source->terminal_id ?? '') . ' (' . ($k->source->lokasi ?? 'Galeri ATM') . ')';
+                                $selisih = 'Selisih Rp ' . number_format($k->source->selisih ?? 0, 0, ',', '.');
+                                $penyebab = $k->source->keterangan_selisih ?? 'Terdapat selisih kas fisik ATM vs CBS.';
+                                $riskLevel = 'Tinggi';
+                            } elseif (str_contains($k->source_type, 'CashDetail')) {
+                                $tipeKka = 'Cash Opname Khasanah';
+                                $objek = ($k->source->objek_persediaan ?? 'Kas') . ' (' . ($k->source->pecahan ?? '-') . ')';
+                                $selisih = 'Selisih Rp ' . number_format($k->source->selisih ?? 0, 0, ',', '.');
                             } elseif (str_contains($k->source_type, 'ObsDetail')) {
                                 $tipeKka = 'Observasi Lingkungan';
-                                $objek = $k->source->area_observasi;
-                                $selisih = 'Kondisi: ' . $k->source->kondisi_aktual;
+                                $objek = $k->source->area_observasi ?? 'Observasi';
+                                $selisih = 'Kondisi: ' . ($k->source->kondisi_aktual ?? '-');
                             } elseif (str_contains($k->source_type, 'StokDetail')) {
                                 $tipeKka = 'Stok Opname';
-                                $objek = $k->source->sub_area . ' - ' . explode('|', $k->source->kondisi_objek)[0];
-                                $selisih = 'Selisih ' . $k->source->selisih . ' lembar/buku';
+                                $objek = ($k->source->sub_area ?? 'Stok') . ' - ' . explode('|', $k->source->kondisi_objek ?? '')[0];
+                                $selisih = 'Selisih ' . ($k->source->selisih ?? 0) . ' lembar/buku';
                             } elseif (str_contains($k->source_type, 'KartuAtmDetail')) {
                                 $tipeKka = 'Rekon Kartu ATM';
-                                $objek = ($k->source->sub_area ?? '') . ' - ' . ($k->source->jenis_kartu ?? '');
-                                $selisih = (is_numeric($k->source->selisih ?? null)) ? 'Selisih ' . $k->source->selisih . ' keping' : 'Kondisi: ' . ($k->source->hasil_fisik ?? '-');
+                                $objek = ($k->source->sub_area ?? 'Kartu') . ' - ' . ($k->source->jenis_kartu ?? '');
+                                if (($k->source->sub_area ?? '') === 'Kontrol') {
+                                    $selisih = 'Hasil Uji: ' . ($k->source->jawaban_kontrol ?? 'Tidak');
+                                    $penyebab = $k->source->catatan_kontrol ?: 'Pengendalian kartu ATM tidak terpenuhi.';
+                                } else {
+                                    $selisihRp = (float)($k->source->selisih_persediaan ?? 0);
+                                    $selisihPin = (int)($k->source->selisih_pin_mailer ?? 0);
+                                    if (abs($selisihRp) >= 0.01) {
+                                        $selisih = 'Selisih Persediaan: Rp ' . number_format($selisihRp, 0, ',', '.');
+                                    } elseif ($selisihPin !== 0) {
+                                        $selisih = 'Selisih PIN: ' . $selisihPin . ' bh';
+                                    } else {
+                                        $selisih = 'Kondisi: ' . ($k->source->hasil_fisik ?? '-');
+                                    }
+                                }
                             } elseif (str_contains($k->source_type, 'BarangCetakanDetail')) {
                                 $tipeKka = 'Rekon Barang Cetakan';
-                                $objek = ($k->source->kategori ?? '') . ' - ' . ($k->source->nama_barang ?? '');
-                                $selisih = 'Selisih ' . ($k->source->selisih ?? 0) . ' ' . ($k->source->satuan ?? 'Bh');
+                                $objek = ($k->source->kategori ?? 'Cetakan') . ' - ' . ($k->source->nama_barang ?? '');
+                                if (($k->source->kategori ?? '') === 'Kontrol') {
+                                    $selisih = 'Hasil Uji: ' . ($k->source->jawaban_kontrol ?? 'Tidak');
+                                    $penyebab = $k->source->catatan_kontrol ?: 'Pengendalian internal barang cetakan tidak terpenuhi.';
+                                } else {
+                                    $selisih = 'Selisih ' . ($k->source->selisih ?? 0) . ' ' . ($k->source->satuan ?? 'Bh');
+                                }
                             }
                         }
 

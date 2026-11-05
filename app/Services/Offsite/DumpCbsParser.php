@@ -24,12 +24,13 @@ class DumpCbsParser
         $headerMap = [];
         if ($header) {
             foreach ($header as $index => $colName) {
-                $headerMap[trim(strtoupper($colName))] = $index;
+                $cleanCol = preg_replace('/^\xEF\xBB\xBF/', '', trim((string)$colName));
+                $headerMap[strtoupper($cleanCol)] = $index;
             }
         }
 
         $idxDate = $headerMap['TGL_TX'] ?? ($headerMap['TANGGAL'] ?? 0);
-        $idxKet = $headerMap['KET_TX'] ?? ($headerMap['KETERANGAN'] ?? 1);
+        $idxKet = $headerMap['KET_TX'] ?? ($headerMap['KETERANGAN'] ?? ($headerMap['RINCIAN'] ?? ($headerMap['DESKRIPSI'] ?? ($headerMap['URAIAN'] ?? ($headerMap['TRANSAKSI'] ?? 1)))));
         $idxNominal = $headerMap['JUMLAH_TX'] ?? ($headerMap['NOMINAL'] ?? 2);
 
         $lowRiskData = [];
@@ -52,11 +53,12 @@ class DumpCbsParser
             $keterangan = strtoupper(trim($row[$idxKet] ?? ''));
             $nominal = (float) str_replace(['Rp', ',', '.'], '', $row[$idxNominal] ?? 0);
 
-            // DETEKSI LOGIKA EXCEL SOP 02
+            // DETEKSI LOGIKA EXCEL SOP 02 & KEYWORD HARDCODE (REVERSAL & TPP)
             $isReversal = strpos($keterangan, 'REV-') !== false || strpos($keterangan, 'PEMBATALAN') !== false;
             $isHighNominal = $nominal >= 50000000;
+            $isTpp = (stripos($keterangan, 'TPP') !== false || stripos($keterangan, 'TUNJANGAN PERBAIKAN PENGHASILAN') !== false);
 
-            $riskLevel = ($isReversal || $isHighNominal) ? ($isHighNominal ? 'High' : 'Moderate') : 'Low';
+            $riskLevel = ($isReversal || $isHighNominal || $isTpp) ? ($isHighNominal ? 'High' : 'Moderate') : 'Low';
             
             if ($riskLevel === 'High') {
                 $countHigh++;
@@ -64,18 +66,18 @@ class DumpCbsParser
                 $countModerate++;
             }
 
-            if ($isReversal || $isHighNominal) {
+            if ($isReversal || $isHighNominal || $isTpp) {
                 // =========================================================
-                // PEMETAAN KE SHEET KKA SESUAI STANDAR SOP 04.2
+                // PEMETAAN KE SHEET KKA SESUAI STANDAR 6 TAB KKA HARIAN
                 // =========================================================
                 $sourceSheet = 'KKA_Teller_Kas'; // Default Fallback Teller & Kas
 
-                if (preg_match('/(TRANSFER|KLIRING|SKN|RTGS|KIRIMAN UANG|INWARD|OUTWARD|TELLER|KAS|SETOR|TARIK|OTORISASI|SELISIH KAS)/i', $keterangan)) {
-                    $sourceSheet = 'KKA_Teller_Kas';
-                } elseif (preg_match('/(BIAYA|INTERN|JURNAL INTERN|PENAMPUNG|OVERBOOKING AKUN)/i', $keterangan)) {
+                if (preg_match('/(BIAYA|INTERN|JURNAL INTERN|PENAMPUNG|OVERBOOKING AKUN)/i', $keterangan)) {
                     $sourceSheet = 'KKA_Biaya_Beban';
                 } elseif (preg_match('/(KREDIT|PENCAIRAN|ANGSURAN|PELUNASAN)/i', $keterangan)) {
                     $sourceSheet = 'KKA_Kredit';
+                } elseif (preg_match('/(TRANSFER|KLIRING|SKN|RTGS|CEK|BG|TPP|TUNJANGAN|KIRIMAN UANG|INWARD|OUTWARD|TELLER|KAS|SETOR|TARIK|OTORISASI|SELISIH KAS|KAS\s*KECIL|KHASANAH|BRANKAS|KAS\s*BESAR)/i', $keterangan)) {
+                    $sourceSheet = 'KKA_Teller_Kas';
                 }
             } else {
                 $sourceSheet = 'DUMP_01_CBS';
@@ -94,6 +96,19 @@ class DumpCbsParser
                         'rincian'         => $keterangan,
                     ];
                 } else {
+                    $subArea = null;
+                    if ($sourceSheet === 'KKA_Teller_Kas') {
+                        if (preg_match('/KAS\s*KECIL/i', $keterangan)) {
+                            $subArea = ['A2'];
+                        } elseif (preg_match('/(KHASANAH|BRANKAS|KAS\s*BESAR)/i', $keterangan)) {
+                            $subArea = ['A3'];
+                        } else {
+                            $subArea = ['A1'];
+                        }
+                    }
+
+                    $jenisException = $isReversal ? 'Indikasi Reversal' : ($isTpp ? 'Transaksi TPP' : 'Nominal Melewati Limit');
+
                     $dailyRegisterData[] = [
                         'tanggal_data'         => $tanggal,
                         'periode'              => date('Y-m-01', strtotime($tanggal)),
@@ -102,12 +117,17 @@ class DumpCbsParser
                         'source_sheet'         => $sourceSheet,
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
-                        'jenis_exception_awal' => $isReversal ? 'Indikasi Reversal' : 'Nominal Melewati Limit',
+                        'jenis_exception_awal' => $jenisException,
+                        'deskripsi'            => $keterangan,
+                        'rincian'              => $keterangan,
+                        'selected_sub_areas'   => $subArea ? json_encode($subArea) : null,
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];
                 }
             } else {
+                $jenisException = $isReversal ? 'Indikasi Reversal' : ($isTpp ? 'Transaksi TPP' : 'Nominal Melewati Limit');
+
                 if ($riskLevel === 'High' || $riskLevel === 'Moderate') {
                     $moderateHighRiskData[] = [
                         'tanggal_data'         => $tanggal,
@@ -117,7 +137,9 @@ class DumpCbsParser
                         'source_sheet'         => $sourceSheet,
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
-                        'jenis_exception_awal' => $isReversal ? 'Indikasi Reversal' : 'Nominal Melewati Limit',
+                        'jenis_exception_awal' => $jenisException,
+                        'deskripsi'            => $keterangan,
+                        'rincian'              => $keterangan,
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];

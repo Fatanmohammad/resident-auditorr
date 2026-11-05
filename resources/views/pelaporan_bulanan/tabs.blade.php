@@ -1,6 +1,7 @@
 @php
     $role = auth()->user()->role ?? '';
     $isAdmin = in_array(strtolower($role), ['admin', 'kabag_ra', 'kadiv_skai']);
+    $isRa = strtolower($role) === 'ra';
     $activeReportId = $reportId ?? request()->route('reportId') ?? request()->query('reportId') ?? request()->query('report_id');
 @endphp
 
@@ -45,60 +46,51 @@
 </style>
 
 <div class="sop08-tabs">
-    <a href="{{ route('pelaporan-bulanan.dashboard') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.dashboard*') ? 'active' : '' }}">
-        Dashboard
-    </a>
-    <a href="{{ route('pelaporan-bulanan.kalender') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.kalender*') ? 'active' : '' }}">
-        Kalender Laporan
-    </a>
-    <a href="{{ route('pelaporan-bulanan.checklist', $activeReportId) }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.checklist*') ? 'active' : '' }}">
-        Checklist Laporan
-    </a>
-    <a href="{{ route('pelaporan-bulanan.rekap-kegiatan', $activeReportId) }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.rekap-kegiatan*') ? 'active' : '' }}">
-        Rekap Kegiatan
-    </a>
-    <a href="{{ route('pelaporan-bulanan.rekap-isu-tl', $activeReportId) }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.rekap-isu-tl*') ? 'active' : '' }}">
-        Rekap Isu &amp; TL
-    </a>
-    <a href="{{ route('pelaporan-bulanan.review-laporan') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.review-laporan*') ? 'active' : '' }}">
-        Review Laporan
-    </a>
-    <a href="{{ route('pelaporan-bulanan.koreksi-approval') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.koreksi-approval*') ? 'active' : '' }}">
-        Koreksi &amp; Approval
-    </a>
-    <a href="{{ route('pelaporan-bulanan.isu-signifikan') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.isu-signifikan*') ? 'active' : '' }}">
-        Isu Signifikan
-    </a>
-    <a href="{{ route('pelaporan-bulanan.distribusi-quality') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.distribusi-quality*') ? 'active' : '' }}">
-        Distribusi &amp; Quality
-    </a>
-    <a href="{{ route('pelaporan-bulanan.konsolidasi') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.konsolidasi*') ? 'active' : '' }}">
-        Konsolidasi
-    </a>
-    <a href="{{ route('pelaporan-bulanan.tren-isu') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.tren-isu*') ? 'active' : '' }}">
-        Tren Isu
-    </a>
-    <a href="{{ route('pelaporan-bulanan.feedback') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.feedback*') ? 'active' : '' }}">
-        Feedback
-    </a>
-    <a href="{{ route('pelaporan-bulanan.master-ra') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.master-ra*') ? 'active' : '' }}">
-        Roster RA
-    </a>
-    <a href="{{ route('pelaporan-bulanan.log-harian') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.log-harian*') ? 'active' : '' }}">
-        Log Harian
-    </a>
-    <a href="{{ route('pelaporan-bulanan.kalender-kinerja') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.kalender-kinerja*') ? 'active' : '' }}">
-        Kinerja RA
-    </a>
-    <a href="{{ route('pelaporan-bulanan.narasi', $activeReportId) }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.narasi*') ? 'active' : '' }}">
-        Narasi Laporan
-    </a>
-    <a href="{{ route('pelaporan-bulanan.laporan-bulanan', $activeReportId) }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.laporan-bulanan*') ? 'active' : '' }}">
-        Cetak Laporan
-    </a>
-    @if($isAdmin)
-    <a href="{{ route('pelaporan-bulanan.master-parameter') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.master-parameter*') ? 'active' : '' }}">
-        Master &amp; Libur
-    </a>
+    @if($isRa)
+        <a href="{{ route('pelaporan-bulanan.dashboard') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.dashboard*') ? 'active' : '' }}">
+            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+        </a>
+        <a href="{{ route('pelaporan-bulanan.laporan-bulanan', $activeReportId) }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.laporan-bulanan*') ? 'active' : '' }}">
+            <i class="bi bi-eye me-1"></i> Mode Preview Laporan
+        </a>
+        <a href="{{ route('pelaporan-bulanan.checklist', $activeReportId) }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.checklist*') ? 'active' : '' }}">
+            <i class="bi bi-ui-checks me-1"></i> Status Kepatuhan KKA
+        </a>
+        <a href="{{ route('pelaporan-bulanan.log-harian') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.log-harian*') || request()->routeIs('pelaporan-bulanan.rekap-kegiatan*') ? 'active' : '' }}">
+            <i class="bi bi-journal-check me-1"></i> Rekap Aktivitas Harian
+        </a>
+        <a href="{{ route('monitoring.index') }}" class="sop08-tab-item {{ request()->routeIs('monitoring*') ? 'active' : '' }}">
+            <i class="bi bi-shield-check me-1"></i> Monitoring Tindak Lanjut
+        </a>
+    @else
+        <a href="{{ route('pelaporan-bulanan.konsolidasi') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.konsolidasi*') ? 'active' : '' }}">
+            <i class="bi bi-diagram-3 me-1"></i> Matriks Konsolidasi Cabang
+        </a>
+        <a href="{{ route('pelaporan-bulanan.dashboard') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.dashboard*') ? 'active' : '' }}">
+            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+        </a>
+        <a href="{{ route('pelaporan-bulanan.narasi', $activeReportId) }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.narasi*') ? 'active' : '' }}">
+            <i class="bi bi-pencil-square me-1"></i> Editor WYSIWYG
+        </a>
+        <a href="{{ route('pelaporan-bulanan.log-harian') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.log-harian*') || request()->routeIs('pelaporan-bulanan.rekap-kegiatan*') ? 'active' : '' }}">
+            <i class="bi bi-journal-check me-1"></i> Rekap Aktivitas Harian
+        </a>
+        <a href="{{ route('monitoring.index') }}" class="sop08-tab-item {{ request()->routeIs('monitoring*') ? 'active' : '' }}">
+            <i class="bi bi-shield-check me-1"></i> Monitoring Tindak Lanjut
+        </a>
+        <a href="{{ route('pelaporan-bulanan.kalender') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.kalender*') ? 'active' : '' }}">
+            <i class="bi bi-calendar3-range me-1"></i> Kalender Laporan
+        </a>
+        <a href="{{ route('pelaporan-bulanan.master-ra') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.master-ra*') || request()->routeIs('pelaporan-bulanan.kalender-kinerja*') ? 'active' : '' }}">
+            <i class="bi bi-people me-1"></i> Roster &amp; Kinerja
+        </a>
+        <a href="{{ route('pelaporan-bulanan.laporan-bulanan', $activeReportId) }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.laporan-bulanan*') ? 'active' : '' }}">
+            <i class="bi bi-printer me-1"></i> Preview &amp; Cetak
+        </a>
+        @if($isAdmin)
+        <a href="{{ route('pelaporan-bulanan.master-parameter') }}" class="sop08-tab-item {{ request()->routeIs('pelaporan-bulanan.master-parameter*') ? 'active' : '' }}">
+            <i class="bi bi-sliders me-1"></i> Master &amp; Libur
+        </a>
+        @endif
     @endif
 </div>

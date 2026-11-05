@@ -276,34 +276,25 @@
             </div>
         </div>
 
-        {{-- ===================== RISK TRIGGER VISIT ===================== --}}
+        {{-- ===================== RISK TRIGGER (SOP 06) ===================== --}}
+        @if($isAdmin)
         @php
-            $canAccessRiskTrigger = in_array($role, ['admin', 'kabag_ra', 'kadiv_skai', 'ra', 'reviewer', 'pimsie']);
+            $rtTriggerCount = 0;
+            try {
+                if (class_exists(\App\Services\RiskTrigger\RiskTriggerService::class)) {
+                    $rtTriggerCount = app(\App\Services\RiskTrigger\RiskTriggerService::class)->getActiveAlarmsCount();
+                }
+            } catch (\Throwable $e) {}
         @endphp
-        @if($canAccessRiskTrigger)
-        <div class="nav-group {{ request()->is('risk-trigger*') ? 'open' : '' }}">
-            <div class="nav-group-toggle">
-                <i class="bi bi-shield-exclamation nav-icon"></i> Risk Trigger Visit
-                <i class="bi bi-chevron-down nav-arrow"></i>
+        <a href="{{ route('risk-trigger.index') }}" class="nav-item {{ request()->is('risk-trigger*') ? 'active' : '' }}" style="display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <i class="bi bi-shield-exclamation nav-icon"></i>
+                <span>Risk Trigger</span>
             </div>
-            <div class="nav-group-children">
-                <a href="{{ route('risk-trigger.control') }}" class="nav-item {{ request()->routeIs('risk-trigger.control') ? 'active' : '' }}">
-                    <i class="bi bi-speedometer2 nav-icon"></i> Ringkasan Control
-                </a>
-                <a href="{{ route('risk-trigger.register') }}" class="nav-item {{ request()->routeIs('risk-trigger.register') ? 'active' : '' }}">
-                    <i class="bi bi-table nav-icon"></i> Register Trigger
-                </a>
-                <a href="{{ route('risk-trigger.assignment') }}" class="nav-item {{ request()->routeIs('risk-trigger.assignment*') ? 'active' : '' }}">
-                    <i class="bi bi-clipboard-check nav-icon"></i> Assignment & Scope
-                </a>
-                <a href="{{ route('risk-trigger.kka.index') }}" class="nav-item {{ request()->routeIs('risk-trigger.kka*') ? 'active' : '' }}">
-                    <i class="bi bi-file-earmark-spreadsheet nav-icon"></i> KKA Risk Trigger
-                </a>
-                <a href="{{ route('risk-trigger.simpulan-tl.index') }}" class="nav-item {{ request()->routeIs('risk-trigger.simpulan-tl*') ? 'active' : '' }}">
-                    <i class="bi bi-check2-circle nav-icon"></i> Klarifikasi & Simpulan TL
-                </a>
-            </div>
-        </div>
+            @if($rtTriggerCount > 0)
+                <span class="badge bg-danger rounded-pill px-2 py-0.5" style="font-size: 0.72rem; font-weight: 700;">{{ $rtTriggerCount }}</span>
+            @endif
+        </a>
         @endif
         {{-- ======================================================================= --}}
 
@@ -318,61 +309,52 @@
                 <i class="bi bi-chevron-down nav-arrow"></i>
             </div>
             <div class="nav-group-children">
-                <a href="{{ route('pelaporan-bulanan.dashboard') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.dashboard*') ? 'active' : '' }}">
-                    <i class="bi bi-speedometer2 nav-icon"></i> Dashboard Pelaporan
-                </a>
-                <a href="{{ route('pelaporan-bulanan.kalender') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.kalender*') ? 'active' : '' }}">
-                    <i class="bi bi-calendar3-range nav-icon"></i> Kalender Laporan
-                </a>
-                <a href="{{ route('pelaporan-bulanan.checklist') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.checklist*') ? 'active' : '' }}">
-                    <i class="bi bi-ui-checks nav-icon"></i> Checklist Laporan
-                </a>
-                <a href="{{ route('pelaporan-bulanan.rekap-kegiatan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.rekap-kegiatan*') ? 'active' : '' }}">
-                    <i class="bi bi-list-task nav-icon"></i> Rekap Kegiatan
-                </a>
-                <a href="{{ route('pelaporan-bulanan.rekap-isu-tl') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.rekap-isu-tl*') ? 'active' : '' }}">
-                    <i class="bi bi-exclamation-diamond nav-icon"></i> Rekap Isu & TL
-                </a>
-                <a href="{{ route('pelaporan-bulanan.review-laporan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.review-laporan*') ? 'active' : '' }}">
-                    <i class="bi bi-clipboard-check nav-icon"></i> Review Laporan
-                </a>
-                <a href="{{ route('pelaporan-bulanan.koreksi-approval') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.koreksi-approval*') ? 'active' : '' }}">
-                    <i class="bi bi-check2-circle nav-icon"></i> Koreksi & Approval
-                </a>
-                <a href="{{ route('pelaporan-bulanan.isu-signifikan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.isu-signifikan*') ? 'active' : '' }}">
-                    <i class="bi bi-shield-exclamation nav-icon"></i> Isu Signifikan
-                </a>
-                <a href="{{ route('pelaporan-bulanan.distribusi-quality') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.distribusi-quality*') ? 'active' : '' }}">
-                    <i class="bi bi-award nav-icon"></i> Distribusi & Quality
-                </a>
-                <a href="{{ route('pelaporan-bulanan.konsolidasi') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.konsolidasi*') ? 'active' : '' }}">
-                    <i class="bi bi-diagram-3 nav-icon"></i> Konsolidasi
-                </a>
-                <a href="{{ route('pelaporan-bulanan.tren-isu') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.tren-isu*') ? 'active' : '' }}">
-                    <i class="bi bi-graph-up-arrow nav-icon"></i> Tren Isu
-                </a>
-                <a href="{{ route('pelaporan-bulanan.feedback') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.feedback*') ? 'active' : '' }}">
-                    <i class="bi bi-chat-square-quote nav-icon"></i> Feedback
-                </a>
-                <a href="{{ route('pelaporan-bulanan.master-ra') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.master-ra*') ? 'active' : '' }}">
-                    <i class="bi bi-people nav-icon"></i> Roster RA
-                </a>
-                <a href="{{ route('pelaporan-bulanan.log-harian') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.log-harian*') ? 'active' : '' }}">
-                    <i class="bi bi-journal-check nav-icon"></i> Log Harian
-                </a>
-                <a href="{{ route('pelaporan-bulanan.kalender-kinerja') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.kalender-kinerja*') ? 'active' : '' }}">
-                    <i class="bi bi-calendar2-check nav-icon"></i> Kinerja RA
-                </a>
-                <a href="{{ route('pelaporan-bulanan.narasi') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.narasi*') ? 'active' : '' }}">
-                    <i class="bi bi-journal-text nav-icon"></i> Narasi Laporan
-                </a>
-                <a href="{{ route('pelaporan-bulanan.laporan-bulanan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.laporan-bulanan*') ? 'active' : '' }}">
-                    <i class="bi bi-printer nav-icon"></i> Cetak Laporan Bulanan
-                </a>
-                @if($isAdmin)
-                <a href="{{ route('pelaporan-bulanan.master-parameter') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.master-parameter*') ? 'active' : '' }}">
-                    <i class="bi bi-sliders nav-icon"></i> Master & Hari Libur
-                </a>
+                @if($role === 'ra')
+                    <a href="{{ route('pelaporan-bulanan.dashboard') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.dashboard*') ? 'active' : '' }}">
+                        <i class="bi bi-speedometer2 nav-icon"></i> Dashboard Pelaporan
+                    </a>
+                    <a href="{{ route('pelaporan-bulanan.laporan-bulanan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.laporan-bulanan*') ? 'active' : '' }}">
+                        <i class="bi bi-eye nav-icon"></i> Preview Laporan Bulanan
+                    </a>
+                    <a href="{{ route('pelaporan-bulanan.checklist') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.checklist*') ? 'active' : '' }}">
+                        <i class="bi bi-ui-checks nav-icon"></i> Status Kepatuhan KKA
+                    </a>
+                    <a href="{{ route('pelaporan-bulanan.log-harian') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.log-harian*') || request()->routeIs('pelaporan-bulanan.rekap-kegiatan*') ? 'active' : '' }}">
+                        <i class="bi bi-journal-check nav-icon"></i> Rekap Aktivitas Harian
+                    </a>
+                    <a href="{{ route('monitoring.index') }}" class="nav-item {{ request()->routeIs('monitoring*') ? 'active' : '' }}">
+                        <i class="bi bi-shield-check nav-icon"></i> Monitoring Tindak Lanjut
+                    </a>
+                @else
+                    <a href="{{ route('pelaporan-bulanan.konsolidasi') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.konsolidasi*') ? 'active' : '' }}">
+                        <i class="bi bi-diagram-3 nav-icon"></i> Matriks Konsolidasi Cabang
+                    </a>
+                    <a href="{{ route('pelaporan-bulanan.dashboard') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.dashboard*') ? 'active' : '' }}">
+                        <i class="bi bi-speedometer2 nav-icon"></i> Dashboard Pelaporan
+                    </a>
+                    <a href="{{ route('pelaporan-bulanan.narasi') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.narasi*') ? 'active' : '' }}">
+                        <i class="bi bi-pencil-square nav-icon"></i> Editor WYSIWYG &amp; Catatan
+                    </a>
+                    <a href="{{ route('pelaporan-bulanan.log-harian') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.log-harian*') || request()->routeIs('pelaporan-bulanan.rekap-kegiatan*') ? 'active' : '' }}">
+                        <i class="bi bi-journal-check nav-icon"></i> Rekap Aktivitas Harian
+                    </a>
+                    <a href="{{ route('monitoring.index') }}" class="nav-item {{ request()->routeIs('monitoring*') ? 'active' : '' }}">
+                        <i class="bi bi-shield-check nav-icon"></i> Monitoring Tindak Lanjut
+                    </a>
+                    <a href="{{ route('pelaporan-bulanan.kalender') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.kalender*') ? 'active' : '' }}">
+                        <i class="bi bi-calendar3-range nav-icon"></i> Kalender Laporan
+                    </a>
+                    <a href="{{ route('pelaporan-bulanan.master-ra') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.master-ra*') || request()->routeIs('pelaporan-bulanan.kalender-kinerja*') ? 'active' : '' }}">
+                        <i class="bi bi-people nav-icon"></i> Roster &amp; Kinerja RA
+                    </a>
+                    <a href="{{ route('pelaporan-bulanan.laporan-bulanan') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.laporan-bulanan*') ? 'active' : '' }}">
+                        <i class="bi bi-printer nav-icon"></i> Preview &amp; Cetak Laporan
+                    </a>
+                    @if($isAdmin)
+                    <a href="{{ route('pelaporan-bulanan.master-parameter') }}" class="nav-item {{ request()->routeIs('pelaporan-bulanan.master-parameter*') ? 'active' : '' }}">
+                        <i class="bi bi-sliders nav-icon"></i> Master &amp; Hari Libur
+                    </a>
+                    @endif
                 @endif
             </div>
         </div>

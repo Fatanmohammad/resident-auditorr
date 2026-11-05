@@ -16,4 +16,9 @@ class PhysicalKkaKartuAtmDetail extends Model
     {
         return $this->belongsTo(PhysicalKka::class, 'physical_kka_id');
     }
+
+    public function klarifikasi()
+    {
+        return $this->morphOne(RegisterKlarifikasi::class, 'source');
+    }
 }

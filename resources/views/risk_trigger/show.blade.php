@@ -216,38 +216,14 @@
             </div>
             <div class="col-md-3">
                 <div class="param-box">
-                    <div class="param-label">2. Sumber Data</div>
-                    <div class="param-value">{{ $trigger->sumber }}</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="param-box">
-                    <div class="param-label">3. Source WP ID</div>
-                    <div class="param-value" style="font-family: monospace;">{{ $trigger->source_wp_id ?: '-' }}</div>
+                    <div class="param-label">2 &amp; 3. Sumber Data &amp; Ref ID</div>
+                    <div class="param-value">{{ $trigger->sumber }} <span class="text-muted font-monospace small">({{ $trigger->source_wp_id ?: '-' }})</span></div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="param-box">
                     <div class="param-label">4. Tanggal Trigger</div>
                     <div class="param-value">{{ $trigger->tanggal_trigger ? $trigger->tanggal_trigger->format('d/m/Y') : '-' }}</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="param-box">
-                    <div class="param-label">5. Kode Unit</div>
-                    <div class="param-value">{{ $trigger->kode_unit }}</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="param-box">
-                    <div class="param-label">6. Unit / Kantor</div>
-                    <div class="param-value">{{ $trigger->nama_unit }}</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="param-box">
-                    <div class="param-label">7. Area Standar SOP 06</div>
-                    <div class="param-value text-primary">{{ $trigger->area }}</div>
                 </div>
             </div>
             <div class="col-md-3">
@@ -260,6 +236,18 @@
                             <span class="badge badge-danger">LENGKAPI PARAMETER</span>
                         @endif
                     </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="param-box">
+                    <div class="param-label">5 &amp; 6. Unit / Kantor Cabang</div>
+                    <div class="param-value text-dark">{{ $trigger->nama_unit }} <span class="badge bg-light text-secondary border font-monospace">({{ $trigger->kode_unit }})</span></div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="param-box">
+                    <div class="param-label">7. Area Standar SOP 06</div>
+                    <div class="param-value text-primary">{{ $trigger->area }}</div>
                 </div>
             </div>
         </div>
@@ -298,18 +286,38 @@
             <div class="col-md-12">
                 <div class="param-box">
                     <div class="param-label">11. Uraian Trigger / Temuan</div>
+                    @php
+                        $cleanUraian = trim((string)$trigger->uraian_trigger);
+                        if (!empty($trigger->objek_key) && str_starts_with(strtolower($cleanUraian), strtolower($trigger->objek_key))) {
+                            $cleanUraian = trim(substr($cleanUraian, strlen($trigger->objek_key)));
+                            $cleanUraian = ltrim($cleanUraian, " :-–—\t\n\r\0\x0B");
+                        }
+                    @endphp
                     <div class="param-value fw-normal" style="white-space: pre-line; line-height: 1.6;">
-                        {{ $trigger->uraian_trigger }}
+                        {{ !empty($cleanUraian) ? $cleanUraian : $trigger->uraian_trigger }}
                     </div>
                 </div>
             </div>
 
             <div class="col-md-12">
                 <div class="param-box">
-                    <div class="param-label">12. Bukti Awal Minimum</div>
+                    <div class="param-label">12. Bukti Awal Minimum &amp; Lampiran Bukti</div>
                     <div class="param-value fw-normal" style="white-space: pre-line; line-height: 1.6;">
                         {{ $trigger->bukti_awal ?: '-' }}
                     </div>
+                    @if($trigger->kkaInduk && $trigger->kkaInduk->file_ringkasan_bukti)
+                        @php
+                            $evidenceUrl = asset(str_starts_with($trigger->kkaInduk->file_ringkasan_bukti, 'storage/') ? $trigger->kkaInduk->file_ringkasan_bukti : 'storage/' . $trigger->kkaInduk->file_ringkasan_bukti);
+                        @endphp
+                        <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between">
+                            <span class="badge bg-success text-white px-2.5 py-1">
+                                📎 Bukti Terlampir
+                            </span>
+                            <a href="{{ $evidenceUrl }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                <i class="bi bi-download me-1"></i> Buka / Unduh Lampiran Bukti KKA
+                            </a>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -462,37 +470,40 @@
                 </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <div class="param-box">
-                    <div class="param-label">28. Override Keputusan</div>
-                    <div class="param-value">
-                        @if($trigger->override_keputusan)
-                            <span class="text-warning fw-bold fs-6">{{ $trigger->override_keputusan }}</span>
-                        @else
-                            <span class="text-muted">Tidak Ada Override (Gunakan Otomatis)</span>
-                        @endif
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="param-box">
-                    <div class="param-label">29. Alasan Override</div>
+                    <div class="param-label">28 &amp; 29. Alasan dan Dokumen Pendukung Override</div>
+                    @if($trigger->override_keputusan)
+                        <div class="mb-2">
+                            <span class="badge badge-warning me-1">Keputusan Override: <strong>{{ $trigger->override_keputusan }}</strong></span>
+                        </div>
+                    @endif
                     <div class="param-value fw-normal" style="line-height: 1.5;">
-                        {{ $trigger->alasan_override ?: 'Tidak ada alasan dicantumkan.' }}
+                        {{ $trigger->alasan_override ?: 'Tidak ada alasan override dicantumkan / Mengikuti rekomendasi sistem.' }}
                     </div>
+                    @if($trigger->dokumen_override)
+                        <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between">
+                            <span class="badge bg-primary text-white px-2.5 py-1">
+                                <i class="bi bi-paperclip me-1"></i> Dokumen Pendukung Terlampir
+                            </span>
+                            <a href="{{ asset('storage/' . $trigger->dokumen_override) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                <i class="bi bi-download me-1"></i> Unduh / Buka Dokumen Pendukung
+                            </a>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- SECTION 5: Pelaksanaan, Tim & Review (Kolom 31 - 37) -->
+<!-- SECTION 5: Pelaksanaan, Tim & Status (Kolom 31 - 36) -->
 <div class="detail-section-card mb-5">
     <div class="detail-section-header">
         <h5 class="detail-section-title">
-            <i class="bi bi-person-check text-primary"></i> 5. Pelaksanaan, Tim &amp; Review
+            <i class="bi bi-person-check text-primary"></i> 5. Pelaksanaan &amp; Tim
         </h5>
-        <span class="badge badge-gray" style="font-size: 0.78rem;">Kolom 31 - 37</span>
+        <span class="badge badge-gray" style="font-size: 0.78rem;">Kolom 31 - 36</span>
     </div>
     <div class="detail-section-body">
         <div class="row g-3">
@@ -535,15 +546,6 @@
                 <div class="param-box">
                     <div class="param-label">36. Reviewer</div>
                     <div class="param-value fs-5">{{ $trigger->reviewer ?: 'Belum Direview' }}</div>
-                </div>
-            </div>
-
-            <div class="col-md-12">
-                <div class="param-box">
-                    <div class="param-label">37. Catatan Review</div>
-                    <div class="param-value fw-normal" style="white-space: pre-line; line-height: 1.6;">
-                        {{ $trigger->catatan_review ?: 'Belum ada catatan review supervisor/kabag.' }}
-                    </div>
                 </div>
             </div>
         </div>

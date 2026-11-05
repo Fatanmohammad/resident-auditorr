@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\DailyRegister\PhysicalKka;
 use App\Models\DailyRegister\PhysicalKkaCashDetail;
+use App\Models\DailyRegister\PhysicalKkaAtmMachine;
+use App\Models\DailyRegister\PhysicalKkaAtmCassette;
 use App\Models\DailyRegister\PhysicalKkaObsDetail;
 use App\Models\DailyRegister\PhysicalKkaStokDetail;
 use App\Models\DailyRegister\PhysicalKkaKartuAtmDetail;
@@ -16,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Cabang;
+use Illuminate\Validation\ValidationException;
 
 class PhysicalKkaController extends Controller
 {
@@ -32,7 +35,6 @@ class PhysicalKkaController extends Controller
                 ->get();
 
             $kkas = $indukCabangs->map(function($induk) {
-                // Ambil KC Unit
                 $kcUnit = \App\Models\Unit::where('cabang_id', $induk->id)
                     ->whereIn('unit_type', ['KC', 'KCU', 'KP'])
                     ->first();
@@ -40,7 +42,6 @@ class PhysicalKkaController extends Controller
                 $kodeKC = $kcUnit ? $kcUnit->unit_code : '-';
                 $namaKC = $kcUnit ? $kcUnit->unit_name : $induk->nama_cabang;
 
-                // Ambil pengajuan KKA Fisik terbaru untuk kode unit ini
                 $latestKka = PhysicalKka::with('user')->where(function($q) use ($kodeKC, $induk) {
                     $clean = str_replace('BS-', '', $kodeKC);
                     $q->where('kode_unit', $kodeKC)
@@ -49,7 +50,6 @@ class PhysicalKkaController extends Controller
                       ->orWhere('kode_unit', $induk->kode_cabang);
                 })->orderBy('created_at', 'desc')->first();
 
-                // Ambil nama RA yang ditugaskan ke unit ini
                 $raUser = $latestKka ? $latestKka->user : \App\Models\User::where('cabang_id', $induk->id)->where('role', 'ra')->first();
 
                 return (object) [
@@ -58,267 +58,228 @@ class PhysicalKkaController extends Controller
                     'nama_cabang' => $namaKC,
                     'tanggal_pemeriksaan' => $latestKka ? $latestKka->tanggal_pemeriksaan : null,
                     'user' => $raUser,
-                    'status_final' => $latestKka ? $latestKka->status_final : 'Belum Submit'
+                    'status_final' => $latestKka ? $latestKka->status_final : 'Belum Submit',
+                    'no_arsip' => $latestKka ? $latestKka->no_arsip : null,
                 ];
             });
 
             return view('daily_register.rekap_kka', compact('kkas', 'isAdmin'));
         }
-        // 1. Data Cash Opname (Sesuai Excel)
-        $cashItems = [
-            // Uang Kertas
-            ['objek' => 'Uang Kertas Layak Edar', 'pecahan' => 'Rp 100.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Kertas Layak Edar', 'pecahan' => 'Rp 75.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Kertas Layak Edar', 'pecahan' => 'Rp 50.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Kertas Layak Edar', 'pecahan' => 'Rp 20.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Kertas Layak Edar', 'pecahan' => 'Rp 10.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Kertas Layak Edar', 'pecahan' => 'Rp 5.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Kertas Layak Edar', 'pecahan' => 'Rp 2.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Kertas Layak Edar', 'pecahan' => 'Rp 1.000', 'sub_area' => 'Khasanah'],
-            // Uang Logam
-            ['objek' => 'Uang Logam', 'pecahan' => 'Rp 1.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Logam', 'pecahan' => 'Rp 500', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Logam', 'pecahan' => 'Rp 200', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Logam', 'pecahan' => 'Rp 100', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Logam', 'pecahan' => 'Rp 50', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang Logam', 'pecahan' => 'Rp 25', 'sub_area' => 'Khasanah'],
-            // Uang Lusuh / Tidak Layak Edar
-            ['objek' => 'Uang lusuh/tidak layak edar', 'pecahan' => 'Rp 100.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang lusuh/tidak layak edar', 'pecahan' => 'Rp 75.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang lusuh/tidak layak edar', 'pecahan' => 'Rp 50.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang lusuh/tidak layak edar', 'pecahan' => 'Rp 20.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang lusuh/tidak layak edar', 'pecahan' => 'Rp 10.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang lusuh/tidak layak edar', 'pecahan' => 'Rp 5.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang lusuh/tidak layak edar', 'pecahan' => 'Rp 2.000', 'sub_area' => 'Khasanah'],
-            ['objek' => 'Uang lusuh/tidak layak edar', 'pecahan' => 'Rp 1.000', 'sub_area' => 'Khasanah'],
-            // Rekonsiliasi Total
-            ['objek' => 'Rekonsiliasi total khasanah', 'pecahan' => 'Total', 'sub_area' => 'Khasanah'],
+
+        // =========================================================================
+        // 1. DATA CASH OPNAME KHASANAH (3 KELOMPOK STANDAR BA PEMERIKSAAN KAS)
+        // =========================================================================
+        $ulePecahan = [
+            ['pecahan' => 'Rp 100.000', 'nilai' => 100000],
+            ['pecahan' => 'Rp 75.000',  'nilai' => 75000],
+            ['pecahan' => 'Rp 50.000',  'nilai' => 50000],
+            ['pecahan' => 'Rp 20.000',  'nilai' => 20000],
+            ['pecahan' => 'Rp 10.000',  'nilai' => 10000],
+            ['pecahan' => 'Rp 5.000',   'nilai' => 5000],
+            ['pecahan' => 'Rp 2.000',   'nilai' => 2000],
+            ['pecahan' => 'Rp 1.000',   'nilai' => 1000],
         ];
 
-        // 20 Baris ATM Dinamis
-        for ($i = 1; $i <= 20; $i++) {
-            $cashItems[] = [
-                'objek' => '', 
-                'pecahan' => 'Isi ID/lokasi ATM; maksimal 4 kaset + reject/retain', 
-                'sub_area' => 'ATM'
+        $logamPecahan = [
+            ['pecahan' => 'Rp 1.000', 'nilai' => 1000],
+            ['pecahan' => 'Rp 500',   'nilai' => 500],
+            ['pecahan' => 'Rp 200',   'nilai' => 200],
+            ['pecahan' => 'Rp 100',   'nilai' => 100],
+            ['pecahan' => 'Rp 50',    'nilai' => 50],
+            ['pecahan' => 'Rp 25',    'nilai' => 25],
+        ];
+
+        $utlePecahan = [
+            ['pecahan' => 'Rp 100.000', 'nilai' => 100000],
+            ['pecahan' => 'Rp 75.000',  'nilai' => 75000],
+            ['pecahan' => 'Rp 50.000',  'nilai' => 50000],
+            ['pecahan' => 'Rp 20.000',  'nilai' => 20000],
+            ['pecahan' => 'Rp 10.000',  'nilai' => 10000],
+            ['pecahan' => 'Rp 5.000',   'nilai' => 5000],
+            ['pecahan' => 'Rp 2.000',   'nilai' => 2000],
+            ['pecahan' => 'Rp 1.000',   'nilai' => 1000],
+        ];
+
+        $khasanahUleItems = [];
+        foreach ($ulePecahan as $p) {
+            $khasanahUleItems[] = [
+                'kelompok' => 'ULE',
+                'objek' => 'Uang Kertas Layak Edar',
+                'pecahan' => $p['pecahan'],
+                'nilai' => $p['nilai'],
+                'jumlah_lembar' => 0,
+                'nominal' => 0,
             ];
         }
 
-        // 2. Data Observasi Lingkungan (Sesuai Excel)
-        $obsItems = [
-            // Area Umum
-            ['area' => 'Keamanan', 'kriteria' => 'Petugas keamanan dan buku tamu'],
-            ['area' => 'Keamanan', 'kriteria' => 'Akses masuk gedung dan area terbatas'],
-            ['area' => 'CCTV', 'kriteria' => 'Cakupan kamera pada area kritis'],
-            ['area' => 'CCTV', 'kriteria' => 'Fungsi kamera, waktu, dan mutu rekaman'],
-            ['area' => 'CCTV', 'kriteria' => 'Backup dan masa simpan rekaman'],
-            ['area' => 'Layanan Nasabah', 'kriteria' => 'Mesin/sistem antrean'],
-            ['area' => 'Gedung', 'kriteria' => 'Kondisi bangunan dan kebersihan'],
-            ['area' => 'Gedung', 'kriteria' => 'Suhu ruangan, pencahayaan, dan ventilasi'],
-            ['area' => 'Kelistrikan', 'kriteria' => 'Panel, stopkontak, kabel, stabilizer, dan UPS'],
-            ['area' => 'Keselamatan', 'kriteria' => 'APAR'],
-            ['area' => 'Keselamatan', 'kriteria' => 'Jalur evakuasi, pintu darurat, dan titik kumpul'],
-            ['area' => 'Keselamatan', 'kriteria' => 'Kotak P3K dan komunikasi darurat'],
-            ['area' => 'Layanan Nasabah', 'kriteria' => 'Privasi nasabah pada area layanan'],
-            ['area' => 'Layanan Nasabah', 'kriteria' => 'Area teller dan customer service'],
-            ['area' => 'Lingkungan Kerja', 'kriteria' => 'Kerapian meja, lemari, dokumen, dan jalur berjalan'],
-            ['area' => 'Arsip', 'kriteria' => 'Ruang/lemari penyimpanan arsip'],
-            ['area' => 'Fasilitas', 'kriteria' => 'Toilet, pantry, air bersih, dan sanitasi'],
-            ['area' => 'Fasilitas', 'kriteria' => 'Genset dan fasilitas listrik cadangan'],
-            ['area' => 'Identitas Gedung', 'kriteria' => 'Papan nama, informasi layanan, dan branding'],
-            ['area' => 'Lingkungan Sekitar', 'kriteria' => 'Risiko banjir, kebakaran, longsor, dan gangguan sekitar'],
-        ];
-
-        // Area ATM 01 sampai ATM 10
-        for ($i = 1; $i <= 10; $i++) {
-            $atmNumber = str_pad($i, 2, '0', STR_PAD_LEFT);
-            $obsItems[] = ['area' => "ATM $atmNumber | Bangunan/Ruang ATM", 'kriteria' => ''];
-            $obsItems[] = ['area' => "ATM $atmNumber | Mesin dan Kaset ATM", 'kriteria' => ''];
-            $obsItems[] = ['area' => "ATM $atmNumber | Infrastruktur Pendukung ATM", 'kriteria' => ''];
+        $khasanahLogamItems = [];
+        foreach ($logamPecahan as $p) {
+            $khasanahLogamItems[] = [
+                'kelompok' => 'Logam',
+                'objek' => 'Uang Logam',
+                'pecahan' => $p['pecahan'],
+                'nilai' => $p['nilai'],
+                'jumlah_lembar' => 0,
+                'nominal' => 0,
+            ];
         }
 
-        // 3. Data Stok Opname (Sesuai Excel)
+        $khasanahUtleItems = [];
+        foreach ($utlePecahan as $p) {
+            $khasanahUtleItems[] = [
+                'kelompok' => 'UTLE',
+                'objek' => 'Uang lusuh/tidak layak edar',
+                'pecahan' => $p['pecahan'],
+                'nilai' => $p['nilai'],
+                'jumlah_lembar' => 0,
+                'nominal' => 0,
+            ];
+        }
+
+        // Backward-compatible cashItems
+        $cashItems = array_merge($khasanahUleItems, $khasanahLogamItems, $khasanahUtleItems);
+
+        // =========================================================================
+        // 2. DATA OBSERVASI LINGKUNGAN (TERSTRUKTUR SPESIFIK STANDAR BANK SULTENG)
+        // =========================================================================
+        $obsItems = self::getDefaultObsItems();
+
+        // =========================================================================
+        // 3. DATA STOK OPNAME DOKUMEN BERHARGA
+        // =========================================================================
         $stokItems = [
-            // Grup Cek
             ['sub_area' => 'Cek', 'objek' => 'Buku cek kosong/belum digunakan', 'pecahan' => 'Seluruh buku dan nomor seri dalam listing'],
             ['sub_area' => 'Cek', 'objek' => 'Cek rusak atau dibatalkan', 'pecahan' => 'Seluruh fisik dan nomor seri dalam register pembatalan'],
             ['sub_area' => 'Cek', 'objek' => 'Cek tercetak/diserahkan tetapi belum diambil', 'pecahan' => 'Seluruh fisik berada dalam custody unit'],
-            
-            // Grup Bilyet Giro
             ['sub_area' => 'Bilyet Giro', 'objek' => 'Bilyet giro kosong/belum digunakan', 'pecahan' => 'Seluruh buku dan nomor seri dalam listing'],
             ['sub_area' => 'Bilyet Giro', 'objek' => 'Bilyet giro rusak atau dibatalkan', 'pecahan' => 'Seluruh fisik dan nomor seri dalam register pembatalan'],
             ['sub_area' => 'Bilyet Giro', 'objek' => 'Bilyet giro tercetak/diserahkan tetapi belum diambil', 'pecahan' => 'Seluruh fisik berada dalam custody unit'],
-            
-            // Grup Deposito & Kontrol
             ['sub_area' => 'Deposito', 'objek' => 'Bilyet deposito kosong', 'pecahan' => 'Seluruh fisik dan nomor seri dalam listing, bila berada dalam ruang lingkup'],
             ['sub_area' => 'Kontrol', 'objek' => 'Kartu kontrol harian', 'pecahan' => 'Dibuat, diperbarui, dan direkonsiliasi setiap hari'],
             ['sub_area' => 'Kontrol', 'objek' => 'Register penerimaan dan pengeluaran', 'pecahan' => 'Urutan seri, penerimaan, pengeluaran, dan serah terima lengkap'],
             ['sub_area' => 'Kontrol', 'objek' => 'Penyimpanan dokumen berharga', 'pecahan' => 'Terkunci, dual control, akses terbatas, dan penanggung jawab jelas'],
         ];
-        
-        // 4. Data Rekonsiliasi Kartu ATM (Kelompok 1 & 2)
-        $kartuAtmItems = [];
-        // Kelompok 1: 10 Baris Dinamis Stok Kartu
-        for ($i = 1; $i <= 10; $i++) {
-            $kartuAtmItems[] = [
-                'id' => null,
-                'procedure_id' => null,
-                'sub_area' => 'Persediaan Kartu ATM',
-                'jenis_kartu' => '',
-                'keterangan_lokasi' => '',
-                'saldo_nominatif' => '',
-                'hasil_fisik' => '',
-                'selisih' => '',
-                'status_uji' => 'BELUM DIUJI',
-                'kondisi' => 'Baik',
-                'kriteria' => '',
-                'penyebab' => '',
-                'dampak' => '',
-                'impact' => 1,
-                'likelihood' => 1,
-                'critical_trigger' => 'Tidak',
-                'risk_score' => null,
-                'severity_level' => null,
-                'perlu_klarifikasi' => 'Tidak',
-                'bukti_path' => null,
-                'simpulan_ra' => '',
-                'tanggal_uji' => date('Y-m-d'),
-                'ra_pelaksana' => $user ? $user->name : '',
-                'reviewer_id' => null,
-                'status_review' => 'Belum Direviu',
-                'validasi' => null,
-                'siap_register' => 'Tidak',
-                'is_exception' => false,
-                'is_control' => false,
-            ];
-        }
 
-        // Kelompok 2: 6 Baris Prosedur Kontrol Wajib (Excel baris 45–50)
-        $staticAtmControls = [
-            [
-                'jenis_kartu' => 'Jumlah kartu dan PIN mailer',
-                'keterangan_lokasi' => 'Jumlah kartu ATM sepadan dengan PIN mailer/komponen terkait atau perbedaannya dapat dijelaskan.'
-            ],
-            [
-                'jenis_kartu' => 'Register penerimaan dan pengeluaran',
-                'keterangan_lokasi' => 'Seluruh penerimaan, penyerahan, retur, dan pemusnahan tercatat lengkap dan mutakhir.'
-            ],
-            [
-                'jenis_kartu' => 'Kontrol nomor seri/batch',
-                'keterangan_lokasi' => 'Nomor seri atau batch dapat ditelusuri dari penerimaan sampai penyerahan kepada nasabah.'
-            ],
-            [
-                'jenis_kartu' => 'Kartu rusak/retur',
-                'keterangan_lokasi' => 'Kartu rusak, gagal personalisasi, retur, dan kartu yang akan dimusnahkan dipisahkan serta dikendalikan.'
-            ],
-            [
-                'jenis_kartu' => 'Penyimpanan dan akses',
-                'keterangan_lokasi' => 'Persediaan disimpan aman; akses dibatasi dan menerapkan dual control sesuai ketentuan.'
-            ],
-            [
-                'jenis_kartu' => 'Bukti serah terima',
-                'keterangan_lokasi' => 'Penyerahan kartu kepada nasabah atau unit lain didukung bukti yang sah dan sesuai tanggal nominatif.'
-            ]
+        // =========================================================================
+        // 4. DATA REKONSILIASI KARTU ATM (SECTION A & SECTION B — ACUAN E.4.3)
+        // =========================================================================
+        $defaultCardTypes = [
+            ['jenis_kartu' => 'Kartu Silver',   'harga_modal' => 42180],
+            ['jenis_kartu' => 'Kartu Gold',     'harga_modal' => 68820],
+            ['jenis_kartu' => 'Kartu Platinum', 'harga_modal' => 68820],
         ];
 
-        foreach ($staticAtmControls as $ctrl) {
-            $kartuAtmItems[] = [
+        $kartuAtmStockRows = [];
+        foreach ($defaultCardTypes as $ct) {
+            $kartuAtmStockRows[] = [
                 'id' => null,
-                'procedure_id' => null,
-                'sub_area' => 'Kontrol',
-                'jenis_kartu' => $ctrl['jenis_kartu'],
-                'keterangan_lokasi' => $ctrl['keterangan_lokasi'],
-                'saldo_nominatif' => 'N/A',
-                'hasil_fisik' => '',
-                'selisih' => 'N/A',
-                'status_uji' => 'BELUM DIUJI',
-                'kondisi' => 'Sesuai',
-                'kriteria' => '',
-                'penyebab' => '',
-                'dampak' => '',
-                'impact' => 1,
-                'likelihood' => 1,
-                'critical_trigger' => 'Tidak',
-                'risk_score' => null,
-                'severity_level' => null,
-                'perlu_klarifikasi' => 'Tidak',
-                'bukti_path' => null,
-                'simpulan_ra' => '',
-                'tanggal_uji' => date('Y-m-d'),
-                'ra_pelaksana' => $user ? $user->name : '',
-                'reviewer_id' => null,
-                'status_review' => 'Belum Direviu',
-                'validasi' => null,
-                'siap_register' => 'Tidak',
-                'is_exception' => false,
-                'is_control' => true,
+                'sub_area' => 'Persediaan Kartu ATM',
+                'jenis_kartu' => $ct['jenis_kartu'],
+                'harga_modal' => $ct['harga_modal'],
+                'qty_fisik_kosong' => 0,
+                'qty_fisik_rusak' => 0,
+                'nominal_fisik' => 0,
+                'saldo_buku_qty' => 0,
+                'saldo_buku_nominal' => 0,
+                'selisih_persediaan' => 0,
+                'pin_mailer_qty' => 0,
+                'selisih_pin_mailer' => 0,
+                'keterangan_lokasi' => 'Brankas Khasanah',
             ];
         }
 
-        // 5. Data Rekonsiliasi Barang Cetakan (27 Item Default Excel baris 15–41)
+        // 8 Item Kontrol Pengelolaan Kartu ATM (Section B Checklist Murni Ya/Tidak)
+        $standardAtmControls = [
+            'Formulir permohonan kartu ATM (asli, tanda tangan nasabah) lengkap.',
+            'Register kartu ATM keluar/masuk (stock opname) tertib dan mutakhir.',
+            'Otorisasi pengaktifan kartu ATM sesuai kewenangan.',
+            'Tanda terima penyerahan kartu ATM oleh nasabah terdokumentasi.',
+            'Penyimpanan & penyerahan PIN Mailer dilakukan terpisah dari fisik kartu ATM (dual control).',
+            'Kartu ATM rusak / expired / tertelan dibuatkan Berita Acara Pemusnahan.',
+            'Penyimpanan stok kartu ATM kosong (blank) berada di lemari terkunci / brankas aman (dual control).',
+            'Register kartu ATM yang diblokir / ditutup tercatat lengkap.',
+        ];
+
+        $kartuAtmControlRows = [];
+        foreach ($standardAtmControls as $cText) {
+            $kartuAtmControlRows[] = [
+                'id' => null,
+                'sub_area' => 'Kontrol',
+                'jenis_kartu' => $cText,
+                'jawaban_kontrol' => 'Ya',
+                'catatan_kontrol' => '',
+            ];
+        }
+
+        $kartuAtmItems = array_merge($kartuAtmStockRows, $kartuAtmControlRows);
+
+        // =========================================================================
+        // 5. DATA REKONSILIASI BARANG CETAKAN (MERGED KRITERIA & 4 KONTROL YA/TIDAK)
+        // =========================================================================
         $rawBarangCetakan = [
-            ['kategori' => 'Formulir', 'nama_barang' => 'Kwitansi pencairan kredit', 'satuan' => 'Bh'],
-            ['kategori' => 'Formulir', 'nama_barang' => 'Slip setoran', 'satuan' => 'Bh'],
-            ['kategori' => 'Formulir', 'nama_barang' => 'Slip penarikan', 'satuan' => 'Bh'],
-            ['kategori' => 'Formulir', 'nama_barang' => 'Slip RTGS', 'satuan' => 'Bh'],
-            ['kategori' => 'Buku Tabungan', 'nama_barang' => 'Tabungan Simantap', 'satuan' => 'Bh'],
-            ['kategori' => 'Buku Tabungan', 'nama_barang' => 'Tabungan Simpeda', 'satuan' => 'Bh'],
-            ['kategori' => 'Buku Tabungan', 'nama_barang' => 'Tabungan TabunganKU', 'satuan' => 'Bh'],
-            ['kategori' => 'Buku Tabungan', 'nama_barang' => 'Tabungan PNS', 'satuan' => 'Bh'],
-            ['kategori' => 'Buku Tabungan', 'nama_barang' => 'Tabungan Tawa', 'satuan' => 'Bh'],
-            ['kategori' => 'Buku Tabungan', 'nama_barang' => 'Tabungan Pensiunku', 'satuan' => 'Bh'],
-            ['kategori' => 'Buku Tabungan', 'nama_barang' => 'Tabungan Simpel', 'satuan' => 'Bh'],
-            ['kategori' => 'Buku Tabungan', 'nama_barang' => 'Tawa Plus', 'satuan' => 'Bh'],
-            ['kategori' => 'Buku Tabungan', 'nama_barang' => 'TabunganKU Plus', 'satuan' => 'Bh'],
-            ['kategori' => 'Formulir', 'nama_barang' => 'Pembukaan rekening perorangan', 'satuan' => 'Bh'],
-            ['kategori' => 'Formulir', 'nama_barang' => 'Pembukaan rekening nonperorangan', 'satuan' => 'Bh'],
-            ['kategori' => 'Formulir', 'nama_barang' => 'Pembukaan rekening Tawa', 'satuan' => 'Bh'],
-            ['kategori' => 'Formulir', 'nama_barang' => 'Form keluhan nasabah', 'satuan' => 'Bh'],
-            ['kategori' => 'Formulir', 'nama_barang' => 'Form KYC', 'satuan' => 'Bh'],
-            ['kategori' => 'Kertas', 'nama_barang' => 'Kertas kop bank', 'satuan' => 'Rim'],
-            ['kategori' => 'Amplop', 'nama_barang' => 'Amplop kecil berlogo', 'satuan' => 'Pack'],
-            ['kategori' => 'Amplop', 'nama_barang' => 'Amplop panjang berlogo', 'satuan' => 'Pack'],
-            ['kategori' => 'Amplop', 'nama_barang' => 'Amplop sedang berlogo', 'satuan' => 'Pack'],
-            ['kategori' => 'Perlengkapan', 'nama_barang' => 'Signature Spectroline', 'satuan' => 'Dos'],
-            ['kategori' => 'Perlengkapan', 'nama_barang' => 'Invisible Signature Spectroline', 'satuan' => 'Dos'],
-            ['kategori' => 'Prioritas', 'nama_barang' => 'Amplop nasabah prioritas', 'satuan' => 'Bh'],
-            ['kategori' => 'Prioritas', 'nama_barang' => 'Form pembukaan nasabah prioritas', 'satuan' => 'Bh'],
-            ['kategori' => 'Perlengkapan', 'nama_barang' => 'Pita printer tally', 'satuan' => 'Bh'],
+            ['kategori' => 'Formulir',       'nama_barang' => 'Formulir / Dokumen Pembukaan ATM', 'kriteria' => 'Formulir Pembukaan ATM — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Formulir',       'nama_barang' => 'Formulir / Dokumen Pembukaan ATM', 'kriteria' => 'Formulir Pembukaan ATM — Rusak / Batal', 'satuan' => 'Bh'],
+            ['kategori' => 'Bilyet Deposito', 'nama_barang' => 'Bilyet Deposito', 'kriteria' => 'Bilyet Deposito — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Bilyet Deposito', 'nama_barang' => 'Bilyet Deposito', 'kriteria' => 'Bilyet Deposito — Rusak / Batal', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan Simantap', 'kriteria' => 'Tabungan Simantap — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan Simantap', 'kriteria' => 'Tabungan Simantap — Rusak / Batal', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan Simpeda', 'kriteria' => 'Tabungan Simpeda — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan Simpeda', 'kriteria' => 'Tabungan Simpeda — Rusak / Batal', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan TabunganKU', 'kriteria' => 'Tabungan TabunganKU — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan TabunganKU', 'kriteria' => 'Tabungan TabunganKU — Rusak / Batal', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan PNS', 'kriteria' => 'Tabungan PNS — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan PNS', 'kriteria' => 'Tabungan PNS — Rusak / Batal', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan Tawa', 'kriteria' => 'Tabungan Tawa — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan Pensiunku', 'kriteria' => 'Tabungan Pensiunku — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Buku Tabungan',  'nama_barang' => 'Tabungan Simpel', 'kriteria' => 'Tabungan Simpel — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Cek',            'nama_barang' => 'Cek', 'kriteria' => 'Cek — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Cek',            'nama_barang' => 'Cek', 'kriteria' => 'Cek — Rusak / Batal', 'satuan' => 'Bh'],
+            ['kategori' => 'Bilyet Giro',    'nama_barang' => 'Bilyet Giro', 'kriteria' => 'Bilyet Giro — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Bilyet Giro',    'nama_barang' => 'Bilyet Giro', 'kriteria' => 'Bilyet Giro — Rusak / Batal', 'satuan' => 'Bh'],
+            ['kategori' => 'Formulir',       'nama_barang' => 'Kwitansi pencairan kredit', 'kriteria' => 'Kwitansi pencairan kredit — Kosong / Belum Digunakan', 'satuan' => 'Bh'],
+            ['kategori' => 'Formulir',       'nama_barang' => 'Slip setoran', 'kriteria' => 'Slip setoran operasional', 'satuan' => 'Bh'],
+            ['kategori' => 'Formulir',       'nama_barang' => 'Slip penarikan', 'kriteria' => 'Slip penarikan operasional', 'satuan' => 'Bh'],
+            ['kategori' => 'Formulir',       'nama_barang' => 'Slip RTGS', 'kriteria' => 'Slip transfer RTGS / SKN', 'satuan' => 'Bh'],
+            ['kategori' => 'Formulir',       'nama_barang' => 'Form keluhan nasabah', 'kriteria' => 'Formulir pengaduan nasabah', 'satuan' => 'Bh'],
+            ['kategori' => 'Formulir',       'nama_barang' => 'Form KYC', 'kriteria' => 'Formulir Customer Due Diligence (KYC)', 'satuan' => 'Bh'],
+            ['kategori' => 'Kertas',         'nama_barang' => 'Kertas kop bank', 'kriteria' => 'Kertas kop surat resmi berlogo', 'satuan' => 'Rim'],
+            ['kategori' => 'Amplop',         'nama_barang' => 'Amplop kecil berlogo', 'kriteria' => 'Amplop surat dinas kecil', 'satuan' => 'Pack'],
+            ['kategori' => 'Amplop',         'nama_barang' => 'Amplop panjang berlogo', 'kriteria' => 'Amplop surat dinas panjang', 'satuan' => 'Pack'],
+            ['kategori' => 'Amplop',         'nama_barang' => 'Amplop sedang berlogo', 'kriteria' => 'Amplop surat dinas sedang', 'satuan' => 'Pack'],
+            ['kategori' => 'Perlengkapan',   'nama_barang' => 'Signature Spectroline', 'kriteria' => 'Tinta pengaman spesimen tanda tangan', 'satuan' => 'Dos'],
+            ['kategori' => 'Perlengkapan',   'nama_barang' => 'Invisible Signature Spectroline', 'kriteria' => 'Spectroline invisible verifikasi buku tabungan', 'satuan' => 'Dos'],
+            ['kategori' => 'Prioritas',      'nama_barang' => 'Amplop nasabah prioritas', 'kriteria' => 'Amplop eksklusif layanan prioritas', 'satuan' => 'Bh'],
+            ['kategori' => 'Prioritas',      'nama_barang' => 'Form pembukaan nasabah prioritas', 'kriteria' => 'Formulir pembukaan CIF prioritas', 'satuan' => 'Bh'],
+            ['kategori' => 'Perlengkapan',   'nama_barang' => 'Pita printer tally', 'kriteria' => 'Ribbon cartridge printer passbook', 'satuan' => 'Bh'],
         ];
 
         $barangCetakanItems = [];
         foreach ($rawBarangCetakan as $bct) {
             $barangCetakanItems[] = [
                 'id' => null,
-                'procedure_id' => null,
                 'kategori' => $bct['kategori'],
                 'nama_barang' => $bct['nama_barang'],
+                'kriteria' => $bct['kriteria'],
                 'satuan' => $bct['satuan'],
                 'stok_sistem' => 0,
                 'hasil_fisik' => '',
-                'selisih' => '',
+                'selisih' => 0,
                 'status_uji' => 'BELUM DIUJI',
-                'kondisi' => 'Baik',
-                'kriteria' => '',
                 'penyebab' => '',
-                'dampak' => '',
-                'impact' => 1,
-                'likelihood' => 1,
-                'critical_trigger' => 'Tidak',
-                'risk_score' => null,
-                'severity_level' => null,
-                'perlu_klarifikasi' => 'Tidak',
-                'bukti_path' => null,
                 'simpulan_ra' => '',
                 'tanggal_uji' => date('Y-m-d'),
                 'ra_pelaksana' => $user ? $user->name : '',
-                'reviewer_id' => null,
-                'status_review' => 'Belum Direviu',
-                'validasi' => null,
-                'siap_register' => 'Tidak',
                 'is_exception' => false,
             ];
         }
+
+        // 4 Butir Kontrol Barang Cetakan (Checklist Ya / Tidak)
+        $barangCetakanControls = [
+            ['no' => 1, 'butir' => 'Pencatatan register penerimaan dan pengeluaran barang cetakan tertib dan mutakhir.', 'jawaban' => 'Ya', 'catatan' => ''],
+            ['no' => 2, 'butir' => 'Penyimpanan stok barang cetakan berada di lemari terkunci (dual control).', 'jawaban' => 'Ya', 'catatan' => ''],
+            ['no' => 3, 'butir' => 'Berita acara pemusnahan warkat/barang cetakan rusak atau dibatalkan terdokumentasi.', 'jawaban' => 'Ya', 'catatan' => ''],
+            ['no' => 4, 'butir' => 'Kesesuaian nomor seri warkat berurutan (tidak ada nomor seri hilang/melompat).', 'jawaban' => 'Ya', 'catatan' => ''],
+        ];
 
         $suratIzin = null;
         $statusSurat = 'Pending';
@@ -341,9 +302,6 @@ class PhysicalKkaController extends Controller
         $monday = Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
         $friday = Carbon::now()->startOfWeek(Carbon::MONDAY)->addDays(4)->toDateString();
 
-        // Carry-Forward Mingguan:
-        // Untuk minggu kalender yang sama (Senin–Jumat yang sama), data 5 KKA Fisik yang sudah diisi
-        // pada hari sebelumnya tetap bertahan/terbawa (carry-forward) sehingga RA tidak perlu menginput ulang.
         if (!$id && !$isAdmin) {
             $existingWeeklyKka = PhysicalKka::where(function($q) use ($kodeUnit) {
                 $clean = str_replace('BS-', '', $kodeUnit);
@@ -361,76 +319,120 @@ class PhysicalKkaController extends Controller
 
         $kontrolMingguan = KontrolMingguan::getOrCreateForUnit($kodeUnit);
 
+        $atmMachines = collect();
+        $kka = null;
+        $noArsip = 'ARSIP-KKA-' . $kodeUnit . '-' . Carbon::now()->format('Ymd') . '-001';
+        $posisiTanggalRekon = Carbon::now()->toDateString();
+        $saldoKasOlibs = 0;
+        $saldoFisikKhasanah = 0;
+        $selisihKasKhasanah = 0;
+        $penjelasanSelisihKas = '';
+        $rekonKartuPenyebabSelisih = 'Tidak terdapat selisih antara fisik kartu ATM, saldo persediaan, dan PIN Mailer';
+
         if ($id) {
-            $kka = PhysicalKka::with(['cashDetails', 'obsDetails', 'stokDetails', 'kartuAtmDetails', 'barangCetakanDetails'])->findOrFail($id);
+            $kka = PhysicalKka::with(['cashDetails', 'obsDetails', 'stokDetails', 'kartuAtmDetails', 'barangCetakanDetails', 'atmMachines.cassettes'])->findOrFail($id);
             $kodeUnit = $kka->kode_unit ?? $kodeUnit;
             $suratIzin = $kka->surat_izin_path;
             $statusSurat = $kka->status_surat;
             $catatanSurat = $kka->catatan_surat;
+            $noArsip = $kka->no_arsip ?: $noArsip;
+            $posisiTanggalRekon = $kka->posisi_tanggal_rekon ?: $posisiTanggalRekon;
+            $saldoKasOlibs = (float)$kka->saldo_kas_olibs;
+            $saldoFisikKhasanah = (float)$kka->saldo_fisik_khasanah;
+            $selisihKasKhasanah = (float)$kka->selisih_kas_khasanah;
+            $penjelasanSelisihKas = $kka->penjelasan_selisih_kas ?? '';
+            $rekonKartuPenyebabSelisih = $kka->rekon_kartu_penyebab_selisih ?: $rekonKartuPenyebabSelisih;
 
-            // Mapping Cash
+            // Mapping Cash Khasanah details
             if ($kka->cashDetails->isNotEmpty()) {
-                $cashItems = $kka->cashDetails->map(function($detail) {
-                    return [
-                        'id' => $detail->id,
-                        'sub_area' => $detail->sub_area,
-                        'objek' => $detail->objek_persediaan,
-                        'pecahan' => $detail->pecahan,
-                        'saldo_sistem' => 50000000,
-                        'hasil_fisik' => $detail->hasil_fisik,
-                        'status_uji' => $detail->status_uji,
-                        'penyebab' => $detail->penyebab,
-                        'impact' => $detail->impact,
-                        'likelihood' => $detail->likelihood,
-                        'critical_trigger' => $detail->critical_trigger,
-                        'risk_score' => $detail->risk_score,
-                        'severity_level' => $detail->severity_level,
-                        'simpulan_ra' => $detail->simpulan_ra,
-                        'tanggal_uji' => $detail->tanggal_uji,
-                        'reviewer_id' => $detail->reviewer_id,
-                        'status_review' => $detail->status_review,
-                        'catatan_reviewer' => $detail->catatan_reviewer,
-                    ];
-                })->toArray();
-
-                // Pastikan selalu ada slot ATM kosong di tab Cash Opname ATM
-                $atmCount = collect($cashItems)->where('sub_area', 'ATM')->count();
-                if ($atmCount < 10) {
-                    for ($i = $atmCount + 1; $i <= 10; $i++) {
-                        $cashItems[] = [
-                            'objek' => '', 
-                            'pecahan' => 'Isi ID/lokasi ATM; maksimal 4 kaset + reject/retain', 
-                            'sub_area' => 'ATM',
-                            'saldo_sistem' => 50000000,
-                            'hasil_fisik' => '',
-                            'status_uji' => 'BELUM DIUJI',
-                        ];
+                foreach ($khasanahUleItems as &$item) {
+                    $match = $kka->cashDetails->first(fn($d) => ($d->kelompok === 'ULE' || str_contains((string)($d->objek_persediaan ?? ''), 'Layak Edar')) && $d->pecahan === $item['pecahan']);
+                    if ($match) {
+                        $item['id'] = $match->id;
+                        $item['jumlah_lembar'] = $match->jumlah_lembar ?? 0;
+                        $item['nominal'] = $match->nominal ?: $match->hasil_fisik;
                     }
                 }
+                unset($item);
+
+                foreach ($khasanahLogamItems as &$item) {
+                    $match = $kka->cashDetails->first(fn($d) => ($d->kelompok === 'Logam' || str_contains((string)($d->objek_persediaan ?? ''), 'Logam')) && $d->pecahan === $item['pecahan']);
+                    if ($match) {
+                        $item['id'] = $match->id;
+                        $item['jumlah_lembar'] = $match->jumlah_lembar ?? 0;
+                        $item['nominal'] = $match->nominal ?: $match->hasil_fisik;
+                    }
+                }
+                unset($item);
+
+                foreach ($khasanahUtleItems as &$item) {
+                    $match = $kka->cashDetails->first(fn($d) => ($d->kelompok === 'UTLE' || str_contains((string)($d->objek_persediaan ?? ''), 'lusuh')) && $d->pecahan === $item['pecahan']);
+                    if ($match) {
+                        $item['id'] = $match->id;
+                        $item['jumlah_lembar'] = $match->jumlah_lembar ?? 0;
+                        $item['nominal'] = $match->nominal ?: $match->hasil_fisik;
+                    }
+                }
+                unset($item);
+
+                $cashItems = array_merge($khasanahUleItems, $khasanahLogamItems, $khasanahUtleItems);
             }
 
-            // Mapping Obs
+            // ATM Machines
+            $atmMachines = $kka->atmMachines;
+
+            // Mapping Obs: Gabungkan default structured items dengan data tersimpan agar 32 item audit selalu lengkap
+            $defaultObs = self::getDefaultObsItems();
             if ($kka->obsDetails->isNotEmpty()) {
-                $obsItems = $kka->obsDetails->map(function($detail) {
-                    return [
-                        'id' => $detail->id,
-                        'area' => $detail->area_observasi,
-                        'kriteria' => $detail->kriteria_diharapkan,
-                        'kondisi_aktual' => $detail->kondisi_aktual,
-                        'hasil_observasi' => $detail->hasil_observasi,
-                        'status_uji' => $detail->status_uji,
-                        'penyebab' => $detail->penyebab,
-                        'impact' => $detail->impact,
-                        'likelihood' => $detail->likelihood,
-                        'critical_trigger' => $detail->critical_trigger,
-                        'risk_score' => $detail->risk_score,
-                        'severity_level' => $detail->severity_level,
-                        'tanggal_uji' => $detail->tanggal_uji,
-                        'reviewer_id' => $detail->reviewer_id,
-                        'status_review' => $detail->status_review,
-                        'catatan_reviewer' => $detail->catatan_reviewer,
+                $existingObsMap = $kka->obsDetails->keyBy('area_observasi');
+                $mergedObs = [];
+                foreach ($defaultObs as $def) {
+                    $match = $existingObsMap->get($def['area']);
+                    if ($match) {
+                        $mergedObs[] = array_merge($def, [
+                            'id' => $match->id,
+                            'kondisi_aktual' => $match->kondisi_aktual,
+                            'hasil_observasi' => $match->hasil_observasi,
+                            'status_uji' => $match->status_uji,
+                            'penyebab' => $match->penyebab,
+                            'impact' => $match->impact,
+                            'likelihood' => $match->likelihood,
+                            'critical_trigger' => $match->critical_trigger,
+                            'risk_score' => $match->risk_score,
+                            'severity_level' => $match->severity_level,
+                            'tanggal_uji' => $match->tanggal_uji,
+                            'reviewer_id' => $match->reviewer_id,
+                            'status_review' => $match->status_review,
+                            'catatan_reviewer' => $match->catatan_reviewer,
+                        ]);
+                        $existingObsMap->forget($def['area']);
+                    } else {
+                        $mergedObs[] = $def;
+                    }
+                }
+                foreach ($existingObsMap as $extra) {
+                    $mergedObs[] = [
+                        'id' => $extra->id,
+                        'kategori' => 'Observasi Tambahan',
+                        'area' => $extra->area_observasi,
+                        'kriteria' => $extra->kriteria_diharapkan,
+                        'backup_90_hari' => '—',
+                        'kondisi_aktual' => $extra->kondisi_aktual,
+                        'hasil_observasi' => $extra->hasil_observasi,
+                        'status_uji' => $extra->status_uji,
+                        'penyebab' => $extra->penyebab,
+                        'impact' => $extra->impact,
+                        'likelihood' => $extra->likelihood,
+                        'critical_trigger' => $extra->critical_trigger,
+                        'risk_score' => $extra->risk_score,
+                        'severity_level' => $extra->severity_level,
+                        'tanggal_uji' => $extra->tanggal_uji,
+                        'reviewer_id' => $extra->reviewer_id,
+                        'status_review' => $extra->status_review,
+                        'catatan_reviewer' => $extra->catatan_reviewer,
                     ];
-                })->toArray();
+                }
+                $obsItems = $mergedObs;
             }
 
             // Mapping Stok
@@ -444,7 +446,7 @@ class PhysicalKkaController extends Controller
                         'sub_area' => $detail->sub_area,
                         'objek' => $objek,
                         'pecahan' => $pecahan,
-                        'saldo_sistem' => 150,
+                        'saldo_sistem' => $detail->saldo_sistem,
                         'hasil_fisik' => $detail->hasil_fisik,
                         'status_uji' => $detail->status_uji,
                         'penyebab' => $detail->penyebab,
@@ -462,83 +464,85 @@ class PhysicalKkaController extends Controller
                 })->toArray();
             }
 
-            // Mapping Kartu ATM
-            if ($kka->kartuAtmDetails->isNotEmpty()) {
-                $kartuAtmItems = $kka->kartuAtmDetails->map(function($detail) {
+            // Mapping Kartu ATM (Section A & Section B)
+            $existingAtmStock = $kka->kartuAtmDetails->where('sub_area', 'Persediaan Kartu ATM');
+            if ($existingAtmStock->isNotEmpty()) {
+                $kartuAtmStockRows = $existingAtmStock->map(function($detail) {
                     return [
                         'id' => $detail->id,
-                        'procedure_id' => $detail->procedure_id,
-                        'sub_area' => $detail->sub_area,
+                        'sub_area' => 'Persediaan Kartu ATM',
                         'jenis_kartu' => $detail->jenis_kartu,
-                        'keterangan_lokasi' => $detail->keterangan_lokasi,
-                        'saldo_nominatif' => $detail->saldo_nominatif,
-                        'hasil_fisik' => $detail->hasil_fisik,
-                        'selisih' => $detail->selisih,
-                        'status_uji' => $detail->status_uji,
-                        'kondisi' => $detail->kondisi,
-                        'kriteria' => $detail->kriteria,
-                        'penyebab' => $detail->penyebab,
-                        'dampak' => $detail->dampak,
-                        'impact' => $detail->impact,
-                        'likelihood' => $detail->likelihood,
-                        'critical_trigger' => $detail->critical_trigger,
-                        'risk_score' => $detail->risk_score,
-                        'severity_level' => $detail->severity_level,
-                        'perlu_klarifikasi' => $detail->perlu_klarifikasi,
-                        'bukti_path' => $detail->bukti_path,
-                        'simpulan_ra' => $detail->simpulan_ra,
-                        'tanggal_uji' => $detail->tanggal_uji,
-                        'ra_pelaksana' => $detail->ra_pelaksana,
-                        'reviewer_id' => $detail->reviewer_id,
-                        'status_review' => $detail->status_review,
-                        'validasi' => $detail->validasi,
-                        'siap_register' => $detail->siap_register,
-                        'is_exception' => (bool)$detail->is_exception,
-                        'is_control' => ($detail->sub_area === 'Kontrol'),
+                        'harga_modal' => (float)($detail->harga_modal ?: ($detail->jenis_kartu === 'Kartu Silver' ? 42180 : 68820)),
+                        'qty_fisik_kosong' => (int)($detail->qty_fisik_kosong ?: $detail->hasil_fisik),
+                        'qty_fisik_rusak' => (int)($detail->qty_fisik_rusak ?: 0),
+                        'nominal_fisik' => (float)$detail->nominal_fisik,
+                        'saldo_buku_qty' => (int)($detail->saldo_buku_qty ?: $detail->saldo_nominatif),
+                        'saldo_buku_nominal' => (float)$detail->saldo_buku_nominal,
+                        'selisih_persediaan' => (float)$detail->selisih_persediaan,
+                        'pin_mailer_qty' => (int)$detail->pin_mailer_qty,
+                        'selisih_pin_mailer' => (int)$detail->selisih_pin_mailer,
+                        'keterangan_lokasi' => $detail->keterangan_lokasi ?? 'Brankas Khasanah',
                     ];
                 })->toArray();
             }
 
+            $existingAtmControls = $kka->kartuAtmDetails->where('sub_area', 'Kontrol');
+            if ($existingAtmControls->isNotEmpty()) {
+                foreach ($kartuAtmControlRows as &$cRow) {
+                    $match = $existingAtmControls->firstWhere('jenis_kartu', $cRow['jenis_kartu']);
+                    if ($match) {
+                        $cRow['id'] = $match->id;
+                        $cRow['jawaban_kontrol'] = $match->jawaban_kontrol ?: ($match->kondisi === 'Sesuai' ? 'Ya' : 'Tidak');
+                        $cRow['catatan_kontrol'] = $match->catatan_kontrol ?? '';
+                    }
+                }
+                unset($cRow);
+            }
+
+            $kartuAtmItems = array_merge($kartuAtmStockRows, $kartuAtmControlRows);
+
             // Mapping Barang Cetakan
-            if ($kka->barangCetakanDetails->isNotEmpty()) {
-                $barangCetakanItems = $kka->barangCetakanDetails->map(function($detail) {
+            $existingBctDetails = $kka->barangCetakanDetails->where('kategori', '!=', 'Kontrol');
+            if ($existingBctDetails->isNotEmpty()) {
+                $barangCetakanItems = $existingBctDetails->map(function($detail) {
                     return [
                         'id' => $detail->id,
-                        'procedure_id' => $detail->procedure_id,
                         'kategori' => $detail->kategori,
                         'nama_barang' => $detail->nama_barang,
+                        'kriteria' => $detail->kriteria ?: $detail->nama_barang,
                         'satuan' => $detail->satuan,
-                        'stok_sistem' => $detail->stok_sistem,
-                        'hasil_fisik' => $detail->hasil_fisik,
-                        'selisih' => $detail->selisih,
+                        'stok_sistem' => (float)$detail->stok_sistem,
+                        'hasil_fisik' => (float)$detail->hasil_fisik,
+                        'selisih' => (float)$detail->selisih,
                         'status_uji' => $detail->status_uji,
-                        'kondisi' => $detail->kondisi,
-                        'kriteria' => $detail->kriteria,
-                        'penyebab' => $detail->penyebab,
-                        'dampak' => $detail->dampak,
-                        'impact' => $detail->impact,
-                        'likelihood' => $detail->likelihood,
-                        'critical_trigger' => $detail->critical_trigger,
-                        'risk_score' => $detail->risk_score,
-                        'severity_level' => $detail->severity_level,
-                        'perlu_klarifikasi' => $detail->perlu_klarifikasi,
-                        'bukti_path' => $detail->bukti_path,
-                        'simpulan_ra' => $detail->simpulan_ra,
+                        'penyebab' => $detail->penyebab ?? '',
+                        'simpulan_ra' => $detail->simpulan_ra ?? '',
                         'tanggal_uji' => $detail->tanggal_uji,
                         'ra_pelaksana' => $detail->ra_pelaksana,
-                        'reviewer_id' => $detail->reviewer_id,
-                        'status_review' => $detail->status_review,
-                        'validasi' => $detail->validasi,
-                        'siap_register' => $detail->siap_register,
                         'is_exception' => (bool)$detail->is_exception,
                     ];
                 })->toArray();
+            }
+
+            $existingBctControls = $kka->barangCetakanDetails->where('kategori', 'Kontrol');
+            if ($existingBctControls->isNotEmpty()) {
+                foreach ($barangCetakanControls as &$bcRow) {
+                    $match = $existingBctControls->firstWhere('nama_barang', $bcRow['butir']);
+                    if ($match) {
+                        $bcRow['jawaban'] = $match->jawaban_kontrol ?: ($match->kondisi === 'Sesuai' ? 'Ya' : 'Tidak');
+                        $bcRow['catatan'] = $match->catatan_kontrol ?? '';
+                    }
+                }
+                unset($bcRow);
             }
         }
 
         return view('daily_register.physical_kka', compact(
-            'cashItems', 'obsItems', 'stokItems', 'kartuAtmItems', 'barangCetakanItems',
-            'isAdmin', 'id', 'suratIzin', 'statusSurat', 'catatanSurat', 'kodeUnit', 'kontrolMingguan'
+            'cashItems', 'khasanahUleItems', 'khasanahLogamItems', 'khasanahUtleItems',
+            'atmMachines', 'obsItems', 'stokItems', 'kartuAtmStockRows', 'kartuAtmControlRows', 'kartuAtmItems',
+            'barangCetakanItems', 'barangCetakanControls', 'noArsip', 'posisiTanggalRekon',
+            'saldoKasOlibs', 'saldoFisikKhasanah', 'selisihKasKhasanah', 'penjelasanSelisihKas', 'rekonKartuPenyebabSelisih',
+            'isAdmin', 'id', 'kka', 'suratIzin', 'statusSurat', 'catatanSurat', 'kodeUnit', 'kontrolMingguan'
         ));
     }
 
@@ -566,11 +570,18 @@ class PhysicalKkaController extends Controller
     public function submitAll(Request $request)
     {
         $request->validate([
+            'no_arsip' => 'nullable|string',
+            'posisi_tanggal_rekon' => 'nullable|date',
+            'saldo_kas_olibs' => 'nullable|numeric',
             'cash_details' => 'nullable|array',
+            'kas_details' => 'nullable|array',
+            'atm_machines' => 'nullable|array',
             'obs_details' => 'nullable|array',
             'stok_details' => 'nullable|array',
-            'kartu_atm_details' => 'nullable|array',
+            'kartu_atm_stock' => 'nullable|array',
+            'kartu_atm_controls' => 'nullable|array',
             'barang_cetakan_details' => 'nullable|array',
+            'barang_cetakan_controls' => 'nullable|array',
         ]);
 
         DB::beginTransaction();
@@ -616,13 +627,59 @@ class PhysicalKkaController extends Controller
                 ->first();
             }
 
+            $noArsip = $request->filled('no_arsip') ? $request->no_arsip : ('ARSIP-KKA-' . $kodeUnit . '-' . Carbon::now()->format('Ymd') . '-001');
+            $posisiTanggalRekon = $request->filled('posisi_tanggal_rekon') ? $request->posisi_tanggal_rekon : Carbon::now()->toDateString();
+            $saldoKasOlibs = $request->filled('saldo_kas_olibs') ? (float)$request->saldo_kas_olibs : 0;
+
             if ($physicalKka) {
-                $updateData = ['status_final' => 'Final'];
+                $updateData = [
+                    'status_final' => 'Final',
+                    'no_arsip' => $noArsip,
+                    'posisi_tanggal_rekon' => $posisiTanggalRekon,
+                    'saldo_kas_olibs' => $saldoKasOlibs,
+                    'penjelasan_selisih_kas' => $request->penjelasan_selisih_kas,
+                    'kas_pelaksana_nama' => $request->kas_pelaksana_nama,
+                    'kas_pelaksana_jabatan' => $request->kas_pelaksana_jabatan,
+                    'kas_saksi_nama' => $request->kas_saksi_nama,
+                    'kas_saksi_jabatan' => $request->kas_saksi_jabatan,
+                    'rekon_kartu_penyebab_selisih' => $request->rekon_kartu_penyebab_selisih,
+                ];
                 if ($suratIzinPath) {
                     $updateData['surat_izin_path'] = $suratIzinPath;
                     $updateData['status_surat'] = 'Pending';
                 }
                 $physicalKka->update($updateData);
+
+                // Bersihkan RegisterKlarifikasi terkait detail lama untuk mencegah orphaned records dan duplikasi
+                $cashIds = PhysicalKkaCashDetail::where('physical_kka_id', $physicalKka->id)->pluck('id');
+                if ($cashIds->isNotEmpty()) {
+                    RegisterKlarifikasi::where('source_type', PhysicalKkaCashDetail::class)->whereIn('source_id', $cashIds)->delete();
+                }
+
+                $atmIds = $physicalKka->atmMachines->pluck('id');
+                if ($atmIds->isNotEmpty()) {
+                    RegisterKlarifikasi::where('source_type', PhysicalKkaAtmMachine::class)->whereIn('source_id', $atmIds)->delete();
+                }
+
+                $obsIds = PhysicalKkaObsDetail::where('physical_kka_id', $physicalKka->id)->pluck('id');
+                if ($obsIds->isNotEmpty()) {
+                    RegisterKlarifikasi::where('source_type', PhysicalKkaObsDetail::class)->whereIn('source_id', $obsIds)->delete();
+                }
+
+                $stokIds = PhysicalKkaStokDetail::where('physical_kka_id', $physicalKka->id)->pluck('id');
+                if ($stokIds->isNotEmpty()) {
+                    RegisterKlarifikasi::where('source_type', PhysicalKkaStokDetail::class)->whereIn('source_id', $stokIds)->delete();
+                }
+
+                $kartuIds = PhysicalKkaKartuAtmDetail::where('physical_kka_id', $physicalKka->id)->pluck('id');
+                if ($kartuIds->isNotEmpty()) {
+                    RegisterKlarifikasi::where('source_type', PhysicalKkaKartuAtmDetail::class)->whereIn('source_id', $kartuIds)->delete();
+                }
+
+                $bctIds = PhysicalKkaBarangCetakanDetail::where('physical_kka_id', $physicalKka->id)->pluck('id');
+                if ($bctIds->isNotEmpty()) {
+                    RegisterKlarifikasi::where('source_type', PhysicalKkaBarangCetakanDetail::class)->whereIn('source_id', $bctIds)->delete();
+                }
 
                 // Hapus detail sebelumnya untuk diperbarui dengan data terkini tanpa duplikasi
                 PhysicalKkaCashDetail::where('physical_kka_id', $physicalKka->id)->delete();
@@ -630,12 +687,27 @@ class PhysicalKkaController extends Controller
                 PhysicalKkaStokDetail::where('physical_kka_id', $physicalKka->id)->delete();
                 PhysicalKkaKartuAtmDetail::where('physical_kka_id', $physicalKka->id)->delete();
                 PhysicalKkaBarangCetakanDetail::where('physical_kka_id', $physicalKka->id)->delete();
+                
+                // ATM Machines & Cassettes
+                foreach ($physicalKka->atmMachines as $oldMach) {
+                    $oldMach->cassettes()->delete();
+                    $oldMach->delete();
+                }
             } else {
                 $physicalKka = PhysicalKka::create([
                     'kode_unit' => $kodeUnit,
                     'user_id' => $user ? $user->id : 1, 
                     'tanggal_pemeriksaan' => Carbon::now()->toDateString(),
                     'status_final' => 'Final',
+                    'no_arsip' => $noArsip,
+                    'posisi_tanggal_rekon' => $posisiTanggalRekon,
+                    'saldo_kas_olibs' => $saldoKasOlibs,
+                    'penjelasan_selisih_kas' => $request->penjelasan_selisih_kas,
+                    'kas_pelaksana_nama' => $request->kas_pelaksana_nama,
+                    'kas_pelaksana_jabatan' => $request->kas_pelaksana_jabatan,
+                    'kas_saksi_nama' => $request->kas_saksi_nama,
+                    'kas_saksi_jabatan' => $request->kas_saksi_jabatan,
+                    'rekon_kartu_penyebab_selisih' => $request->rekon_kartu_penyebab_selisih,
                     'surat_izin_path' => $suratIzinPath,
                     'status_surat' => 'Pending'
                 ]);
@@ -644,35 +716,130 @@ class PhysicalKkaController extends Controller
             $hasException = false;
             $dateCode = Carbon::now()->format('Ymd');
 
-            // 1. Process Cash Details
-            if ($request->has('cash_details') && is_array($request->cash_details)) {
-                foreach ($request->cash_details as $item) {
-                    if (empty($item['hasil_fisik'])) continue;
+            // =========================================================================
+            // 1. PROCESS CASH KHASANAH (3 KELOMPOK ULE, LOGAM, UTLE)
+            // =========================================================================
+            $totalFisikKasKhasanah = 0;
+            $cashDetailsInput = $request->input('cash_details') ?? $request->input('kas_details');
+            if ($cashDetailsInput && is_array($cashDetailsInput)) {
+                foreach ($cashDetailsInput as $item) {
+                    $lembar = isset($item['jumlah_lembar']) ? (int)$item['jumlah_lembar'] : 0;
+                    $nominal = isset($item['nominal']) ? (float)$item['nominal'] : ((float)($item['hasil_fisik'] ?? 0));
+                    $totalFisikKasKhasanah += $nominal;
 
-                    $selisih = (float)$item['saldo_sistem'] - (float)$item['hasil_fisik'];
-                    $isException = ($selisih != 0);
-                    
-                    $item['selisih'] = $selisih;
-                    $item['status_uji'] = $isException ? 'Exception' : 'Sesuai';
-                    
-                    if ($isException) {
-                        $hasException = true;
-                        $severity = $this->calculateSeverity($item['impact'] ?? 1, $item['likelihood'] ?? 1, !empty($item['critical_trigger']) && $item['critical_trigger'] == 'Ya');
-                        $item['risk_score'] = $severity['score'];
-                        $item['severity_level'] = $severity['level'];
-                    } else {
-                        $item['risk_score'] = 0;
-                        $item['severity_level'] = 'Rendah';
-                    }
-                    $item['is_exception'] = $isException;
                     $item['physical_kka_id'] = $physicalKka->id;
+                    $item['sub_area'] = 'Khasanah';
+                    $item['jumlah_lembar'] = $lembar;
+                    $item['nominal'] = $nominal;
+                    $item['hasil_fisik'] = $nominal;
+                    $item['status_uji'] = 'Sesuai';
+                    $item['is_exception'] = false;
+                    $item['tanggal_uji'] = Carbon::now()->toDateString();
 
-                    $detail = PhysicalKkaCashDetail::create($item);
-                    if ($isException) $this->createKlarifikasi($detail, $kodeUnit);
+                    PhysicalKkaCashDetail::create($item);
                 }
             }
 
-            // 2. Process Observasi Details
+            $selisihKasKhasanah = $totalFisikKasKhasanah - $saldoKasOlibs;
+            $physicalKka->update([
+                'saldo_fisik_khasanah' => $totalFisikKasKhasanah,
+                'selisih_kas_khasanah' => $selisihKasKhasanah,
+            ]);
+
+            if (abs($selisihKasKhasanah) >= 0.01) {
+                if (empty(trim($request->penjelasan_selisih_kas ?? ''))) {
+                    throw ValidationException::withMessages([
+                        'penjelasan_selisih_kas' => 'Uraian penjelasan selisih Kas Khasanah wajib diisi apabila terdapat selisih fisik vs saldo sistem Olibs.'
+                    ]);
+                }
+                $hasException = true;
+                // Buat finding/klarifikasi untuk kas khasanah
+                $firstCash = PhysicalKkaCashDetail::where('physical_kka_id', $physicalKka->id)->first();
+                if ($firstCash) {
+                    $firstCash->update([
+                        'is_exception' => true,
+                        'status_uji' => 'Exception',
+                        'selisih' => $selisihKasKhasanah,
+                        'penyebab' => $request->penjelasan_selisih_kas,
+                    ]);
+                    $this->createKlarifikasi($firstCash, $kodeUnit);
+                }
+            }
+
+            // =========================================================================
+            // 2. PROCESS CASH OPNAME MESIN ATM (CARD & KASET)
+            // =========================================================================
+            if ($request->has('atm_machines') && is_array($request->atm_machines)) {
+                foreach ($request->atm_machines as $mIdx => $atmData) {
+                    if (empty($atmData['terminal_id']) && empty($atmData['lokasi'])) {
+                        continue;
+                    }
+
+                    $saldoCbs = isset($atmData['saldo_cbs']) ? (float)$atmData['saldo_cbs'] : 0;
+                    $totalFisikAtm = 0;
+
+                    $cassettesData = $atmData['cassettes'] ?? [];
+                    if (is_array($cassettesData)) {
+                        foreach ($cassettesData as $c) {
+                            $totalFisikAtm += (float)($c['total_nominal'] ?? 0);
+                        }
+                    }
+
+                    $selisihAtm = $saldoCbs - $totalFisikAtm;
+                    $isAtmException = (abs($selisihAtm) >= 0.01);
+                    if ($isAtmException) {
+                        if (empty(trim($atmData['keterangan_selisih'] ?? ''))) {
+                            throw ValidationException::withMessages([
+                                "atm_machines.{$mIdx}.keterangan_selisih" => "Keterangan penyebab selisih kas ATM ({$atmData['terminal_id']}) wajib diisi apabila terdapat selisih fisik vs saldo CBS."
+                            ]);
+                        }
+                        $hasException = true;
+                    }
+
+                    $hasFilledCassette = collect($cassettesData)->some(fn($c) => (!empty($c['total_nominal']) && (float)$c['total_nominal'] > 0) || (!empty($c['jumlah_lembar']) && (int)$c['jumlah_lembar'] > 0));
+                    $statusUji = $hasFilledCassette ? 'Selesai Diuji' : 'Belum Diuji';
+
+                    $atmMachine = PhysicalKkaAtmMachine::create([
+                        'physical_kka_id' => $physicalKka->id,
+                        'terminal_id' => $atmData['terminal_id'] ?? 'ATM-' . rand(100, 999),
+                        'lokasi' => $atmData['lokasi'] ?? null,
+                        'merk' => $atmData['merk'] ?? null,
+                        'denominasi' => $atmData['denominasi'] ?? 100000,
+                        'tanggal_pengisian_terakhir' => !empty($atmData['tanggal_pengisian_terakhir']) ? $atmData['tanggal_pengisian_terakhir'] : null,
+                        'saldo_cbs' => $saldoCbs,
+                        'total_fisik' => $totalFisikAtm,
+                        'selisih' => $selisihAtm,
+                        'status_uji' => $statusUji,
+                        'keterangan_selisih' => $atmData['keterangan_selisih'] ?? null,
+                        'pelaksana_nama' => $atmData['pelaksana_nama'] ?? ($user ? $user->name : 'Resident Auditor'),
+                        'pelaksana_jabatan' => $atmData['pelaksana_jabatan'] ?? 'Resident Auditor SKAI',
+                        'saksi_nama' => $atmData['saksi_nama'] ?? 'Supervisor / Custody ATM',
+                        'saksi_jabatan' => $atmData['saksi_jabatan'] ?? 'Pemegang Kunci ATM',
+                        'is_exception' => $isAtmException,
+                    ]);
+
+                    if (is_array($cassettesData)) {
+                        foreach ($cassettesData as $cas) {
+                            if (empty($cas['nama_kaset']) && empty($cas['total_nominal'])) continue;
+                            PhysicalKkaAtmCassette::create([
+                                'atm_machine_id' => $atmMachine->id,
+                                'nama_kaset' => $cas['nama_kaset'] ?? 'Cassette',
+                                'denominasi' => (float)($cas['denominasi'] ?? 100000),
+                                'jumlah_lembar' => (int)($cas['jumlah_lembar'] ?? 0),
+                                'total_nominal' => (float)($cas['total_nominal'] ?? 0),
+                            ]);
+                        }
+                    }
+
+                    if ($isAtmException) {
+                        $this->createKlarifikasi($atmMachine, $kodeUnit);
+                    }
+                }
+            }
+
+            // =========================================================================
+            // 3. PROCESS OBSERVASI DETAILS
+            // =========================================================================
             if ($request->has('obs_details') && is_array($request->obs_details)) {
                 foreach ($request->obs_details as $item) {
                     if (empty($item['hasil_observasi'])) continue;
@@ -697,7 +864,9 @@ class PhysicalKkaController extends Controller
                 }
             }
 
-            // 3. Process Stok Details
+            // =========================================================================
+            // 4. PROCESS STOK OPNAME DETAILS
+            // =========================================================================
             if ($request->has('stok_details') && is_array($request->stok_details)) {
                 foreach ($request->stok_details as $item) {
                     if (empty($item['hasil_fisik'])) continue;
@@ -725,152 +894,160 @@ class PhysicalKkaController extends Controller
                 }
             }
 
-            // 4. Process Tab 4: Rekonsiliasi Kartu ATM
-            if ($request->has('kartu_atm_details') && is_array($request->kartu_atm_details)) {
-                $noUrutAtm = 1;
-                foreach ($request->kartu_atm_details as $index => $item) {
-                    $subArea = $item['sub_area'] ?? 'Persediaan Kartu ATM';
-                    $isControl = ($subArea === 'Kontrol');
+            // =========================================================================
+            // 5. PROCESS REKONSILIASI KARTU ATM (SECTION A & SECTION B)
+            // =========================================================================
+            // Section A: Stock Matrix
+            $noUrutAtm = 1;
+            if ($request->has('kartu_atm_stock') && is_array($request->kartu_atm_stock)) {
+                foreach ($request->kartu_atm_stock as $sRow) {
+                    if (empty($sRow['jenis_kartu'])) continue;
 
-                    // Lewati baris dinamis kosong jika RA belum mengisinya
-                    if (!$isControl && empty($item['jenis_kartu']) && (!isset($item['hasil_fisik']) || $item['hasil_fisik'] === '') && (!isset($item['saldo_nominatif']) || $item['saldo_nominatif'] === '')) {
-                        continue;
-                    }
+                    $hargaModal = (float)($sRow['harga_modal'] ?? 0);
+                    $qtyKosong = (int)($sRow['qty_fisik_kosong'] ?? 0);
+                    $qtyRusak = (int)($sRow['qty_fisik_rusak'] ?? 0);
+                    $nomFisik = $hargaModal * $qtyKosong;
+                    $saldoBukuQty = (int)($sRow['saldo_buku_qty'] ?? 0);
+                    $saldoBukuNom = (float)($sRow['saldo_buku_nominal'] ?? ($saldoBukuQty * $hargaModal));
+                    $selisihPersediaan = $nomFisik - $saldoBukuNom;
+                    $pinQty = (int)($sRow['pin_mailer_qty'] ?? 0);
+                    $selisihPin = $qtyKosong - $pinQty;
 
-                    // Format Procedure ID: FLD-WK-{Kode_Unit}-{YYYYMMDD}-KATREC-{No_Urut_3_Digit}
-                    $item['procedure_id'] = $item['procedure_id'] ?? ('FLD-WK-' . $kodeUnit . '-' . $dateCode . '-KATREC-' . str_pad($noUrutAtm++, 3, '0', STR_PAD_LEFT));
-
-                    $statusUji = 'BELUM DIUJI';
-                    if ($isControl) {
-                        $kondisi = $item['kondisi'] ?? 'Sesuai';
-                        if ($kondisi === 'Sesuai') {
-                            $statusUji = 'SESUAI';
-                        } elseif ($kondisi === 'Tidak Sesuai') {
-                            $statusUji = 'EXCEPTION';
-                        } elseif ($kondisi === 'Tidak Berlaku') {
-                            $statusUji = 'TIDAK BERLAKU';
-                        }
-                        $item['saldo_nominatif'] = 'N/A';
-                        $item['selisih'] = 'N/A';
-                    } else {
-                        $saldoNom = isset($item['saldo_nominatif']) && is_numeric($item['saldo_nominatif']) ? (float)$item['saldo_nominatif'] : 0;
-                        $fisik = isset($item['hasil_fisik']) && is_numeric($item['hasil_fisik']) ? (float)$item['hasil_fisik'] : 0;
-                        $selisih = $fisik - $saldoNom;
-                        $kondisi = $item['kondisi'] ?? 'Baik';
-
-                        if ($kondisi === 'Tidak Berlaku') {
-                            $statusUji = 'TIDAK BERLAKU';
-                        } elseif (abs($selisih) >= 0.01 || in_array($kondisi, ['Outdated', 'Rusak', 'Tidak Baik'])) {
-                            $statusUji = 'EXCEPTION';
-                        } elseif ($item['saldo_nominatif'] !== '' && $item['hasil_fisik'] !== '') {
-                            $statusUji = 'SESUAI';
-                        }
-                        $item['selisih'] = (string)$selisih;
-                    }
-
-                    $item['status_uji'] = $statusUji;
-                    $isException = ($statusUji === 'EXCEPTION');
-                    $item['is_exception'] = $isException;
-
+                    $isException = (abs($selisihPersediaan) >= 0.01 || $selisihPin !== 0);
                     if ($isException) {
+                        $findings = trim($request->rekon_kartu_penyebab_selisih ?? '');
+                        if (empty($findings) || $findings === 'Tidak terdapat selisih antara fisik kartu ATM, saldo persediaan, dan PIN Mailer') {
+                            throw ValidationException::withMessages([
+                                'rekon_kartu_penyebab_selisih' => 'Penyebab selisih / findings pada Rekonsiliasi Kartu ATM wajib diisi apabila terdapat selisih fisik, saldo persediaan, atau PIN Mailer.'
+                            ]);
+                        }
                         $hasException = true;
-                        $severity = $this->calculateSeverity(
-                            $item['impact'] ?? 1,
-                            $item['likelihood'] ?? 1,
-                            !empty($item['critical_trigger']) && $item['critical_trigger'] === 'Ya'
-                        );
-                        $item['risk_score'] = $severity['score'];
-                        $item['severity_level'] = $severity['level'];
-                        $item['perlu_klarifikasi'] = 'Ya';
-                    } else {
-                        $item['risk_score'] = null;
-                        $item['severity_level'] = null;
-                        $item['perlu_klarifikasi'] = 'Tidak';
                     }
 
-                    $item['ra_pelaksana'] = $user ? $user->name : ($item['ra_pelaksana'] ?? 'RA Pelaksana');
-                    $item['tanggal_uji'] = !empty($item['tanggal_uji']) ? $item['tanggal_uji'] : Carbon::now()->toDateString();
-                    $item['status_review'] = 'Belum Direviu';
-                    $item['siap_register'] = 'Tidak';
-                    $item['physical_kka_id'] = $physicalKka->id;
+                    $detail = PhysicalKkaKartuAtmDetail::create([
+                        'physical_kka_id' => $physicalKka->id,
+                        'procedure_id' => 'FLD-WK-' . $kodeUnit . '-' . $dateCode . '-KATREC-' . str_pad($noUrutAtm++, 3, '0', STR_PAD_LEFT),
+                        'sub_area' => 'Persediaan Kartu ATM',
+                        'jenis_kartu' => $sRow['jenis_kartu'],
+                        'keterangan_lokasi' => $sRow['keterangan_lokasi'] ?? 'Brankas Khasanah',
+                        'saldo_nominatif' => (string)$saldoBukuQty,
+                        'hasil_fisik' => (string)$qtyKosong,
+                        'selisih' => (string)$selisihPersediaan,
+                        'status_uji' => $isException ? 'EXCEPTION' : 'SESUAI',
+                        'kondisi' => 'Baik',
+                        'harga_modal' => $hargaModal,
+                        'qty_fisik_kosong' => $qtyKosong,
+                        'qty_fisik_rusak' => $qtyRusak,
+                        'nominal_fisik' => $nomFisik,
+                        'saldo_buku_qty' => $saldoBukuQty,
+                        'saldo_buku_nominal' => $saldoBukuNom,
+                        'selisih_persediaan' => $selisihPersediaan,
+                        'pin_mailer_qty' => $pinQty,
+                        'selisih_pin_mailer' => $selisihPin,
+                        'is_exception' => $isException,
+                        'tanggal_uji' => Carbon::now()->toDateString(),
+                        'ra_pelaksana' => $user ? $user->name : 'Resident Auditor',
+                    ]);
 
-                    // Upload Bukti jika ada
-                    if ($request->hasFile("kartu_atm_details.{$index}.bukti")) {
-                        $file = $request->file("kartu_atm_details.{$index}.bukti");
-                        $item['bukti_path'] = $file->storeAs('bukti_kka/kartu_atm', time() . '_' . $index . '_' . $file->getClientOriginalName(), 'public');
-                    }
-                    unset($item['bukti']);
-
-                    $detail = PhysicalKkaKartuAtmDetail::create($item);
-                    if ($isException) {
-                        $this->createKlarifikasi($detail, $kodeUnit);
-                    }
+                    if ($isException) $this->createKlarifikasi($detail, $kodeUnit);
                 }
             }
 
-            // 5. Process Tab 5: Rekonsiliasi Barang Cetakan
+            // Section B: 8 Item Checklist Kontrol Pengelolaan
+            if ($request->has('kartu_atm_controls') && is_array($request->kartu_atm_controls)) {
+                foreach ($request->kartu_atm_controls as $cRow) {
+                    if (empty($cRow['jenis_kartu'])) continue;
+
+                    $jawaban = $cRow['jawaban_kontrol'] ?? 'Ya';
+                    $isException = ($jawaban === 'Tidak');
+                    if ($isException) $hasException = true;
+
+                    $detail = PhysicalKkaKartuAtmDetail::create([
+                        'physical_kka_id' => $physicalKka->id,
+                        'procedure_id' => 'FLD-WK-' . $kodeUnit . '-' . $dateCode . '-KATCTRL-' . str_pad($noUrutAtm++, 3, '0', STR_PAD_LEFT),
+                        'sub_area' => 'Kontrol',
+                        'jenis_kartu' => $cRow['jenis_kartu'],
+                        'jawaban_kontrol' => $jawaban,
+                        'catatan_kontrol' => $cRow['catatan_kontrol'] ?? null,
+                        'status_uji' => $isException ? 'EXCEPTION' : 'SESUAI',
+                        'kondisi' => $jawaban === 'Ya' ? 'Sesuai' : 'Tidak Sesuai',
+                        'saldo_nominatif' => 'N/A',
+                        'hasil_fisik' => $jawaban,
+                        'selisih' => 'N/A',
+                        'is_exception' => $isException,
+                        'tanggal_uji' => Carbon::now()->toDateString(),
+                        'ra_pelaksana' => $user ? $user->name : 'Resident Auditor',
+                    ]);
+
+                    if ($isException) $this->createKlarifikasi($detail, $kodeUnit);
+                }
+            }
+
+            // =========================================================================
+            // 6. PROCESS REKONSILIASI BARANG CETAKAN (MERGED KRITERIA & 4 KONTROL)
+            // =========================================================================
+            $noUrutBct = 1;
             if ($request->has('barang_cetakan_details') && is_array($request->barang_cetakan_details)) {
-                $noUrutBct = 1;
-                foreach ($request->barang_cetakan_details as $index => $item) {
-                    if (empty($item['nama_barang']) && (!isset($item['hasil_fisik']) || $item['hasil_fisik'] === '') && (!isset($item['stok_sistem']) || $item['stok_sistem'] === '')) {
-                        continue;
-                    }
+                foreach ($request->barang_cetakan_details as $bRow) {
+                    if (empty($bRow['nama_barang']) && empty($bRow['kriteria'])) continue;
 
-                    // Format Procedure ID: FLD-WK-{Kode_Unit}-{YYYYMMDD}-BCT-{No_Urut_3_Digit}
-                    $item['procedure_id'] = $item['procedure_id'] ?? ('FLD-WK-' . $kodeUnit . '-' . $dateCode . '-BCT-' . str_pad($noUrutBct++, 3, '0', STR_PAD_LEFT));
-
-                    $stokSistem = isset($item['stok_sistem']) && is_numeric($item['stok_sistem']) ? (float)$item['stok_sistem'] : 0;
-                    $hasilFisik = isset($item['hasil_fisik']) && is_numeric($item['hasil_fisik']) ? (float)$item['hasil_fisik'] : 0;
+                    $stokSistem = isset($bRow['stok_sistem']) ? (float)$bRow['stok_sistem'] : 0;
+                    $hasilFisik = isset($bRow['hasil_fisik']) && $bRow['hasil_fisik'] !== '' ? (float)$bRow['hasil_fisik'] : 0;
                     $selisih = $hasilFisik - $stokSistem;
-                    $kondisi = $item['kondisi'] ?? 'Baik';
+                    $isException = (abs($selisih) >= 0.01);
+                    if ($isException) $hasException = true;
 
-                    $statusUji = 'BELUM DIUJI';
-                    if ($kondisi === 'Tidak Berlaku') {
-                        $statusUji = 'TIDAK BERLAKU';
-                    } elseif (abs($selisih) >= 0.01 || in_array($kondisi, ['Outdated', 'Rusak', 'Tidak Baik'])) {
-                        $statusUji = 'EXCEPTION';
-                    } elseif ($item['hasil_fisik'] !== '' && $kondisi === 'Baik' && abs($selisih) < 0.01) {
-                        $statusUji = 'SESUAI';
-                    }
+                    $detail = PhysicalKkaBarangCetakanDetail::create([
+                        'physical_kka_id' => $physicalKka->id,
+                        'procedure_id' => 'FLD-WK-' . $kodeUnit . '-' . $dateCode . '-BCT-' . str_pad($noUrutBct++, 3, '0', STR_PAD_LEFT),
+                        'kategori' => $bRow['kategori'] ?? 'Formulir',
+                        'nama_barang' => $bRow['nama_barang'],
+                        'kriteria' => $bRow['kriteria'] ?? $bRow['nama_barang'],
+                        'satuan' => $bRow['satuan'] ?? 'Bh',
+                        'stok_sistem' => $stokSistem,
+                        'hasil_fisik' => $hasilFisik,
+                        'selisih' => $selisih,
+                        'status_uji' => $isException ? 'EXCEPTION' : 'SESUAI',
+                        'kondisi' => 'Baik',
+                        'penyebab' => $bRow['penyebab'] ?? null,
+                        'is_exception' => $isException,
+                        'tanggal_uji' => Carbon::now()->toDateString(),
+                        'ra_pelaksana' => $user ? $user->name : 'Resident Auditor',
+                    ]);
 
-                    $item['selisih'] = $selisih;
-                    $item['status_uji'] = $statusUji;
-                    $isException = ($statusUji === 'EXCEPTION');
-                    $item['is_exception'] = $isException;
+                    if ($isException) $this->createKlarifikasi($detail, $kodeUnit);
+                }
+            }
 
-                    if ($isException) {
-                        $hasException = true;
-                        $severity = $this->calculateSeverity(
-                            $item['impact'] ?? 1,
-                            $item['likelihood'] ?? 1,
-                            !empty($item['critical_trigger']) && $item['critical_trigger'] === 'Ya'
-                        );
-                        $item['risk_score'] = $severity['score'];
-                        $item['severity_level'] = $severity['level'];
-                        $item['perlu_klarifikasi'] = 'Ya';
-                    } else {
-                        $item['risk_score'] = null;
-                        $item['severity_level'] = null;
-                        $item['perlu_klarifikasi'] = 'Tidak';
-                    }
+            // 4 Butir Kontrol Barang Cetakan (Checklist Ya / Tidak)
+            if ($request->has('barang_cetakan_controls') && is_array($request->barang_cetakan_controls)) {
+                foreach ($request->barang_cetakan_controls as $bcRow) {
+                    if (empty($bcRow['butir'])) continue;
 
-                    $item['ra_pelaksana'] = $user ? $user->name : ($item['ra_pelaksana'] ?? 'RA Pelaksana');
-                    $item['tanggal_uji'] = !empty($item['tanggal_uji']) ? $item['tanggal_uji'] : Carbon::now()->toDateString();
-                    $item['status_review'] = 'Belum Direviu';
-                    $item['siap_register'] = 'Tidak';
-                    $item['physical_kka_id'] = $physicalKka->id;
+                    $jawaban = $bcRow['jawaban'] ?? 'Ya';
+                    $isException = ($jawaban === 'Tidak');
+                    if ($isException) $hasException = true;
 
-                    // Upload Bukti jika ada
-                    if ($request->hasFile("barang_cetakan_details.{$index}.bukti")) {
-                        $file = $request->file("barang_cetakan_details.{$index}.bukti");
-                        $item['bukti_path'] = $file->storeAs('bukti_kka/barang_cetakan', time() . '_' . $index . '_' . $file->getClientOriginalName(), 'public');
-                    }
-                    unset($item['bukti']);
+                    $detail = PhysicalKkaBarangCetakanDetail::create([
+                        'physical_kka_id' => $physicalKka->id,
+                        'procedure_id' => 'FLD-WK-' . $kodeUnit . '-' . $dateCode . '-BCTCTRL-' . str_pad($noUrutBct++, 3, '0', STR_PAD_LEFT),
+                        'kategori' => 'Kontrol',
+                        'nama_barang' => $bcRow['butir'],
+                        'kriteria' => 'Pengujian Pengendalian Internal Barang Cetakan',
+                        'satuan' => 'Uji',
+                        'stok_sistem' => 0,
+                        'hasil_fisik' => 0,
+                        'selisih' => 0,
+                        'status_uji' => $isException ? 'EXCEPTION' : 'SESUAI',
+                        'kondisi' => $jawaban === 'Ya' ? 'Sesuai' : 'Tidak Sesuai',
+                        'jawaban_kontrol' => $jawaban,
+                        'catatan_kontrol' => $bcRow['catatan'] ?? null,
+                        'is_exception' => $isException,
+                        'tanggal_uji' => Carbon::now()->toDateString(),
+                        'ra_pelaksana' => $user ? $user->name : 'Resident Auditor',
+                    ]);
 
-                    $detail = PhysicalKkaBarangCetakanDetail::create($item);
-                    if ($isException) {
-                        $this->createKlarifikasi($detail, $kodeUnit);
-                    }
+                    if ($isException) $this->createKlarifikasi($detail, $kodeUnit);
                 }
             }
 
@@ -885,11 +1062,14 @@ class PhysicalKkaController extends Controller
             DB::commit();
             
             $msg = $hasException 
-                ? "KKA Fisik (5 Tab Pemeriksaan) berhasil di-submit. Terdapat Exception yang telah dimasukkan ke Register Klarifikasi." 
-                : "KKA Fisik (5 Tab Pemeriksaan) berhasil di-submit tanpa Exception.";
+                ? "KKA Fisik & Rekonsiliasi berhasil disimpan dan masuk ke arsip siap cetak (No. Arsip: {$noArsip}). Terdapat Exception yang telah dimasukkan ke Register Klarifikasi." 
+                : "KKA Fisik & Rekonsiliasi berhasil disimpan dan masuk ke arsip siap cetak (No. Arsip: {$noArsip}) tanpa Exception.";
                 
-            return redirect()->back()->with('success', $msg);
+            return redirect()->route('daily-register.physical-kka.index', $physicalKka->id)->with('success', $msg);
 
+        } catch (ValidationException $ve) {
+            DB::rollBack();
+            return redirect()->back()->withErrors($ve->validator)->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', $e->getMessage());
@@ -898,12 +1078,10 @@ class PhysicalKkaController extends Controller
 
     public function submitReview(Request $request)
     {
-        // For admin/reviewer to submit their review
         DB::beginTransaction();
         try {
             $user = Auth::user();
             $reviewerId = $user ? $user->name : 'Admin Reviewer';
-            
             $isSuratRevisi = $request->status_surat === 'Tidak Valid/Revisi';
 
             if ($request->has('physical_kka_id')) {
@@ -915,7 +1093,6 @@ class PhysicalKkaController extends Controller
                 }
             }
 
-            // Cash
             if ($request->has('cash_review')) {
                 foreach ($request->cash_review as $id => $review) {
                     $detail = PhysicalKkaCashDetail::find($id);
@@ -928,7 +1105,6 @@ class PhysicalKkaController extends Controller
                 }
             }
             
-            // Obs
             if ($request->has('obs_review')) {
                 foreach ($request->obs_review as $id => $review) {
                     $detail = PhysicalKkaObsDetail::find($id);
@@ -941,7 +1117,6 @@ class PhysicalKkaController extends Controller
                 }
             }
 
-            // Stok
             if ($request->has('stok_review')) {
                 foreach ($request->stok_review as $id => $review) {
                     $detail = PhysicalKkaStokDetail::find($id);
@@ -954,7 +1129,6 @@ class PhysicalKkaController extends Controller
                 }
             }
 
-            // Tab 4: Kartu ATM Review
             if ($request->has('kartu_atm_review')) {
                 foreach ($request->kartu_atm_review as $id => $review) {
                     $detail = PhysicalKkaKartuAtmDetail::find($id);
@@ -969,7 +1143,6 @@ class PhysicalKkaController extends Controller
                 }
             }
 
-            // Tab 5: Barang Cetakan Review
             if ($request->has('barang_cetakan_review')) {
                 foreach ($request->barang_cetakan_review as $id => $review) {
                     $detail = PhysicalKkaBarangCetakanDetail::find($id);
@@ -1000,5 +1173,462 @@ class PhysicalKkaController extends Controller
             'kode_unit' => $kodeUnit,
             'status' => 'Menunggu Klarifikasi',
         ]);
+    }
+
+    // =========================================================================
+    // PRINT METHODS FOR TAHAP 2 (BERITA ACARA & KKA STANDAR RESMI BANK SULTENG)
+    // =========================================================================
+    public function printBaKas($id)
+    {
+        $kka = PhysicalKka::with(['user', 'cashDetails'])->findOrFail($id);
+        $cabang = Cabang::where('kode_cabang', 'like', '%' . $kka->kode_unit . '%')->first();
+        $namaCabang = $cabang ? $cabang->nama_cabang : ('Cabang ' . $kka->kode_unit);
+
+        $ulePecahan = ['Rp 100.000', 'Rp 75.000', 'Rp 50.000', 'Rp 20.000', 'Rp 10.000', 'Rp 5.000', 'Rp 2.000', 'Rp 1.000'];
+        $logamPecahan = ['Rp 1.000', 'Rp 500', 'Rp 200', 'Rp 100', 'Rp 50', 'Rp 25'];
+        $utlePecahan = ['Rp 100.000', 'Rp 75.000', 'Rp 50.000', 'Rp 20.000', 'Rp 10.000', 'Rp 5.000', 'Rp 2.000', 'Rp 1.000'];
+
+        $uleDetails = [];
+        foreach ($ulePecahan as $pec) {
+            $item = $kka->cashDetails->first(fn($d) => ($d->kelompok === 'ULE' || str_contains((string)($d->objek_persediaan ?? ''), 'Layak Edar')) && $d->pecahan === $pec);
+            $uleDetails[] = [
+                'pecahan' => $pec,
+                'jumlah_lembar' => $item ? $item->jumlah_lembar : 0,
+                'nominal' => $item ? ($item->nominal ?: $item->hasil_fisik) : 0,
+            ];
+        }
+
+        $logamDetails = [];
+        foreach ($logamPecahan as $pec) {
+            $item = $kka->cashDetails->first(fn($d) => ($d->kelompok === 'Logam' || str_contains((string)($d->objek_persediaan ?? ''), 'Logam')) && $d->pecahan === $pec);
+            $logamDetails[] = [
+                'pecahan' => $pec,
+                'jumlah_lembar' => $item ? $item->jumlah_lembar : 0,
+                'nominal' => $item ? ($item->nominal ?: $item->hasil_fisik) : 0,
+            ];
+        }
+
+        $utleDetails = [];
+        foreach ($utlePecahan as $pec) {
+            $item = $kka->cashDetails->first(fn($d) => ($d->kelompok === 'UTLE' || str_contains((string)($d->objek_persediaan ?? ''), 'lusuh')) && $d->pecahan === $pec);
+            $utleDetails[] = [
+                'pecahan' => $pec,
+                'jumlah_lembar' => $item ? $item->jumlah_lembar : 0,
+                'nominal' => $item ? ($item->nominal ?: $item->hasil_fisik) : 0,
+            ];
+        }
+
+        return view('daily_register.print.ba_cash_khasanah', compact('kka', 'namaCabang', 'uleDetails', 'logamDetails', 'utleDetails'));
+    }
+
+    public function printBaAtm($id)
+    {
+        $kka = PhysicalKka::with(['user', 'atmMachines.cassettes'])->findOrFail($id);
+        $cabang = Cabang::where('kode_cabang', 'like', '%' . $kka->kode_unit . '%')->first();
+        $namaCabang = $cabang ? $cabang->nama_cabang : ('Cabang ' . $kka->kode_unit);
+        $atmMachines = $kka->atmMachines;
+
+        return view('daily_register.print.ba_cash_atm', compact('kka', 'namaCabang', 'atmMachines'));
+    }
+
+    public function printKkaKartu($id)
+    {
+        $kka = PhysicalKka::with(['user', 'kartuAtmDetails'])->findOrFail($id);
+        $stockRows = $kka->kartuAtmDetails->where('sub_area', 'Persediaan Kartu ATM');
+        $controlRows = $kka->kartuAtmDetails->where('sub_area', 'Kontrol');
+
+        return view('daily_register.print.kka_kartu_atm', compact('kka', 'stockRows', 'controlRows'));
+    }
+
+    public function printKkaCetakan($id)
+    {
+        $kka = PhysicalKka::with(['user', 'barangCetakanDetails'])->findOrFail($id);
+        $bctItems = $kka->barangCetakanDetails->where('kategori', '!=', 'Kontrol');
+        $bctControls = $kka->barangCetakanDetails->where('kategori', 'Kontrol')->map(function($c) {
+            return [
+                'butir' => $c->nama_barang,
+                'jawaban' => $c->jawaban_kontrol ?: ($c->kondisi === 'Sesuai' ? 'Ya' : 'Tidak'),
+                'catatan' => $c->catatan_kontrol ?: $c->simpulan_ra,
+            ];
+        })->toArray();
+
+        return view('daily_register.print.kka_barang_cetakan', compact('kka', 'bctItems', 'bctControls'));
+    }
+
+    public function printAll($id)
+    {
+        $kka = PhysicalKka::with(['user', 'cashDetails', 'atmMachines.cassettes', 'obsDetails', 'stokDetails', 'kartuAtmDetails', 'barangCetakanDetails'])->findOrFail($id);
+        $cabang = Cabang::where('kode_cabang', 'like', '%' . $kka->kode_unit . '%')->first();
+        $namaCabang = $cabang ? $cabang->nama_cabang : ('Cabang ' . $kka->kode_unit);
+
+        $ulePecahan = ['Rp 100.000', 'Rp 75.000', 'Rp 50.000', 'Rp 20.000', 'Rp 10.000', 'Rp 5.000', 'Rp 2.000', 'Rp 1.000'];
+        $logamPecahan = ['Rp 1.000', 'Rp 500', 'Rp 200', 'Rp 100', 'Rp 50', 'Rp 25'];
+        $utlePecahan = ['Rp 100.000', 'Rp 75.000', 'Rp 50.000', 'Rp 20.000', 'Rp 10.000', 'Rp 5.000', 'Rp 2.000', 'Rp 1.000'];
+
+        $uleDetails = [];
+        foreach ($ulePecahan as $pec) {
+            $item = $kka->cashDetails->first(fn($d) => ($d->kelompok === 'ULE' || str_contains((string)($d->objek_persediaan ?? ''), 'Layak Edar')) && $d->pecahan === $pec);
+            $uleDetails[] = ['pecahan' => $pec, 'jumlah_lembar' => $item ? $item->jumlah_lembar : 0, 'nominal' => $item ? ($item->nominal ?: $item->hasil_fisik) : 0];
+        }
+
+        $logamDetails = [];
+        foreach ($logamPecahan as $pec) {
+            $item = $kka->cashDetails->first(fn($d) => ($d->kelompok === 'Logam' || str_contains((string)($d->objek_persediaan ?? ''), 'Logam')) && $d->pecahan === $pec);
+            $logamDetails[] = ['pecahan' => $pec, 'jumlah_lembar' => $item ? $item->jumlah_lembar : 0, 'nominal' => $item ? ($item->nominal ?: $item->hasil_fisik) : 0];
+        }
+
+        $utleDetails = [];
+        foreach ($utlePecahan as $pec) {
+            $item = $kka->cashDetails->first(fn($d) => ($d->kelompok === 'UTLE' || str_contains((string)($d->objek_persediaan ?? ''), 'lusuh')) && $d->pecahan === $pec);
+            $utleDetails[] = ['pecahan' => $pec, 'jumlah_lembar' => $item ? $item->jumlah_lembar : 0, 'nominal' => $item ? ($item->nominal ?: $item->hasil_fisik) : 0];
+        }
+
+        $atmMachines = $kka->atmMachines;
+        $stockRows = $kka->kartuAtmDetails->where('sub_area', 'Persediaan Kartu ATM');
+        $controlRows = $kka->kartuAtmDetails->where('sub_area', 'Kontrol');
+        $bctItems = $kka->barangCetakanDetails->where('kategori', '!=', 'Kontrol');
+        $bctControls = $kka->barangCetakanDetails->where('kategori', 'Kontrol')->map(function($c) {
+            return [
+                'butir' => $c->nama_barang,
+                'jawaban' => $c->jawaban_kontrol ?: ($c->kondisi === 'Sesuai' ? 'Ya' : 'Tidak'),
+                'catatan' => $c->catatan_kontrol ?: $c->simpulan_ra,
+            ];
+        })->toArray();
+
+        $defaultObs = self::getDefaultObsItems();
+        if ($kka->obsDetails->isNotEmpty()) {
+            $existingObsMap = $kka->obsDetails->keyBy('area_observasi');
+            $mergedDetails = collect();
+            foreach ($defaultObs as $def) {
+                $match = $existingObsMap->get($def['area']);
+                if ($match) {
+                    $mergedDetails->push($match);
+                    $existingObsMap->forget($def['area']);
+                } else {
+                    $mergedDetails->push((object)[
+                        'area_observasi' => $def['area'],
+                        'kriteria_diharapkan' => $def['kriteria'],
+                        'hasil_observasi' => 'Sesuai',
+                        'kondisi_aktual' => 'Sesuai standar operasional fisik',
+                        'status_uji' => 'Sesuai',
+                        'is_exception' => false,
+                        'penyebab' => null,
+                        'risk_score' => 0,
+                        'severity_level' => 'Rendah',
+                        'tanggal_uji' => $kka->tanggal_pemeriksaan,
+                    ]);
+                }
+            }
+            foreach ($existingObsMap as $extra) {
+                $mergedDetails->push($extra);
+            }
+            $obsDetails = $mergedDetails;
+        } else {
+            $obsDetails = collect($defaultObs)->map(fn($i) => (object)[
+                'area_observasi' => $i['area'],
+                'kriteria_diharapkan' => $i['kriteria'],
+                'hasil_observasi' => 'Sesuai',
+                'kondisi_aktual' => 'Sesuai ketentuan standar fisik operasional',
+                'status_uji' => 'Sesuai',
+                'is_exception' => false,
+                'penyebab' => null,
+                'risk_score' => 0,
+                'severity_level' => 'Rendah',
+                'tanggal_uji' => $kka->tanggal_pemeriksaan,
+            ]);
+        }
+
+        return view('daily_register.print.kka_fisik_all', compact(
+            'kka', 'namaCabang', 'uleDetails', 'logamDetails', 'utleDetails',
+            'atmMachines', 'stockRows', 'controlRows', 'bctItems', 'bctControls', 'obsDetails'
+        ));
+    }
+
+    public function printKkaObservasi($id)
+    {
+        $kka = PhysicalKka::with(['user', 'obsDetails'])->findOrFail($id);
+        $cabang = Cabang::where('kode_cabang', 'like', '%' . $kka->kode_unit . '%')->first();
+        $namaCabang = $cabang ? $cabang->nama_cabang : ('Cabang ' . $kka->kode_unit);
+
+        $defaultObs = self::getDefaultObsItems();
+        if ($kka->obsDetails->isNotEmpty()) {
+            $existingObsMap = $kka->obsDetails->keyBy('area_observasi');
+            $obsItems = [];
+            foreach ($defaultObs as $def) {
+                $match = $existingObsMap->get($def['area']);
+                if ($match) {
+                    $obsItems[] = (object)[
+                        'area_observasi' => $match->area_observasi,
+                        'kriteria_diharapkan' => $match->kriteria_diharapkan,
+                        'hasil_observasi' => $match->hasil_observasi,
+                        'kondisi_aktual' => $match->kondisi_aktual,
+                        'status_uji' => $match->status_uji,
+                        'is_exception' => $match->is_exception,
+                        'penyebab' => $match->penyebab,
+                        'risk_score' => $match->risk_score,
+                        'severity_level' => $match->severity_level,
+                        'tanggal_uji' => $match->tanggal_uji,
+                    ];
+                    $existingObsMap->forget($def['area']);
+                } else {
+                    $obsItems[] = (object)[
+                        'area_observasi' => $def['area'],
+                        'kriteria_diharapkan' => $def['kriteria'],
+                        'hasil_observasi' => 'Sesuai',
+                        'kondisi_aktual' => 'Sesuai standar operasional fisik',
+                        'status_uji' => 'Sesuai',
+                        'is_exception' => false,
+                        'penyebab' => null,
+                        'risk_score' => 0,
+                        'severity_level' => 'Rendah',
+                        'tanggal_uji' => $kka->tanggal_pemeriksaan,
+                    ];
+                }
+            }
+            foreach ($existingObsMap as $extra) {
+                $obsItems[] = $extra;
+            }
+        } else {
+            $obsItems = collect($defaultObs)->map(fn($i) => (object)[
+                'area_observasi' => $i['area'],
+                'kriteria_diharapkan' => $i['kriteria'],
+                'hasil_observasi' => 'Sesuai',
+                'kondisi_aktual' => 'Sesuai ketentuan standar fisik operasional',
+                'status_uji' => 'Sesuai',
+                'is_exception' => false,
+                'penyebab' => null,
+                'risk_score' => 0,
+                'severity_level' => 'Rendah',
+                'tanggal_uji' => $kka->tanggal_pemeriksaan,
+            ]);
+        }
+
+        return view('daily_register.print.kka_observasi', compact('kka', 'namaCabang', 'obsItems'));
+    }
+
+    /**
+     * Master Checklist Observasi Lingkungan Terstruktur Standar Bank Sulteng
+     */
+    public static function getDefaultObsItems(): array
+    {
+        return [
+            // =========================================================================
+            // 1. SPESIFIK 4 TITIK ALARM (PANIC BUTTON)
+            // =========================================================================
+            [
+                'kategori' => 'Spesifik 4 Titik Alarm',
+                'area' => 'Titik Alarm | Ruang Pimpinan Cabang',
+                'kriteria' => 'Tombol panic button / alarm berfungsi normal, tersambung ke pos security / pihak keamanan, dan diuji berkala',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Spesifik 4 Titik Alarm',
+                'area' => 'Titik Alarm | Ruang Wakil Pimpinan Cabang',
+                'kriteria' => 'Tombol panic button / alarm berfungsi normal, tersambung ke pos security / pihak keamanan, dan diuji berkala',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Spesifik 4 Titik Alarm',
+                'area' => 'Titik Alarm | Counter Teller',
+                'kriteria' => 'Tombol alarm / kick-bar teller berfungsi normal, mudah dijangkau tersembunyi, dan dilakukan pengujian berkala',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Spesifik 4 Titik Alarm',
+                'area' => 'Titik Alarm | Meja Customer Service (CS)',
+                'kriteria' => 'Tombol alarm / panic button CS berfungsi responsif ke pos jaga security, dan dilakukan pengujian berkala',
+                'backup_90_hari' => '—',
+            ],
+
+            // =========================================================================
+            // 2. SPESIFIK 5 AREA TERBATAS
+            // =========================================================================
+            [
+                'kategori' => 'Spesifik 5 Area Terbatas',
+                'area' => 'Area Terbatas | Counter Teller',
+                'kriteria' => 'Akses pintu masuk counter teller terkunci otomatis / access control, hanya teller dan otorisator berwenang yang dapat masuk',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Spesifik 5 Area Terbatas',
+                'area' => 'Area Terbatas | Customer Service (CS)',
+                'kriteria' => 'Area kerja berkas nasabah terlindungi, pembatasan akses non-petugas, dan penanda area terbatas terpasang',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Spesifik 5 Area Terbatas',
+                'area' => 'Area Terbatas | Ruang Arsip',
+                'kriteria' => 'Pintu ruang arsip selalu terkunci, akses khusus pengelola arsip, dan logbook peminjaman arsip tercatat tertib',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Spesifik 5 Area Terbatas',
+                'area' => 'Area Terbatas | Ruang Server',
+                'kriteria' => 'Akses pintu terkunci menggunakan kunci fisik/biometric/PIN, suhu ruang 24 jam terkontrol, hanya petugas IT yang berwenang',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Spesifik 5 Area Terbatas',
+                'area' => 'Area Terbatas | Khasanah',
+                'kriteria' => 'Ruang khasanah terkunci dual control, teralis pengaman terpasang, dan larangan masuk bagi pihak tanpa pendampingan pejabat',
+                'backup_90_hari' => '—',
+            ],
+
+            // =========================================================================
+            // 3. MATRIKS 9 TITIK CCTV (ACUAN STANDAR AUDIT E.1.5)
+            // =========================================================================
+            [
+                'kategori' => 'Matriks 9 Titik CCTV (Acuan E.1.5)',
+                'area' => 'Matriks CCTV (E.1.5) | Titik 1: Depan Banking Hall',
+                'kriteria' => 'Kamera aktif 24 jam memantau akses pintu masuk utama; Penegasan Backup Rekaman Minimal 90 Hari (E.1.5)',
+                'backup_90_hari' => 'Wajib Min. 90 Hari',
+            ],
+            [
+                'kategori' => 'Matriks 9 Titik CCTV (Acuan E.1.5)',
+                'area' => 'Matriks CCTV (E.1.5) | Titik 2: Banking Hall',
+                'kriteria' => 'Kamera memantau ruang tunggu, antrean, dan aktivitas banking hall; Penegasan Backup Rekaman Minimal 90 Hari (E.1.5)',
+                'backup_90_hari' => 'Wajib Min. 90 Hari',
+            ],
+            [
+                'kategori' => 'Matriks 9 Titik CCTV (Acuan E.1.5)',
+                'area' => 'Matriks CCTV (E.1.5) | Titik 3: Gardu ATM',
+                'kriteria' => 'Kamera memantau bilik galeri ATM tanpa menyorot PIN nasabah; Penegasan Backup Rekaman Minimal 90 Hari (E.1.5)',
+                'backup_90_hari' => 'Wajib Min. 90 Hari',
+            ],
+            [
+                'kategori' => 'Matriks 9 Titik CCTV (Acuan E.1.5)',
+                'area' => 'Matriks CCTV (E.1.5) | Titik 4: Gudang Arsip',
+                'kriteria' => 'Kamera memantau pintu akses dan lorong rak dokumen arsip; Penegasan Backup Rekaman Minimal 90 Hari (E.1.5)',
+                'backup_90_hari' => 'Wajib Min. 90 Hari',
+            ],
+            [
+                'kategori' => 'Matriks 9 Titik CCTV (Acuan E.1.5)',
+                'area' => 'Matriks CCTV (E.1.5) | Titik 5: Khasanah',
+                'kriteria' => 'Kamera menyorot pintu khasanah, aktivitas buka-tutup brankas kas besar; Penegasan Backup Rekaman Minimal 90 Hari (E.1.5)',
+                'backup_90_hari' => 'Wajib Min. 90 Hari',
+            ],
+            [
+                'kategori' => 'Matriks 9 Titik CCTV (Acuan E.1.5)',
+                'area' => 'Matriks CCTV (E.1.5) | Titik 6: Teller',
+                'kriteria' => 'Kamera menyorot meja counter teller, laci kas fisik, dan penyerahan uang; Penegasan Backup Rekaman Minimal 90 Hari (E.1.5)',
+                'backup_90_hari' => 'Wajib Min. 90 Hari',
+            ],
+            [
+                'kategori' => 'Matriks 9 Titik CCTV (Acuan E.1.5)',
+                'area' => 'Matriks CCTV (E.1.5) | Titik 7: CS',
+                'kriteria' => 'Kamera menyorot area meja customer service dan verifikasi nasabah; Penegasan Backup Rekaman Minimal 90 Hari (E.1.5)',
+                'backup_90_hari' => 'Wajib Min. 90 Hari',
+            ],
+            [
+                'kategori' => 'Matriks 9 Titik CCTV (Acuan E.1.5)',
+                'area' => 'Matriks CCTV (E.1.5) | Titik 8: Ruang Server',
+                'kriteria' => 'Kamera menyorot rak rack server, perangkat jaringan, dan panel kelistrikan; Penegasan Backup Rekaman Minimal 90 Hari (E.1.5)',
+                'backup_90_hari' => 'Wajib Min. 90 Hari',
+            ],
+            [
+                'kategori' => 'Matriks 9 Titik CCTV (Acuan E.1.5)',
+                'area' => 'Matriks CCTV (E.1.5) | Titik 9: Kredit',
+                'kriteria' => 'Kamera menyorot area kerja administrasi kredit dan penyimpanan berkas agunan; Penegasan Backup Rekaman Minimal 90 Hari (E.1.5)',
+                'backup_90_hari' => 'Wajib Min. 90 Hari',
+            ],
+
+            // =========================================================================
+            // 4. MUTASI & BUKU MUTASI SECURITY SERTA ABSENSI KARYAWAN
+            // =========================================================================
+            [
+                'kategori' => 'Mutasi Security & Absensi Karyawan',
+                'area' => 'Security | Mutasi & Buku Mutasi Security',
+                'kriteria' => 'Buku mutasi serah terima tugas jaga security terisi rutin setiap pergantian shift, pencatatan logbook tamu dan patroli malam',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Mutasi Security & Absensi Karyawan',
+                'area' => 'Security | Kesiapsiagaan Pos & Personil Jaga',
+                'kriteria' => 'Personil security hadir sesuai jadwal shift, mengenakan seragam atribut lengkap, dan siaga di pos penjagaan',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Mutasi Security & Absensi Karyawan',
+                'area' => 'Kepegawaian | Absensi Karyawan',
+                'kriteria' => 'Pencatatan absensi kehadiran karyawan (fingerprint/aplikasi) tertib, kesesuaian jam kerja, dan rekonsiliasi berkas izin/cuti',
+                'backup_90_hari' => '—',
+            ],
+
+            // =========================================================================
+            // 5. SECTION KHUSUS ATM (E.4.4): BRANDING INTERIOR KANTOR VS FASILITAS ATM
+            // =========================================================================
+            // A. Branding Interior Kantor
+            [
+                'kategori' => 'Branding Interior Kantor',
+                'area' => 'Branding Interior Kantor | Lisplank & Signage Kantor',
+                'kriteria' => 'Lisplank fasad gedung kantor, huruf timbul, logo Bank Sulteng, dan signage informasi bersih, terawat, dan menyala normal',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Branding Interior Kantor',
+                'area' => 'Branding Interior Kantor | Sandblast Kaca Kantor',
+                'kriteria' => 'Stiker motif sandblast logo Bank Sulteng pada partisi kaca/pintu banking hall, teller, CS terpasang rapi, simetris, dan bersih',
+                'backup_90_hari' => '—',
+            ],
+            // B. Fasilitas ATM (E.4.4)
+            [
+                'kategori' => 'Section Khusus ATM (E.4.4)',
+                'area' => 'Fasilitas ATM (E.4.4) | Fasilitas UPS ATM',
+                'kriteria' => 'Perangkat UPS ATM berfungsi baik, baterai prima untuk membackup daya operasional mesin ATM saat listrik PLN padam',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Section Khusus ATM (E.4.4)',
+                'area' => 'Fasilitas ATM (E.4.4) | Fasilitas Stavol / Stabilizer',
+                'kriteria' => 'Stavol / Automatic Voltage Regulator (AVR) beroperasi normal dan tegangan listrik keluaran stabil 220V',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Section Khusus ATM (E.4.4)',
+                'area' => 'Fasilitas ATM (E.4.4) | Kunci Kombinasi Brankas ATM (Dual Control > 1 Kunci)',
+                'kriteria' => 'Brankas mesin ATM wajib Dual Control: kunci fisik brankas dan nomor kombinasi brankas wajib dipegang oleh > 1 orang petugas berbeda',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Section Khusus ATM (E.4.4)',
+                'area' => 'Fasilitas ATM (E.4.4) | Lolipop (Neon Box) ATM',
+                'kriteria' => 'Neon box (Lolipop) ATM di depan bilik menyala terang di malam hari, bersih, dan visibilitas terbaca jelas oleh nasabah',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Section Khusus ATM (E.4.4)',
+                'area' => 'Fasilitas ATM (E.4.4) | Lisplank Fasilitas ATM',
+                'kriteria' => 'Lisplank kanopi/bilik ATM kokoh, warna corak corporate branding Bank Sulteng rapi, dan lampu kanopi berfungsi',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Section Khusus ATM (E.4.4)',
+                'area' => 'Fasilitas ATM (E.4.4) | Sandblast & Kaca Bilik ATM',
+                'kriteria' => 'Kaca bilik ATM bersih, stiker motif sandblast / safety glass terpasang rapi dengan batas privasi optimal saat bertransaksi',
+                'backup_90_hari' => '—',
+            ],
+
+            // =========================================================================
+            // 6. KESELAMATAN & FASILITAS LISTRIK CADANGAN GEDUNG
+            // =========================================================================
+            [
+                'kategori' => 'Keselamatan & Fasilitas Gedung',
+                'area' => 'Keselamatan | Alat Pemadam Api Ringan (APAR)',
+                'kriteria' => 'APAR dalam masa berlaku aktif, segel utuh, jarum manometer pada posisi hijau, dan ditempatkan pada posisi mudah dijangkau',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Keselamatan & Fasilitas Gedung',
+                'area' => 'Keselamatan | Jalur Evakuasi & Pintu Darurat',
+                'kriteria' => 'Jalur evakuasi darurat bebas dari halangan barang, pintu darurat berfungsi, dan denah petunjuk titik kumpul terpasang jelas',
+                'backup_90_hari' => '—',
+            ],
+            [
+                'kategori' => 'Keselamatan & Fasilitas Gedung',
+                'area' => 'Kelistrikan | Fasilitas Listrik Cadangan (Genset)',
+                'kriteria' => 'Genset cadangan beroperasi normal, bahan bakar solar terisi mencukupi, dan dilakukan pemanasan berkala (warm-up)',
+                'backup_90_hari' => '—',
+            ],
+        ];
     }
 }

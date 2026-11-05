@@ -189,13 +189,13 @@
 
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-dark" style="font-size: 0.85rem;">
-                                Referensi Otorisasi (Kolom Q) <span class="text-danger">*</span>
+                                Referensi Otorisasi (Kolom Q - Opsional)
                             </label>
-                            <input type="text" name="referensi_otorisasi" class="form-control @error('referensi_otorisasi') is-invalid @enderror" placeholder="Contoh: ST/042/SKAI/X/2026 atau Memo Kadiv" value="{{ old('referensi_otorisasi') }}" required>
+                            <input type="text" name="referensi_otorisasi" class="form-control @error('referensi_otorisasi') is-invalid @enderror" placeholder="Contoh: ST/042/SKAI/X/2026 atau Memo Kadiv (Opsional)" value="{{ old('referensi_otorisasi') }}">
                             @error('referensi_otorisasi')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="text-muted" style="font-size: 0.76rem;">Nomor surat tugas / memo penetapan visit.</small>
+                            <small class="text-muted" style="font-size: 0.76rem;">Nomor surat tugas / memo penetapan visit (dapat dikosongkan jika belum terbit).</small>
                         </div>
                     </div>
                 </div>

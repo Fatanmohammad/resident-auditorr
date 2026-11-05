@@ -252,10 +252,18 @@
                     {{-- Kolom J: Ringkasan Bukti --}}
                     <td>
                         @if(!empty($k->ringkasan_bukti))
-                            <div class="text-wrap small" style="max-width: 200px;">
+                            <div class="text-wrap small mb-1" style="max-width: 200px;">
                                 {{ Str::limit($k->ringkasan_bukti, 90) }}
                             </div>
-                        @else
+                        @endif
+                        @if(!empty($k->file_ringkasan_bukti))
+                            @php
+                                $fileUrl = asset(str_starts_with($k->file_ringkasan_bukti, 'storage/') ? $k->file_ringkasan_bukti : 'storage/' . $k->file_ringkasan_bukti);
+                            @endphp
+                            <a href="{{ $fileUrl }}" target="_blank" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 text-decoration-none px-2 py-0.5" style="font-size: 0.75rem;" title="Buka lampiran bukti pendukung">
+                                📎 Bukti Terlampir
+                            </a>
+                        @elseif(empty($k->ringkasan_bukti))
                             <span class="text-muted small">-</span>
                         @endif
                     </td>

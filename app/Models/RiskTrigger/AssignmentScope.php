@@ -103,7 +103,7 @@ class AssignmentScope extends Model
 
         // Kolom S: Status Assignment
         // Jika Keputusan Final != RISK TRIGGER VISIT -> BUKAN KEPUTUSAN VISIT
-        // Jika Tanggal Visit, RA Pelaksana, Reviewer, Referensi Otorisasi, Klasifikasi, Batas Scope, Kriteria Selesai kosong -> BELUM LENGKAP
+        // Jika Tanggal Visit, RA Pelaksana, Reviewer, Klasifikasi, Batas Scope, Kriteria Selesai kosong -> BELUM LENGKAP (Referensi Otorisasi bersifat opsional)
         // Jika seluruhnya terisi -> SIAP DILAKSANAKAN
         if ($this->keputusan_final !== 'RISK TRIGGER VISIT') {
             $this->status_assignment = 'BUKAN KEPUTUSAN VISIT';
@@ -111,7 +111,6 @@ class AssignmentScope extends Model
             empty($this->tanggal_visit) ||
             empty($this->ra_pelaksana) ||
             empty($this->reviewer) ||
-            empty($this->referensi_otorisasi) ||
             empty($this->klasifikasi) ||
             empty($this->batas_scope) ||
             empty($this->kriteria_selesai)
