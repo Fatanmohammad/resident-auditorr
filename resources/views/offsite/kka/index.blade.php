@@ -409,9 +409,16 @@
                         </select>
                     </div>
                     <div>
-                        <label class="custom-form-label">Upload Bukti Transaksi (PDF)</label>
-                        <input type="file" class="custom-form-control field-ra" id="file_bukti" accept=".pdf">
-                        <div id="file_bukti_info" style="font-size:0.72rem; color:var(--text-muted); margin-top:0.2rem;"></div>
+                        <label class="custom-form-label" id="label_file_bukti">Upload Bukti Transaksi (PDF)</label>
+                        
+                        {{-- Tampilan untuk Admin / Reviewer: Melihat & memeriksa PDF yang diunggah RA --}}
+                        <div id="view_bukti_admin" style="display:none;"></div>
+
+                        {{-- Tampilan untuk RA: Form Upload File --}}
+                        <div id="upload_bukti_ra">
+                            <input type="file" class="custom-form-control field-ra" id="file_bukti" accept=".pdf">
+                            <div id="file_bukti_info" style="font-size:0.72rem; color:var(--text-muted); margin-top:0.2rem;"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -449,6 +456,20 @@
                             <span id="badge_risk_final" style="padding:0.3rem 0.6rem; border-radius:6px; font-weight:600; font-size:0.8rem; background:#dcfce7; color:#16a34a; border:1px solid #bbf7d0;">Low</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- FLAGGING INDIKASI FRAUD (Poin 8 SOP 09) -->
+                <div id="fraud_flagging_banner" style="display:none; background:#fef2f2; border:1px solid #f87171; border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; color:#991b1b; font-size:0.85rem; font-weight:600;">
+                        <i class="bi bi-flag-fill text-danger fs-5"></i>
+                        <div>
+                            <div>FLAGGING INDIKASI FRAUD TERDETEKSI (STATUS CRITICAL)</div>
+                            <div style="font-weight:400; font-size:0.75rem; color:#b91c1c;">Temuan KKA Offsite ini berisiko Critical dan terindikasi fraud. Admin/Auditor dapat meneruskannya ke Modul Indikasi Fraud (SOP 09).</div>
+                        </div>
+                    </div>
+                    <a href="#" id="btn_eskalasi_fraud_offsite" target="_blank" class="btn btn-sm btn-danger fw-bold shadow-sm" style="white-space:nowrap;">
+                        <i class="bi bi-shield-exclamation me-1"></i> Teruskan ke Fraud SOP 09 &rarr;
+                    </a>
                 </div>
 
                 @if(in_array(strtolower(auth()->user()->role), ['ra', 'admin']))
@@ -511,12 +532,26 @@
                         </select>
                     </div>
                     <div>
-                        <label class="custom-form-label">Keputusan Eskalasi</label>
-                        <select class="custom-form-control field-admin" id="keputusan_eskalasi" @if(strtolower(auth()->user()->role) === 'ra') disabled @endif>
+                        <label class="custom-form-label">Keputusan Eskalasi / Fraud Flagging</label>
+                        <select class="custom-form-control field-admin" id="keputusan_eskalasi" onchange="onOffsiteAdminEskalasiChange()" @if(strtolower(auth()->user()->role) === 'ra') disabled @endif>
                             <option value="Tidak">Tidak Dieskalasi</option>
                             <option value="Eskalasi Kadiv">Eskalasi ke Kadiv SKAI</option>
                             <option value="Eskalasi Direksi">Eskalasi ke Direksi</option>
+                            <option value="Terindikasi Fraud (SOP 09)">Terindikasi Fraud (Teruskan ke SOP 09)</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- Box Disposisi Fraud Khusus Admin saat Approved/Terindikasi Fraud (Poin 8) -->
+                <div id="adm_offsite_fraud_action_box" style="display:none; margin-bottom:1.5rem; background:#fff1f2; border:1px solid #fecdd3; padding:0.75rem 1rem; border-radius:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                        <div>
+                            <div style="font-weight:700; color:#dc2626; font-size:0.85rem;"><i class="bi bi-shield-exclamation me-1"></i> Disposisi Eskalasi Fraud:</div>
+                            <div style="font-size:0.75rem; color:#4b5563;">Admin mengonfirmasi temuan Offsite ini sebagai indikasi fraud untuk ditindaklanjuti pada SOP 09.</div>
+                        </div>
+                        <a href="#" id="adm_btn_direct_fraud_offsite" target="_blank" class="btn btn-sm btn-danger fw-bold shadow-sm" style="font-size:0.78rem;">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Buka Form SOP 09 &rarr;
+                        </a>
                     </div>
                 </div>
 
@@ -745,7 +780,8 @@
                     ${item.deskripsi || item.catatan_rule || item.rincian || item.jenis_exception_awal || '-'}
                 </td>
                 <td style="text-align:center;">${riskBadge}</td>
-                <td style="text-align:right;">
+                <td style="text-align:right; white-space:nowrap;">
+                    ${item.file_bukti ? `<a href="${baseUrl}/${item.id}/view-bukti" target="_blank" class="btn btn-sm btn-outline-danger me-1" style="font-size:0.75rem; padding:0.3rem 0.6rem; border-radius:6px; text-decoration:none;" title="Lihat Dokumen Bukti PDF"><i class="bi bi-file-earmark-pdf-fill"></i> Bukti</a>` : ''}
                     <button class="btn-review" onclick="openDetailView(${item.id})">
                         <i class="bi bi-arrow-right"></i> Review
                     </button>
@@ -840,13 +876,76 @@
         tglInput.value = tanggalVal;
         tglInput.readOnly = true;
 
-        // Info File Bukti
-        const fileInfoEl = document.getElementById('file_bukti_info');
-        if (fileInfoEl) {
-            if (item.file_bukti) {
-                fileInfoEl.innerHTML = `<a href="/storage/${item.file_bukti}" target="_blank" class="text-primary text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Lihat File Bukti Terunggah</a>`;
-            } else {
-                fileInfoEl.innerHTML = `Belum ada file bukti PDF diunggah.`;
+        // Reset File Input
+        const fileInputEl = document.getElementById('file_bukti');
+        if (fileInputEl) fileInputEl.value = '';
+
+        // Tampilan Dokumen Bukti berdasarkan Role (Admin vs RA)
+        const isAdminRole = (userRole !== 'ra');
+        const viewAdminEl = document.getElementById('view_bukti_admin');
+        const uploadRaEl = document.getElementById('upload_bukti_ra');
+        const labelBuktiEl = document.getElementById('label_file_bukti');
+
+        if (isAdminRole) {
+            if (labelBuktiEl) labelBuktiEl.innerText = 'Dokumen Bukti Transaksi (PDF)';
+            if (uploadRaEl) uploadRaEl.style.display = 'none';
+            if (viewAdminEl) {
+                viewAdminEl.style.display = 'block';
+                if (item.file_bukti) {
+                    viewAdminEl.innerHTML = `
+                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.6rem 0.85rem; display:flex; align-items:center; justify-content:space-between; gap:0.75rem;">
+                            <div style="display:flex; align-items:center; gap:0.6rem; overflow:hidden;">
+                                <i class="bi bi-file-earmark-pdf-fill" style="color:#ef4444; font-size:1.6rem; flex-shrink:0;"></i>
+                                <div style="line-height:1.2; overflow:hidden;">
+                                    <span style="font-size:0.82rem; font-weight:700; color:#1e293b; display:block;">Dokumen Bukti RA Tersedia</span>
+                                    <span style="font-size:0.72rem; color:#64748b;">Diunggah oleh Resident Auditor</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.4rem;">
+                                <a href="${baseUrl}/${item.id}/view-bukti" target="_blank" class="btn btn-sm" style="background:#2563eb; color:#fff; font-size:0.78rem; font-weight:600; padding:0.4rem 0.85rem; border-radius:6px; text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem; box-shadow:0 1px 2px rgba(0,0,0,0.08);">
+                                    <i class="bi bi-eye-fill"></i> Buka / Lihat PDF
+                                </a>
+                                <button type="button" onclick="toggleUploadRaForAdmin()" class="btn btn-sm btn-light border text-muted" title="Ganti / Upload Ulang Bukti" style="font-size:0.75rem; padding:0.4rem 0.55rem; border-radius:6px;">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    viewAdminEl.innerHTML = `
+                        <div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:0.65rem 0.85rem; font-size:0.8rem; color:#64748b; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+                            <div style="display:flex; align-items:center; gap:0.45rem;">
+                                <i class="bi bi-exclamation-circle text-secondary" style="font-size:1.1rem;"></i>
+                                <span>Belum ada file bukti PDF diunggah oleh RA.</span>
+                            </div>
+                            <button type="button" onclick="toggleUploadRaForAdmin()" class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem; padding:0.25rem 0.55rem;">
+                                + Upload Manual
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        } else {
+            // Mode RA
+            if (labelBuktiEl) labelBuktiEl.innerText = 'Upload Bukti Transaksi (PDF)';
+            if (viewAdminEl) viewAdminEl.style.display = 'none';
+            if (uploadRaEl) {
+                uploadRaEl.style.display = 'block';
+                const fileInfoEl = document.getElementById('file_bukti_info');
+                if (fileInfoEl) {
+                    if (item.file_bukti) {
+                        fileInfoEl.innerHTML = `
+                            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:0.4rem 0.65rem; display:flex; align-items:center; justify-content:space-between; margin-top:0.35rem;">
+                                <span style="font-size:0.75rem; color:#166534;"><i class="bi bi-check-circle-fill text-success me-1"></i> File tersimpan di sistem</span>
+                                <a href="${baseUrl}/${item.id}/view-bukti" target="_blank" style="font-size:0.75rem; color:#2563eb; font-weight:600; text-decoration:none;">
+                                    <i class="bi bi-file-earmark-pdf"></i> Lihat File
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        fileInfoEl.innerHTML = `<span style="color:#64748b; font-size:0.72rem;">Belum ada file bukti PDF diunggah. Format .pdf (Maks 5MB)</span>`;
+                    }
+                }
             }
         }
 
@@ -885,6 +984,13 @@
         document.getElementById('dashboardView').style.display = 'block';
     }
 
+    // Toggle Form Upload Manual Bukti untuk Admin jika diperlukan
+    function toggleUploadRaForAdmin() {
+        const uploadRaEl = document.getElementById('upload_bukti_ra');
+        if (!uploadRaEl) return;
+        uploadRaEl.style.display = (uploadRaEl.style.display === 'none') ? 'block' : 'none';
+    }
+
     // RENDER ACCORDION CHECKLIST KKA DENGAN KELOMPOK PER SUB-AREA
     function renderChecklistAccordion(checklists, existingAnswers) {
         const container = document.getElementById('checklistAccordionContainer');
@@ -921,13 +1027,18 @@
         const isRa = (userRole === 'ra' || userRole === 'admin');
 
         let html = `
-            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background:#f1f5f9; border:1px solid var(--border-color);">
-                <div style="font-size:0.83rem; font-weight:700; color:var(--primary-blue, #1e3a8a);">
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background:#f1f5f9; border:1px solid var(--border-color); flex-wrap:wrap; gap:0.5rem;">
+                <div style="font-size:0.83rem; font-weight:700; color:var(--primary-blue, #1e3a8a); display:flex; align-items:center; gap:0.5rem;">
                     <i class="bi bi-ui-checks me-1"></i> CHECKLIST PENGUJIAN AUDIT (${checklists.length} ITEM)
                 </div>
-                <div class="d-flex gap-2 align-items-center">
+                <div class="d-flex gap-2 align-items-center flex-wrap">
                     <span class="badge bg-success" id="badgeTotalYa" style="font-size:0.75rem;">0 Ya</span>
                     <span class="badge bg-danger" id="badgeTotalTidak" style="font-size:0.75rem;">0 Tidak</span>
+                    ${isRa ? `
+                    <button type="button" class="btn btn-sm btn-success fw-bold px-3 py-1" style="font-size:0.75rem; border-radius:6px; box-shadow:0 1px 2px rgba(0,0,0,0.08); display:inline-flex; align-items:center; gap:0.35rem;" onclick="setGlobalAllYa(event)">
+                        <i class="bi bi-check2-all"></i> Set Semua Ya (Seluruh Item)
+                    </button>
+                    ` : ''}
                 </div>
             </div>
             <div class="accordion" id="accordionChecklistKka">
@@ -940,15 +1051,15 @@
             html += `
             <div class="accordion-item" style="border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 0.65rem; overflow:hidden;">
                 <h2 class="accordion-header" id="heading_${code}" style="background:#f8fafc;">
-                    <div class="d-flex justify-content-between align-items-center w-100 p-2 px-3" style="cursor:pointer;" onclick="toggleAccordionSubArea('${collapseId}')">
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="d-flex justify-content-between align-items-center w-100 p-2 px-3">
+                        <div class="d-flex align-items-center gap-2 flex-wrap" style="cursor:pointer; flex:1;" onclick="toggleAccordionSubArea('${collapseId}')">
                             <i class="bi bi-chevron-down toggle-icon-${collapseId}" style="font-size:0.8rem; transition: transform 0.2s;"></i>
                             <span class="fw-bold" style="font-size:0.82rem; color:var(--text-dark);">${grp.name}</span>
                             <span class="badge bg-light text-secondary border" style="font-size:0.7rem;">${grp.items.length} Item</span>
                             <span class="badge bg-danger text-white subarea-tidak-badge" id="subTidakBadge_${code}" style="display:none; font-size:0.7rem;">0 Temuan Tidak</span>
                         </div>
                         ${isRa ? `
-                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold" style="font-size:0.72rem; border-radius:4px;" onclick="setSubAreaAllYa('${code}', event)">
+                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold" style="font-size:0.72rem; border-radius:4px; z-index:5;" onclick="setSubAreaAllYa('${code}', event)">
                             <i class="bi bi-check-all"></i> Set Semua Ya
                         </button>
                         ` : ''}
@@ -1022,6 +1133,23 @@
         }
     }
 
+    // Set seluruh checklist dari SEMUA sub-area menjadi Ya sekaligus
+    function setGlobalAllYa(event) {
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        const container = document.getElementById('checklistAccordionContainer');
+        if (!container) return;
+        const yaRadios = container.querySelectorAll('.btn-check[value="Ya"]');
+        yaRadios.forEach(r => {
+            r.checked = true;
+            r.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        onChecklistChange();
+    }
+
+    // Set seluruh checklist pada sub-area tertentu menjadi Ya
     function setSubAreaAllYa(code, event) {
         if (event) {
             event.stopPropagation();
@@ -1032,6 +1160,7 @@
         const yaRadios = body.querySelectorAll('.btn-check[value="Ya"]');
         yaRadios.forEach(r => {
             r.checked = true;
+            r.dispatchEvent(new Event('change', { bubbles: true }));
         });
         onChecklistChange();
     }
@@ -1245,6 +1374,42 @@
         } else {
             onsiteEl.style.color = 'var(--text-dark)';
             onsiteEl.style.fontWeight = '600';
+        }
+
+        // Flagging Fraud SOP 09 saat Risk Final Critical (Poin 8)
+        const fraudBanner = document.getElementById('fraud_flagging_banner');
+        if (fraudBanner) {
+            if (riskFinal === 'Critical') {
+                fraudBanner.style.display = 'flex';
+                const exc = document.getElementById('jenis_exception_ra') ? document.getElementById('jenis_exception_ra').value : '';
+                const hasil = document.getElementById('hasil_uji') ? document.getElementById('hasil_uji').value : '';
+                const fCode = currentKkaItem ? (currentKkaItem.unit_code || '') : '';
+                const fName = currentKkaItem ? (currentKkaItem.unit_name || '') : '';
+                const url = `{{ route('pemeriksaan_awal.pelaporan_awal') }}?source=OFFSITE_CRITICAL&dugaan=${encodeURIComponent(exc)}&fakta=${encodeURIComponent(hasil)}&kode_unit=${encodeURIComponent(fCode)}&nama_unit=${encodeURIComponent(fName)}&area=Offsite%20Audit`;
+                const btnEsk = document.getElementById('btn_eskalasi_fraud_offsite');
+                if (btnEsk) btnEsk.href = url;
+            } else {
+                fraudBanner.style.display = 'none';
+            }
+        }
+    }
+
+    function onOffsiteAdminEskalasiChange() {
+        const val = document.getElementById('keputusan_eskalasi').value;
+        const box = document.getElementById('adm_offsite_fraud_action_box');
+        if (box) {
+            if (val === 'Terindikasi Fraud (SOP 09)') {
+                box.style.display = 'block';
+                const exc = document.getElementById('jenis_exception_ra') ? document.getElementById('jenis_exception_ra').value : '';
+                const hasil = document.getElementById('hasil_uji') ? document.getElementById('hasil_uji').value : '';
+                const fCode = currentKkaItem ? (currentKkaItem.unit_code || '') : '';
+                const fName = currentKkaItem ? (currentKkaItem.unit_name || '') : '';
+                const url = `{{ route('pemeriksaan_awal.pelaporan_awal') }}?source=APPROVAL_ADMIN_OFFSITE_FRAUD&dugaan=${encodeURIComponent(exc)}&fakta=${encodeURIComponent(hasil)}&kode_unit=${encodeURIComponent(fCode)}&nama_unit=${encodeURIComponent(fName)}&area=Offsite%20Audit`;
+                const btnDirect = document.getElementById('adm_btn_direct_fraud_offsite');
+                if (btnDirect) btnDirect.href = url;
+            } else {
+                box.style.display = 'none';
+            }
         }
     }
 

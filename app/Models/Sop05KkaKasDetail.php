@@ -15,15 +15,20 @@ class Sop05KkaKasDetail extends Model
         'surprise_audit_assignment_id',
         'objek_pemeriksaan',
         'nilai_sistem',
-        'ule_100k', 'ule_50k', 'ule_20k', 'ule_10k', 'ule_5k', 'ule_2k', 'ule_1k',
-        'utle_100k', 'utle_50k', 'utle_20k', 'utle_10k', 'utle_5k', 'utle_2k', 'utle_1k',
-        'logam_1000', 'logam_500', 'logam_200', 'logam_100',
+        'ule_100k', 'ule_75k', 'ule_50k', 'ule_20k', 'ule_10k', 'ule_5k', 'ule_2k', 'ule_1k',
+        'utle_100k', 'utle_75k', 'utle_50k', 'utle_20k', 'utle_10k', 'utle_5k', 'utle_2k', 'utle_1k',
+        'logam_1000', 'logam_500', 'logam_200', 'logam_100', 'logam_50', 'logam_25',
         'total_ule', 'total_utle', 'total_logam',
         'nilai_fisik',
         'selisih',
         'status_uji',
         'catatan_pemeriksa',
         'exception_aktif',
+        'status_tindak_lanjut',
+        'komitmen_tanggal',
+        'file_bukti',
+        'klarifikasi',
+        'minta_bukti_cabang',
     ];
 
     public function assignment()

@@ -30,6 +30,19 @@ class Sop05KkaKartuDetail extends Model
         'referensi_bukti',
         'validasi',
         'exception_aktif',
+        'cardman_qty',
+        'cardman_nominal',
+        'saldo_persediaan_gl',
+        'posisi_rekonsiliasi',
+        'periode_audit',
+        'periode_data',
+        'findings_tabel1',
+        'findings_tabel2',
+        'status_tindak_lanjut',
+        'komitmen_tanggal',
+        'file_bukti',
+        'klarifikasi',
+        'minta_bukti_cabang',
     ];
 
     public function assignment()

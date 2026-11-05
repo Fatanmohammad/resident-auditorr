@@ -112,6 +112,7 @@ class OnsiteController extends Controller
     {
         $request->validate([
             'file_cbs' => 'required|file|mimes:csv,txt|max:20480',
+            'periode'  => 'nullable|string',
         ]);
 
         $file     = $request->file('file_cbs');
@@ -122,7 +123,11 @@ class OnsiteController extends Controller
         try {
             $result = $parser->parse($fullPath, $visit);
 
-            $visit->update(['status' => 'Berlangsung']);
+            $updateData = ['status' => 'Berlangsung'];
+            if ($request->filled('periode')) {
+                $updateData['periode'] = $request->periode;
+            }
+            $visit->update($updateData);
 
             DB::commit();
 

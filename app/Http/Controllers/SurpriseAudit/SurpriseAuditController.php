@@ -72,12 +72,12 @@ class SurpriseAuditController extends Controller
         $request->validate([
             'kode_unit' => 'required',
             'nama_unit' => 'required',
-            'nomor_assignment' => 'required',
             'tanggal_rencana' => 'required',
             'ruang_lingkup' => 'required|array',
+            'sample_data_file' => 'nullable|file|mimes:xlsx,xls|max:10240',
         ]);
 
-        $raUserId = $request->ra_user_id;
+        $raUserId = $request->ra_user_id ?: auth()->id();
         $residentAuditorName = $request->resident_auditor;
         if ($raUserId) {
             $raUser = \App\Models\User::find($raUserId);
@@ -94,30 +94,48 @@ class SurpriseAuditController extends Controller
             }
         }
 
+        // Handle Upload Sample Data Excel (Poin 6)
+        $sampleFilePath = null;
+        if ($request->hasFile('sample_data_file')) {
+            $file = $request->file('sample_data_file');
+            $fileName = 'sample_' . time() . '_' . $file->getClientOriginalName();
+            $sampleFilePath = $file->storeAs('surprise_audit_samples', $fileName, 'public');
+        }
+
         $tanggalFormat = date('Ymd', strtotime($request->tanggal_rencana));
         $visitId = 'SA-' . $tanggalFormat . '-' . $request->kode_unit;
+
+        // Auto hitung nama hari jika belum ada
+        $namaHari = $request->tanggal_hari;
+        if (!$namaHari) {
+            $days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            $namaHari = $days[date('w', strtotime($request->tanggal_rencana))] ?? 'Hari';
+        }
 
         SurpriseAuditAssignment::create([
             'visit_id' => $visitId,
             'kode_unit' => $request->kode_unit,
             'nama_unit' => $request->nama_unit,
             'tanggal_rencana' => $request->tanggal_rencana,
+            'tanggal_hari' => $namaHari,
             'tanggal_mulai_aktual' => $request->tanggal_mulai_aktual ?? null,
             'tanggal_selesai_aktual' => $request->tanggal_selesai_aktual ?? null,
-            'resident_auditor' => $residentAuditorName ?? 'Resident Auditor',
+            'resident_auditor' => $residentAuditorName ?? auth()->user()->name,
             'reviewer' => $reviewerName ?? 'Reviewer SKAI',
             'ra_user_id' => $raUserId,
             'created_by' => auth()->id(),
             'dasar_penugasan' => $request->dasar_penugasan ?? 'Informasi Khusus',
-            'nomor_assignment' => $request->nomor_assignment,
+            'nomor_assignment' => $request->nomor_assignment ?: ('ST-RA/SA/' . date('Ym') . '/' . $request->kode_unit),
+            'nomor_surat_tugas' => $request->nomor_assignment ?? null,
             'pemberi_tugas' => $request->pemberi_tugas ?? 'Pimpinan SKAI',
             'tujuan' => $request->tujuan ?? 'Memastikan kesesuaian saldo buku dengan kas fisik khasanah dan kas ATM secara mendadak.',
             'klasifikasi_kerahasiaan' => 'Rahasia - Need to Know',
             'ruang_lingkup_area' => $request->ruang_lingkup,
             'status_assignment' => 'SIAP DILAKSANAKAN',
+            'sample_data_file' => $sampleFilePath,
         ]);
 
-        return redirect()->route('surprise_audit.index')->with('success', 'Penugasan Surprise Audit berhasil dibuat dan dikoneksikan.');
+        return redirect()->route('surprise_audit.index')->with('success', 'Penugasan Surprise Audit berhasil dibuat oleh Resident Auditor.');
     }
 
     public function show($id)
@@ -176,7 +194,231 @@ class SurpriseAuditController extends Controller
             ];
         }
 
-        return view('surprise-audit.show', compact('assignment', 'controlData'));
+        // Kumpulkan Seluruh Berkas Bukti & Sample yang Diunggah RA untuk Admin
+        $uploadedBukti = [];
+
+        if ($assignment->sample_data_file) {
+            $uploadedBukti[] = [
+                'area' => 'Sample Data Master',
+                'objek' => 'Populasi / Sample Pemeriksaan Fisik',
+                'file_name' => basename($assignment->sample_data_file),
+                'file_path' => $assignment->sample_data_file,
+                'type' => 'sample',
+                'id' => $assignment->id,
+                'status_tl' => 'TERSEDIA',
+                'komitmen_tanggal' => null,
+                'klarifikasi' => 'File lampiran data sample awal penugasan (Excel).',
+            ];
+        }
+
+        $kasBukti = Sop05KkaKasDetail::where('surprise_audit_assignment_id', $assignment->id)
+            ->whereNotNull('file_bukti')
+            ->where('file_bukti', '!=', '')
+            ->get();
+        foreach ($kasBukti as $kb) {
+            $uploadedBukti[] = [
+                'area' => 'Kas Khasanah & Teller',
+                'objek' => $kb->objek_pemeriksaan,
+                'file_name' => basename($kb->file_bukti),
+                'file_path' => $kb->file_bukti,
+                'type' => 'kas',
+                'id' => $kb->id,
+                'status_tl' => $kb->status_tindak_lanjut ?? 'SUDAH SELESAI',
+                'komitmen_tanggal' => $kb->komitmen_tanggal,
+                'klarifikasi' => $kb->klarifikasi ?? 'Bukti fisik/penyesuaian kas cabang.',
+            ];
+        }
+
+        $kartuBukti = Sop05KkaKartuDetail::where('surprise_audit_assignment_id', $assignment->id)
+            ->whereNotNull('file_bukti')
+            ->where('file_bukti', '!=', '')
+            ->get();
+        foreach ($kartuBukti as $krb) {
+            $uploadedBukti[] = [
+                'area' => 'Kartu ATM & PIN Mailer',
+                'objek' => 'KARTU ' . strtoupper($krb->jenis_kartu),
+                'file_name' => basename($krb->file_bukti),
+                'file_path' => $krb->file_bukti,
+                'type' => 'kartu',
+                'id' => $krb->id,
+                'status_tl' => $krb->status_tindak_lanjut ?? 'SUDAH SELESAI',
+                'komitmen_tanggal' => $krb->komitmen_tanggal,
+                'klarifikasi' => $krb->klarifikasi ?? 'Bukti/surat klarifikasi fisik kartu dan PIN.',
+            ];
+        }
+
+        $atmBukti = Sop05KkaAtmDetail::where('surprise_audit_assignment_id', $assignment->id)
+            ->whereNotNull('file_bukti')
+            ->where('file_bukti', '!=', '')
+            ->get();
+        foreach ($atmBukti as $atmb) {
+            $uploadedBukti[] = [
+                'area' => 'Kas ATM',
+                'objek' => $atmb->objek_lokasi_atm,
+                'file_name' => basename($atmb->file_bukti),
+                'file_path' => $atmb->file_bukti,
+                'type' => 'atm',
+                'id' => $atmb->id,
+                'status_tl' => $atmb->status_tindak_lanjut ?? 'SUDAH SELESAI',
+                'komitmen_tanggal' => $atmb->komitmen_tanggal,
+                'klarifikasi' => $atmb->klarifikasi ?? 'Bukti fisik cash opname ATM / counter printout.',
+            ];
+        }
+
+        return view('surprise-audit.show', compact('assignment', 'controlData', 'uploadedBukti'));
+    }
+
+    public function viewBukti($type, $id, Request $request)
+    {
+        $filePath = null;
+        $fileName = 'bukti';
+        $relative = null;
+
+        if ($type === 'kas') {
+            $detail = Sop05KkaKasDetail::findOrFail($id);
+            $relative = $detail->file_bukti;
+            $fileName = 'bukti_kas_' . $id . '_' . basename($relative);
+        } elseif ($type === 'kartu') {
+            $detail = Sop05KkaKartuDetail::findOrFail($id);
+            $relative = $detail->file_bukti;
+            $fileName = 'bukti_kartu_' . $id . '_' . basename($relative);
+        } elseif ($type === 'atm') {
+            $detail = Sop05KkaAtmDetail::findOrFail($id);
+            $relative = $detail->file_bukti;
+            $fileName = 'bukti_atm_' . $id . '_' . basename($relative);
+        } elseif ($type === 'sample') {
+            $assignment = SurpriseAuditAssignment::where('visit_id', $id)->orWhere('id', $id)->firstOrFail();
+            $relative = $assignment->sample_data_file;
+            $fileName = 'sample_' . basename($relative);
+        } else {
+            abort(404, 'Tipe bukti tidak valid.');
+        }
+
+        if (!$relative) {
+            abort(404, 'File bukti belum diunggah.');
+        }
+
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        if ($disk->exists($relative)) {
+            $filePath = $disk->path($relative);
+        } elseif (file_exists(storage_path('app/public/' . $relative))) {
+            $filePath = storage_path('app/public/' . $relative);
+        } elseif (file_exists(public_path('storage/' . $relative))) {
+            $filePath = public_path('storage/' . $relative);
+        } else {
+            abort(404, 'File fisik bukti tidak ditemukan di penyimpanan server.');
+        }
+
+        // Jika user minta download langsung
+        if ($request->has('download') || $request->input('action') === 'download' || str_ends_with(strtolower($filePath), '.xlsx') || str_ends_with(strtolower($filePath), '.xls')) {
+            return response()->download($filePath, $fileName);
+        }
+
+        $mime = mime_content_type($filePath);
+        $fileData = file_get_contents($filePath);
+        $base64 = base64_encode($fileData);
+        $downloadUrl = route('surprise_audit.view_bukti', ['type' => $type, 'id' => $id, 'download' => 1]);
+
+        if (str_contains($mime, 'pdf')) {
+            return response(<<<HTML
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bukti Surprise Audit - {$fileName}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1e293b; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { background: #0f172a; color: #fff; padding: 0.6rem 1.2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; }
+        .topbar-title { font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+        .btn-download { background: #2563eb; color: #fff; text-decoration: none; padding: 0.35rem 0.9rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; transition: background 0.2s; }
+        .btn-download:hover { background: #1d4ed8; }
+        .viewer-container { flex: 1; width: 100%; height: calc(100vh - 48px); background: #334155; }
+        embed, iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="topbar-title">
+            <span>📄 Dokumen Bukti Surprise Audit: {$fileName}</span>
+        </div>
+        <a href="{$downloadUrl}" class="btn-download">
+            ⬇️ Unduh PDF Asli
+        </a>
+    </div>
+    <div class="viewer-container">
+        <embed src="data:application/pdf;base64,{$base64}" type="application/pdf" />
+    </div>
+</body>
+</html>
+HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
+        } else {
+            return response(<<<HTML
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bukti Surprise Audit - {$fileName}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; min-height: 100vh; display: flex; flex-direction: column; }
+        .topbar { background: #1e293b; color: #fff; padding: 0.6rem 1.2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; }
+        .topbar-title { font-size: 0.9rem; font-weight: 600; }
+        .btn-download { background: #2563eb; color: #fff; text-decoration: none; padding: 0.35rem 0.9rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+        .img-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+        img { max-width: 95%; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="topbar-title">
+            <span>🖼️ Bukti Foto / Dokumen: {$fileName}</span>
+        </div>
+        <a href="{$downloadUrl}" class="btn-download">
+            ⬇️ Unduh File Asli
+        </a>
+    </div>
+    <div class="img-container">
+        <img src="data:{$mime};base64,{$base64}" alt="Bukti Surprise Audit" />
+    </div>
+</body>
+</html>
+HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
+        }
+    }
+
+    public static function tanggalTerbilangIndonesia($dateStr)
+    {
+        $carbon = Carbon::parse($dateStr);
+        $hariMap = [
+            'Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa', 
+            'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'
+        ];
+        $hari = $hariMap[$carbon->format('l')] ?? 'Hari';
+        
+        $angka = [
+            1 => 'Satu', 2 => 'Dua', 3 => 'Tiga', 4 => 'Empat', 5 => 'Lima', 6 => 'Enam', 7 => 'Tujuh', 8 => 'Delapan', 9 => 'Sembilan', 10 => 'Sepuluh', 11 => 'Sebelas',
+            12 => 'Dua Belas', 13 => 'Tiga Belas', 14 => 'Empat Belas', 15 => 'Lima Belas', 16 => 'Enam Belas', 17 => 'Tujuh Belas', 18 => 'Delapan Belas', 19 => 'Sembilan Belas',
+            20 => 'Dua Puluh', 21 => 'Dua Puluh Satu', 22 => 'Dua Puluh Dua', 23 => 'Dua Puluh Tiga', 24 => 'Dua Puluh Empat', 25 => 'Dua Puluh Lima', 26 => 'Dua Puluh Enam', 27 => 'Dua Puluh Tujuh', 28 => 'Dua Puluh Delapan', 29 => 'Dua Puluh Sembilan', 30 => 'Tiga Puluh', 31 => 'Tiga Puluh Satu'
+        ];
+        $bulan = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni',
+            7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+        $tglTeks = $angka[(int)$carbon->format('d')] ?? $carbon->format('d');
+        $blnTeks = $bulan[(int)$carbon->format('m')] ?? $carbon->format('F');
+        $thn = (int)$carbon->format('Y');
+        $thnTeks = 'Dua Ribu ' . ($angka[$thn - 2000] ?? $thn);
+
+        return [
+            'hari' => $hari,
+            'terbilang' => "Tanggal {$tglTeks} Bulan {$blnTeks} Tahun {$thnTeks}",
+            'angka' => $carbon->format('d-m-Y'),
+            'bulan' => $blnTeks,
+            'tahun' => $thn,
+        ];
     }
 
     public function showKas($id)
@@ -191,6 +433,23 @@ class SurpriseAuditController extends Controller
         $totalFisik = $kasData->sum('nilai_fisik');
         $totalSelisih = $totalFisik - $totalSistem;
         $exceptionAktif = $kasData->where('exception_aktif', 'Ya')->count();
+
+        // Default nama pemeriksa & saksi jika belum ada
+        if (!$assignment->pemeriksa_1) {
+            $assignment->pemeriksa_1 = $assignment->resident_auditor ?? auth()->user()->name;
+        }
+        if (!$assignment->pemeriksa_2) {
+            $assignment->pemeriksa_2 = 'Rostika Warda';
+        }
+        if (!$assignment->saksi_1) {
+            $assignment->saksi_1 = 'Hajara Harun (Pemimpin Seksi Pelayanan)';
+        }
+        if (!$assignment->saksi_2) {
+            $assignment->saksi_2 = 'Jasmawati T. Tolabo (Teller)';
+        }
+        if (!$assignment->pejabat_mengetahui) {
+            $assignment->pejabat_mengetahui = 'ADE IRMA S. MAILILI (Pemimpin Cabang Pembantu)';
+        }
 
         return view('surprise-audit.kas', compact(
             'assignment', 
@@ -207,13 +466,16 @@ class SurpriseAuditController extends Controller
         $request->validate([
             'objek_pemeriksaan' => 'required',
             'nilai_sistem' => 'required|numeric',
+            'file_bukti' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ]);
 
         $assignment = SurpriseAuditAssignment::where('visit_id', $id)
             ->orWhere('id', $id)
             ->firstOrFail();
 
+        // 1. Hitung Uang Layak Edar (ULE) Kertas
         $totalUle = (($request->ule_100k ?? 0) * 100000) +
+                    (($request->ule_75k ?? 0) * 75000) +
                     (($request->ule_50k ?? 0) * 50000) +
                     (($request->ule_20k ?? 0) * 20000) +
                     (($request->ule_10k ?? 0) * 10000) +
@@ -221,7 +483,9 @@ class SurpriseAuditController extends Controller
                     (($request->ule_2k ?? 0) * 2000) +
                     (($request->ule_1k ?? 0) * 1000);
 
+        // 2. Hitung Uang Tidak Layak Edar (UTLE / Uang Lusuh)
         $totalUtle = (($request->utle_100k ?? 0) * 100000) +
+                     (($request->utle_75k ?? 0) * 75000) +
                      (($request->utle_50k ?? 0) * 50000) +
                      (($request->utle_20k ?? 0) * 20000) +
                      (($request->utle_10k ?? 0) * 10000) +
@@ -229,20 +493,32 @@ class SurpriseAuditController extends Controller
                      (($request->utle_2k ?? 0) * 2000) +
                      (($request->utle_1k ?? 0) * 1000);
 
+        // 3. Hitung Logam (Keping)
         $totalLogam = (($request->logam_1000 ?? 0) * 1000) +
                       (($request->logam_500 ?? 0) * 500) +
                       (($request->logam_200 ?? 0) * 200) +
-                      (($request->logam_100 ?? 0) * 100);
+                      (($request->logam_100 ?? 0) * 100) +
+                      (($request->logam_50 ?? 0) * 50) +
+                      (($request->logam_25 ?? 0) * 25);
 
         $nilaiFisik = $totalUle + $totalUtle + $totalLogam;
-        $nilaiSistem = $request->nilai_sistem;
+        $nilaiSistem = (float) $request->nilai_sistem;
         $selisih = $nilaiFisik - $nilaiSistem;
         $exceptionAktif = $selisih != 0 ? 'Ya' : 'Tidak';
+
+        // Upload bukti dokumen / surat alasan jika ada (Poin 7)
+        $fileBuktiPath = null;
+        if ($request->hasFile('file_bukti')) {
+            $file = $request->file('file_bukti');
+            $fileName = 'bukti_kas_' . time() . '_' . $file->getClientOriginalName();
+            $fileBuktiPath = $file->storeAs('surprise_audit_bukti', $fileName, 'public');
+        }
 
         $assignment->kasDetails()->create([
             'objek_pemeriksaan' => $request->objek_pemeriksaan,
             'nilai_sistem' => $nilaiSistem,
             'ule_100k' => $request->ule_100k ?? 0,
+            'ule_75k'  => $request->ule_75k ?? 0,
             'ule_50k'  => $request->ule_50k ?? 0,
             'ule_20k'  => $request->ule_20k ?? 0,
             'ule_10k'  => $request->ule_10k ?? 0,
@@ -250,6 +526,7 @@ class SurpriseAuditController extends Controller
             'ule_2k'   => $request->ule_2k ?? 0,
             'ule_1k'   => $request->ule_1k ?? 0,
             'utle_100k' => $request->utle_100k ?? 0,
+            'utle_75k'  => $request->utle_75k ?? 0,
             'utle_50k'  => $request->utle_50k ?? 0,
             'utle_20k'  => $request->utle_20k ?? 0,
             'utle_10k'  => $request->utle_10k ?? 0,
@@ -260,6 +537,8 @@ class SurpriseAuditController extends Controller
             'logam_500'  => $request->logam_500 ?? 0,
             'logam_200'  => $request->logam_200 ?? 0,
             'logam_100'  => $request->logam_100 ?? 0,
+            'logam_50'   => $request->logam_50 ?? 0,
+            'logam_25'   => $request->logam_25 ?? 0,
             'total_ule' => $totalUle,
             'total_utle' => $totalUtle,
             'total_logam' => $totalLogam,
@@ -268,10 +547,111 @@ class SurpriseAuditController extends Controller
             'status_uji' => 'SIAP DIREVIU',
             'catatan_pemeriksa' => $request->catatan_pemeriksa,
             'exception_aktif' => $exceptionAktif,
+            'status_tindak_lanjut' => $request->status_tindak_lanjut ?? 'SUDAH SELESAI',
+            'komitmen_tanggal' => $request->komitmen_tanggal ?? null,
+            'file_bukti' => $fileBuktiPath,
+            'klarifikasi' => $request->klarifikasi ?? null,
         ]);
 
+        // Simpan / update data Berita Acara pada Assignment
+        $assignment->update([
+            'jam_mulai_opname' => $request->jam_mulai_opname ?? $assignment->jam_mulai_opname ?? '16.30 WITA',
+            'jam_selesai_opname' => $request->jam_selesai_opname ?? $assignment->jam_selesai_opname ?? '18.45 WITA',
+            'kondisi_opname' => $request->kondisi_opname ?? $assignment->kondisi_opname ?? 'sebelum Kas Harian dilimpahkan Kepada Teller',
+            'pemeriksa_1' => $request->pemeriksa_1 ?? $assignment->pemeriksa_1 ?? $assignment->resident_auditor,
+            'pemeriksa_2' => $request->pemeriksa_2 ?? $assignment->pemeriksa_2 ?? 'Rostika Warda',
+            'saksi_1' => $request->saksi_1 ?? $assignment->saksi_1 ?? 'Hajara Harun',
+            'saksi_2' => $request->saksi_2 ?? $assignment->saksi_2 ?? 'Jasmawati T. Tolabo',
+            'saksi_list' => $request->saksi_list ? (is_array($request->saksi_list) ? $request->saksi_list : explode("\n", str_replace("\r", "", $request->saksi_list))) : $assignment->saksi_list,
+            'pejabat_mengetahui' => $request->pejabat_mengetahui ?? $assignment->pejabat_mengetahui ?? 'ADE IRMA S. MAILILI',
+            'keterangan_selisih_kas' => $request->keterangan_selisih_kas ?? $assignment->keterangan_selisih_kas,
+        ]);
+
+        // Poin 8: Otomasi Status Lifecycle (Ketika RA sedang mengerjakan KKA -> otomatis DALAM PROSES)
+        if ($assignment->status_assignment === 'SIAP DILAKSANAKAN' || empty($assignment->status_assignment)) {
+            $assignment->update(['status_assignment' => 'DALAM PROSES']);
+        }
+
         return redirect()->route('surprise_audit.kas', $assignment->visit_id)
-            ->with('success', 'Data Opname Rincian Pecahan Kas berhasil disimpan!');
+            ->with('success', 'Data Opname Keadaan Kas berhasil disimpan!');
+    }
+
+    public function beritaAcaraKas($id)
+    {
+        $assignment = SurpriseAuditAssignment::where('visit_id', $id)
+            ->orWhere('id', $id)
+            ->firstOrFail();
+
+        $kasData = $assignment->kasDetails;
+        $totalSistem = $kasData->sum('nilai_sistem');
+        $totalFisik = $kasData->sum('nilai_fisik');
+        $selisih = $totalFisik - $totalSistem;
+
+        $tglInfo = self::tanggalTerbilangIndonesia($assignment->tanggal_rencana);
+
+        // Rekapitulasi per nominal dari seluruh pos kas
+        $denominasiKertas = [
+            100000 => $kasData->sum('ule_100k'),
+            75000  => $kasData->sum('ule_75k'),
+            50000  => $kasData->sum('ule_50k'),
+            20000  => $kasData->sum('ule_20k'),
+            10000  => $kasData->sum('ule_10k'),
+            5000   => $kasData->sum('ule_5k'),
+            2000   => $kasData->sum('ule_2k'),
+            1000   => $kasData->sum('ule_1k'),
+        ];
+
+        $denominasiLogam = [
+            1000 => $kasData->sum('logam_1000'),
+            500  => $kasData->sum('logam_500'),
+            200  => $kasData->sum('logam_200'),
+            100  => $kasData->sum('logam_100'),
+            50   => $kasData->sum('logam_50'),
+            25   => $kasData->sum('logam_25'),
+        ];
+
+        $denominasiLusuh = [
+            100000 => $kasData->sum('utle_100k'),
+            75000  => $kasData->sum('utle_75k'),
+            50000  => $kasData->sum('utle_50k'),
+            20000  => $kasData->sum('utle_20k'),
+            10000  => $kasData->sum('utle_10k'),
+            5000   => $kasData->sum('utle_5k'),
+            2000   => $kasData->sum('utle_2k'),
+            1000   => $kasData->sum('utle_1k'),
+        ];
+
+        $subtotalKertas = $kasData->sum('total_ule');
+        $subtotalLogam = $kasData->sum('total_logam');
+        $subtotalLusuh = $kasData->sum('total_utle');
+
+        // Daftar saksi
+        $saksiList = $assignment->saksi_list ?: [
+            'Hajara Harun',
+            'Jasmawati T. Tolabo',
+            'Fahri Patrayudha',
+            'Aulya Setiasi, SE',
+            'Alber Max Iskandar',
+            'Fibriana R. Mastura',
+            'Mutiara R. Pusadan',
+            'Andee Refo Kani'
+        ];
+
+        return view('surprise-audit.berita-acara-kas', compact(
+            'assignment',
+            'tglInfo',
+            'kasData',
+            'totalSistem',
+            'totalFisik',
+            'selisih',
+            'denominasiKertas',
+            'denominasiLogam',
+            'denominasiLusuh',
+            'subtotalKertas',
+            'subtotalLogam',
+            'subtotalLusuh',
+            'saksiList'
+        ));
     }
 
     public function atm($id)
@@ -302,50 +682,90 @@ class SurpriseAuditController extends Controller
         $request->validate([
             'objek_lokasi_atm' => 'required',
             'saldo_buku' => 'required|numeric',
+            'file_bukti' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ]);
 
         $assignment = SurpriseAuditAssignment::where('visit_id', $id)
             ->orWhere('id', $id)
             ->firstOrFail();
 
-        $k1_nilai = ($request->kaset1_pecahan ?? 100000) * ($request->kaset1_lembar ?? 0);
-        $k2_nilai = ($request->kaset2_pecahan ?? 50000) * ($request->kaset2_lembar ?? 0);
-        $k3_nilai = ($request->kaset3_pecahan ?? 100000) * ($request->kaset3_lembar ?? 0);
-        $k4_nilai = ($request->kaset4_pecahan ?? 50000) * ($request->kaset4_lembar ?? 0);
+        $k1_pecahan = (float) ($request->kaset1_pecahan ?? 100000);
+        $k1_lembar = (int) ($request->kaset1_lembar ?? 0);
+        $k1_nilai = $k1_pecahan * $k1_lembar;
+
+        $k2_pecahan = (float) ($request->kaset2_pecahan ?? 50000);
+        $k2_lembar = (int) ($request->kaset2_lembar ?? 0);
+        $k2_nilai = $k2_pecahan * $k2_lembar;
+
+        $k3_pecahan = (float) ($request->kaset3_pecahan ?? 100000);
+        $k3_lembar = (int) ($request->kaset3_lembar ?? 0);
+        $k3_nilai = $k3_pecahan * $k3_lembar;
+
+        $k4_pecahan = (float) ($request->kaset4_pecahan ?? 50000);
+        $k4_lembar = (int) ($request->kaset4_lembar ?? 0);
+        $k4_nilai = $k4_pecahan * $k4_lembar;
 
         $hasilFisikTotal = $k1_nilai + $k2_nilai + $k3_nilai + $k4_nilai;
-        $selisih = $hasilFisikTotal - $request->saldo_buku;
+        $selisih = $hasilFisikTotal - (float) $request->saldo_buku;
         $exceptionAktif = $selisih != 0 ? 'Ya' : 'Tidak';
+
+        $fileBuktiPath = null;
+        if ($request->hasFile('file_bukti')) {
+            $fileBuktiPath = $request->file('file_bukti')->store('uploads/surprise_audit/bukti', 'public');
+        }
 
         Sop05KkaAtmDetail::create([
             'surprise_audit_assignment_id' => $assignment->id,
             'area_kka' => 'atm',
             'objek_lokasi_atm' => $request->objek_lokasi_atm,
             'saldo_buku' => $request->saldo_buku,
-            'kaset1_pecahan' => $request->kaset1_pecahan ?? 100000,
-            'kaset1_lembar' => $request->kaset1_lembar ?? 0,
+            'kaset1_pecahan' => $k1_pecahan,
+            'kaset1_lembar' => $k1_lembar,
             'kaset1_nilai' => $k1_nilai,
-            'kaset2_pecahan' => $request->kaset2_pecahan ?? 50000,
-            'kaset2_lembar' => $request->kaset2_lembar ?? 0,
+            'kaset2_pecahan' => $k2_pecahan,
+            'kaset2_lembar' => $k2_lembar,
             'kaset2_nilai' => $k2_nilai,
-            'kaset3_pecahan' => $request->kaset3_pecahan ?? 100000,
-            'kaset3_lembar' => $request->kaset3_lembar ?? 0,
+            'kaset3_pecahan' => $k3_pecahan,
+            'kaset3_lembar' => $k3_lembar,
             'kaset3_nilai' => $k3_nilai,
-            'kaset4_pecahan' => $request->kaset4_pecahan ?? 50000,
-            'kaset4_lembar' => $request->kaset4_lembar ?? 0,
+            'kaset4_pecahan' => $k4_pecahan,
+            'kaset4_lembar' => $k4_lembar,
             'kaset4_nilai' => $k4_nilai,
             'hasil_fisik_total' => $hasilFisikTotal,
             'selisih' => $selisih,
-            'status_uji' => $request->status_uji ?? 'LENGKAP',
+            'status_uji' => $exceptionAktif === 'Ya' ? 'EXCEPTION' : 'SESUAI',
             'sebab' => $request->sebab,
             'dampak' => $request->dampak,
             'referensi_bukti' => $request->referensi_bukti,
             'validasi' => 'LENGKAP',
             'exception_aktif' => $exceptionAktif,
+            'status_tindak_lanjut' => $request->status_tindak_lanjut ?? 'SUDAH SELESAI',
+            'komitmen_tanggal' => $request->komitmen_tanggal ?? null,
+            'file_bukti' => $fileBuktiPath,
+            'klarifikasi' => $request->klarifikasi ?? null,
         ]);
+
+        // Poin 8: Otomasi Status Lifecycle (Ketika RA sedang mengerjakan KKA -> otomatis DALAM PROSES)
+        if ($assignment->status_assignment === 'SIAP DILAKSANAKAN' || empty($assignment->status_assignment)) {
+            $assignment->update(['status_assignment' => 'DALAM PROSES']);
+        }
 
         return redirect()->route('surprise_audit.atm', $assignment->visit_id)
             ->with('success', 'Data Opname KKA Kas ATM berhasil disimpan.');
+    }
+
+    public function destroyAtm($id, $detailId)
+    {
+        $assignment = SurpriseAuditAssignment::where('visit_id', $id)
+            ->orWhere('id', $id)
+            ->firstOrFail();
+
+        Sop05KkaAtmDetail::where('id', $detailId)
+            ->where('surprise_audit_assignment_id', $assignment->id)
+            ->delete();
+
+        return redirect()->route('surprise_audit.atm', $assignment->visit_id)
+            ->with('success', 'Data Opname ATM berhasil dihapus.');
     }
 
     // ==========================================
@@ -358,32 +778,66 @@ class SurpriseAuditController extends Controller
             ->orWhere('id', $id)
             ->firstOrFail();
 
-        $jenisKartuTetap = ['Platinum', 'Gold', 'Silver'];
-        foreach ($jenisKartuTetap as $jenis) {
+        // 3 Tipe Kartu Resmi Bank Sulteng dengan Harga Modal Standar
+        $masterKartu = [
+            'Silver'   => 42180,
+            'Gold'     => 68820,
+            'Platinum' => 68820,
+        ];
+
+        foreach ($masterKartu as $jenis => $hargaModal) {
             Sop05KkaKartuDetail::firstOrCreate([
                 'surprise_audit_assignment_id' => $assignment->id,
                 'jenis_kartu' => $jenis,
             ], [
                 'lokasi_penyimpanan' => 'Brankas Utama',
-                'harga_per_kartu' => 15000,
+                'harga_per_kartu' => $hargaModal,
+                'jumlah_fisik_kartu' => ($jenis === 'Silver' ? 365 : ($jenis === 'Platinum' ? 65 : 0)),
+                'jumlah_pin_mailer'  => ($jenis === 'Silver' ? 367 : 0),
+                'saldo_persediaan_gl' => 22855910,
+                'cardman_qty' => 431,
+                'cardman_nominal' => 19911180,
+                'periode_audit' => 'SEMESTER 2 ' . date('Y'),
+                'periode_data' => 'SEMESTER 1 ' . date('Y'),
+                'posisi_rekonsiliasi' => date('Y-m-d'),
             ]);
         }
 
         $kartuData = Sop05KkaKartuDetail::where('surprise_audit_assignment_id', $assignment->id)
-            ->orderByRaw("FIELD(jenis_kartu, 'Platinum', 'Gold', 'Silver')")
+            ->orderByRaw("FIELD(jenis_kartu, 'Silver', 'Gold', 'Platinum')")
             ->get();
 
-        $saldoBukuTotal = $kartuData->sum('saldo_persediaan_buku');
-        $nilaiFisikTotal = $kartuData->sum('nilai_fisik_kartu');
-        $selisihNilaiTotal = $nilaiFisikTotal - $saldoBukuTotal;
+        $totalFisikQty = $kartuData->sum('jumlah_fisik_kartu');
+        $totalNominalFisik = $kartuData->sum('nilai_fisik_kartu');
+        $saldoPersediaanGl = $kartuData->first()->saldo_persediaan_gl ?? 22855910;
+        $selisihPersediaanGl = $totalNominalFisik - $saldoPersediaanGl;
+        $totalPinMailer = $kartuData->sum('jumlah_pin_mailer');
+        $selisihTotalKartuPin = $totalFisikQty - $totalPinMailer;
+
+        $cardmanQty = $kartuData->first()->cardman_qty ?? 431;
+        $cardmanNominal = $kartuData->first()->cardman_nominal ?? 19911180;
+
         $exceptionAktifCount = $kartuData->where('exception_aktif', 'Ya')->count();
+
+        // Default Findings otomatis jika belum diedit user
+        $defaultFindings1 = "Ditemukan bahwa posisi antara fisik, saldo persediaan dan sistem cardman berbeda; dimana fisik mencatat sebanyak {$totalFisikQty} pcs atau Rp " . number_format($totalNominalFisik, 0, ',', '.') . "; rekening persediaan Rp " . number_format($saldoPersediaanGl, 0, ',', '.') . " dan sistem mencatat {$cardmanQty} pcs atau Rp " . number_format($cardmanNominal, 0, ',', '.') . ".";
+        
+        $findingsTabel1 = $kartuData->first()->findings_tabel1 ?: $defaultFindings1;
+        $findingsTabel2 = $kartuData->first()->findings_tabel2 ?: "Pin Mailer KC {$assignment->nama_unit} untuk Kartu Silver diketahui kelebihan dimana salah satunya dikarenakan kesalahan petugas dalam memberikan PIN Mailer pada saat aktivasi kartu ATM; untuk Kartu Platinum tidak disertai dengan PIN Mailer.";
 
         return view('surprise-audit.kartu', compact(
             'assignment',
             'kartuData',
-            'saldoBukuTotal',
-            'nilaiFisikTotal',
-            'selisihNilaiTotal',
+            'totalFisikQty',
+            'totalNominalFisik',
+            'saldoPersediaanGl',
+            'selisihPersediaanGl',
+            'totalPinMailer',
+            'selisihTotalKartuPin',
+            'cardmanQty',
+            'cardmanNominal',
+            'findingsTabel1',
+            'findingsTabel2',
             'exceptionAktifCount'
         ));
     }
@@ -395,50 +849,168 @@ class SurpriseAuditController extends Controller
             ->firstOrFail();
 
         $items = $request->input('items', []);
+        $saldoGl = (float) ($request->input('saldo_persediaan_gl', 22855910));
+        $cardmanQty = (int) ($request->input('cardman_qty', 431));
+        $cardmanNominal = (float) ($request->input('cardman_nominal', 19911180));
+        $findings1 = $request->input('findings_tabel1');
+        $findings2 = $request->input('findings_tabel2');
 
         foreach ($items as $detailId => $data) {
             $harga = (float) ($data['harga_per_kartu'] ?? 0);
-            $saldoBuku = (float) ($data['saldo_persediaan_buku'] ?? 0);
             $fisikKartu = (int) ($data['jumlah_fisik_kartu'] ?? 0);
             $pinMailer = (int) ($data['jumlah_pin_mailer'] ?? 0);
 
-            $qtyBuku = $harga > 0 ? floor($saldoBuku / $harga) : 0;
             $nilaiFisik = $fisikKartu * $harga;
-            $selisihQtyBukuFisik = $fisikKartu - $qtyBuku;
-            $selisihPinFisik = $pinMailer - $fisikKartu;
-            $selisihNilai = $nilaiFisik - $saldoBuku;
+            $selisihPinFisik = $fisikKartu - $pinMailer; // Kartu - PIN Mailer (positif = kartu lebih, negatif = pin lebih)
 
-            $isSesuai = ($qtyBuku == $fisikKartu) && 
-                       ($fisikKartu == $pinMailer) && 
-                       ($nilaiFisik == $saldoBuku);
+            // Upload bukti per item jika ada (Poin 7)
+            $fileBuktiPath = null;
+            if ($request->hasFile("items.{$detailId}.file_bukti")) {
+                $file = $request->file("items.{$detailId}.file_bukti");
+                $fileName = 'bukti_kartu_' . time() . '_' . $file->getClientOriginalName();
+                $fileBuktiPath = $file->storeAs('surprise_audit_bukti', $fileName, 'public');
+            }
 
-            $statusRekonsiliasi = $isSesuai ? 'SESUAI' : 'TIDAK SESUAI';
-            $exceptionAktif = $isSesuai ? 'Tidak' : 'Ya';
+            $updateData = [
+                'lokasi_penyimpanan' => $data['lokasi_penyimpanan'] ?? 'Brankas Utama',
+                'harga_per_kartu' => $harga,
+                'jumlah_fisik_kartu' => $fisikKartu,
+                'jumlah_pin_mailer' => $pinMailer,
+                'nilai_fisik_kartu' => $nilaiFisik,
+                'selisih_pin_fisik' => $selisihPinFisik,
+                'saldo_persediaan_gl' => $saldoGl,
+                'cardman_qty' => $cardmanQty,
+                'cardman_nominal' => $cardmanNominal,
+                'findings_tabel1' => $findings1,
+                'findings_tabel2' => $findings2,
+                'status_tindak_lanjut' => $data['status_tindak_lanjut'] ?? 'SUDAH SELESAI',
+                'komitmen_tanggal' => $data['komitmen_tanggal'] ?? null,
+                'klarifikasi' => $data['klarifikasi'] ?? null,
+                'exception_aktif' => ($selisihPinFisik != 0 || $nilaiFisik == 0) ? 'Ya' : 'Tidak',
+                'status_rekonsiliasi' => ($selisihPinFisik == 0) ? 'SESUAI' : 'SELISIH',
+            ];
+
+            if ($fileBuktiPath) {
+                $updateData['file_bukti'] = $fileBuktiPath;
+            }
 
             Sop05KkaKartuDetail::where('id', $detailId)
                 ->where('surprise_audit_assignment_id', $assignment->id)
-                ->update([
-                    'lokasi_penyimpanan' => $data['lokasi_penyimpanan'] ?? 'Brankas Utama',
-                    'saldo_persediaan_buku' => $saldoBuku,
-                    'harga_per_kartu' => $harga,
-                    'jumlah_fisik_kartu' => $fisikKartu,
-                    'jumlah_pin_mailer' => $pinMailer,
-                    'qty_menurut_buku' => $qtyBuku,
-                    'nilai_fisik_kartu' => $nilaiFisik,
-                    'selisih_qty_buku_fisik' => $selisihQtyBukuFisik,
-                    'selisih_pin_fisik' => $selisihPinFisik,
-                    'selisih_nilai' => $selisihNilai,
-                    'status_rekonsiliasi' => $statusRekonsiliasi,
-                    'sebab' => $data['sebab'] ?? null,
-                    'dampak' => $data['dampak'] ?? null,
-                    'referensi_bukti' => $data['referensi_bukti'] ?? null,
-                    'validasi' => 'LENGKAP',
-                    'exception_aktif' => $exceptionAktif,
-                ]);
+                ->update($updateData);
+        }
+
+        // Poin 8: Otomasi Status Lifecycle
+        if ($assignment->status_assignment === 'SIAP DILAKSANAKAN' || empty($assignment->status_assignment)) {
+            $assignment->update(['status_assignment' => 'DALAM PROSES']);
         }
 
         return redirect()->route('surprise_audit.kartu', $assignment->visit_id)
-            ->with('success', 'Data KKA Rekonsiliasi Kartu ATM & PIN Mailer berhasil diperbarui.');
+            ->with('success', 'Data Rekonsiliasi Kartu ATM & PIN Mailer berhasil disimpan.');
+    }
+
+    public function beritaAcaraKartu($id)
+    {
+        $assignment = SurpriseAuditAssignment::where('visit_id', $id)
+            ->orWhere('id', $id)
+            ->firstOrFail();
+
+        $kartuData = Sop05KkaKartuDetail::where('surprise_audit_assignment_id', $assignment->id)
+            ->orderByRaw("FIELD(jenis_kartu, 'Silver', 'Gold', 'Platinum')")
+            ->get();
+
+        $totalFisikQty = $kartuData->sum('jumlah_fisik_kartu');
+        $totalNominalFisik = $kartuData->sum('nilai_fisik_kartu');
+        $saldoPersediaanGl = $kartuData->first()->saldo_persediaan_gl ?? 22855910;
+        $selisihPersediaanGl = $totalNominalFisik - $saldoPersediaanGl;
+        $totalPinMailer = $kartuData->sum('jumlah_pin_mailer');
+        $selisihTotalKartuPin = $totalFisikQty - $totalPinMailer;
+
+        $cardmanQty = $kartuData->first()->cardman_qty ?? 431;
+        $cardmanNominal = $kartuData->first()->cardman_nominal ?? 19911180;
+
+        $findings1 = $kartuData->first()->findings_tabel1 ?? '';
+        $findings2 = $kartuData->first()->findings_tabel2 ?? '';
+
+        $tglInfo = self::tanggalTerbilangIndonesia($assignment->tanggal_rencana);
+
+        return view('surprise-audit.berita-acara-kartu', compact(
+            'assignment',
+            'tglInfo',
+            'kartuData',
+            'totalFisikQty',
+            'totalNominalFisik',
+            'saldoPersediaanGl',
+            'selisihPersediaanGl',
+            'totalPinMailer',
+            'selisihTotalKartuPin',
+            'cardmanQty',
+            'cardmanNominal',
+            'findings1',
+            'findings2'
+        ));
+    }
+
+    // Poin 9: Admin Review (Approve & Reject)
+    public function adminReview(Request $request, $id)
+    {
+        $user = auth()->user();
+        if (!$user || !in_array($user->role, ['admin', 'kabag_ra', 'kadiv_skai'])) {
+            return redirect()->back()->with('error', 'Akses ditolak: Hanya Admin / Reviewer yang berwenang melakukan approval/reject KKA.');
+        }
+
+        $assignment = SurpriseAuditAssignment::where('visit_id', $id)
+            ->orWhere('id', $id)
+            ->firstOrFail();
+
+        $request->validate([
+            'action' => 'required|in:approve,reject',
+            'catatan_review_admin' => 'nullable|string',
+            'nomor_surat_tugas' => 'nullable|string',
+        ]);
+
+        if ($request->action === 'approve') {
+            $assignment->update([
+                'status_review_admin' => 'DISETUJUI',
+                'status_assignment' => 'SELESAI',
+                'catatan_review_admin' => $request->catatan_review_admin ?? 'Disetujui oleh Reviewer SKAI/Admin.',
+                'nomor_surat_tugas' => $request->nomor_surat_tugas ?: $assignment->nomor_assignment,
+                'nomor_assignment' => $request->nomor_surat_tugas ?: $assignment->nomor_assignment,
+            ]);
+            return redirect()->back()->with('success', 'KKA Fisik berhasil di-APPROVE. RA sekarang dapat melakukan tindak lanjut klarifikasi ke cabang.');
+        } else {
+            if (!$request->catatan_review_admin) {
+                return redirect()->back()->with('error', 'Catatan reject wajib diisi agar RA mengetahui bagian mana yang perlu diperbaiki.');
+            }
+            $assignment->update([
+                'status_review_admin' => 'PERLU PERBAIKAN',
+                'status_assignment' => 'DALAM PROSES',
+                'catatan_review_admin' => $request->catatan_review_admin,
+            ]);
+            return redirect()->back()->with('error', 'KKA Fisik telah di-REJECT. RA wajib memperbaiki KKA sesuai catatan review.');
+        }
+    }
+
+    // Poin 7: RA Meminta Bukti Tambahan ke Cabang
+    public function mintaBuktiCabang(Request $request, $id)
+    {
+        $assignment = SurpriseAuditAssignment::where('visit_id', $id)
+            ->orWhere('id', $id)
+            ->firstOrFail();
+
+        $detailType = $request->detail_type; // 'kas' atau 'kartu'
+        $detailId = $request->detail_id;
+
+        if ($detailType === 'kas') {
+            Sop05KkaKasDetail::where('id', $detailId)
+                ->where('surprise_audit_assignment_id', $assignment->id)
+                ->update(['minta_bukti_cabang' => true]);
+        } elseif ($detailType === 'kartu') {
+            Sop05KkaKartuDetail::where('id', $detailId)
+                ->where('surprise_audit_assignment_id', $assignment->id)
+                ->update(['minta_bukti_cabang' => true]);
+        }
+
+        return redirect()->back()->with('success', 'Permintaan bukti tambahan telah dicatat dan diteruskan ke cabang.');
     }
 
     // ==========================================

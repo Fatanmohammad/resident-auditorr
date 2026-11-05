@@ -9,6 +9,7 @@ use App\Models\DailyRegister\DailyRegisterChecklist;
 use App\Http\Requests\Offsite\UpdateKkaRaRequest;
 use App\Http\Requests\Offsite\UpdateKkaAdminRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class KkaController extends Controller
 {
@@ -491,5 +492,84 @@ class KkaController extends Controller
                 'offsite_deviation_significant' => $totalSignifikan,
             ]);
         }
+    }
+
+    /**
+     * Menampilkan dan mengalirkan file PDF bukti langsung ke browser secara instan
+     * Mencegah freeze / loading terus pada server Windows / Laragon
+     */
+    public function viewBukti($id, Request $request)
+    {
+        $finding = KkaFinding::findOrFail($id);
+
+        if (!$finding->file_bukti) {
+            abort(404, 'File bukti belum diunggah.');
+        }
+
+        $disk = Storage::disk('public');
+        if ($disk->exists($finding->file_bukti)) {
+            $filePath = $disk->path($finding->file_bukti);
+        } else if (file_exists(storage_path('app/public/' . $finding->file_bukti))) {
+            $filePath = storage_path('app/public/' . $finding->file_bukti);
+        } else if (file_exists(public_path('storage/' . $finding->file_bukti))) {
+            $filePath = public_path('storage/' . $finding->file_bukti);
+        } else {
+            abort(404, 'File fisik bukti tidak ditemukan di penyimpanan server.');
+        }
+
+        $fileName = basename($filePath);
+
+        // Jika user minta download langsung
+        if ($request->has('download') || $request->input('action') === 'download') {
+            return response()->download($filePath, $fileName);
+        }
+
+        // Jika permintaan via fetch/XHR (raw binary)
+        if ($request->ajax() || $request->has('raw')) {
+            return response()->file($filePath, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+            ]);
+        }
+
+        // Tampilan Langsung Browser (Menggunakan Base64 Data URI)
+        // Solusi 100% Ampuh: Menghindari deadlock single-thread php artisan serve pada browser PDF viewer Windows
+        $fileData = file_get_contents($filePath);
+        $base64 = base64_encode($fileData);
+        $downloadUrl = route('offsite.kka.view-bukti', ['id' => $id, 'download' => 1]);
+
+        return response(<<<HTML
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bukti Transaksi - {$fileName}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1e293b; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { background: #0f172a; color: #fff; padding: 0.6rem 1.2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; }
+        .topbar-title { font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+        .btn-download { background: #2563eb; color: #fff; text-decoration: none; padding: 0.35rem 0.9rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; transition: background 0.2s; }
+        .btn-download:hover { background: #1d4ed8; }
+        .viewer-container { flex: 1; width: 100%; height: calc(100vh - 48px); background: #334155; }
+        embed, iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="topbar-title">
+            <span>📄 Dokumen Bukti: {$fileName}</span>
+        </div>
+        <a href="{$downloadUrl}" class="btn-download">
+            ⬇️ Unduh PDF Asli
+        </a>
+    </div>
+    <div class="viewer-container">
+        <embed src="data:application/pdf;base64,{$base64}" type="application/pdf" />
+    </div>
+</body>
+</html>
+HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
     }
 }

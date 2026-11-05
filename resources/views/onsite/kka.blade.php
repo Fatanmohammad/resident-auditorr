@@ -439,6 +439,20 @@
                     </div>
                 </div>
 
+                <!-- FLAGGING INDIKASI FRAUD (Poin 8 SOP 09) -->
+                <div id="fraud_flagging_banner" style="display:none; background:#fef2f2; border:1px solid #f87171; border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; color:#991b1b; font-size:0.85rem; font-weight:600;">
+                        <i class="bi bi-flag-fill text-danger fs-5"></i>
+                        <div>
+                            <div>FLAGGING INDIKASI FRAUD TERDETEKSI (STATUS CRITICAL)</div>
+                            <div style="font-weight:400; font-size:0.75rem; color:#b91c1c;">Temuan KKA ini berisiko Critical dan terindikasi fraud. Admin/Auditor dapat meneruskannya ke Modul Indikasi Fraud (SOP 09).</div>
+                        </div>
+                    </div>
+                    <a href="#" id="btn_eskalasi_fraud_onsite" target="_blank" class="btn btn-sm btn-danger fw-bold shadow-sm" style="white-space:nowrap;">
+                        <i class="bi bi-shield-exclamation me-1"></i> Teruskan ke Fraud SOP 09 &rarr;
+                    </a>
+                </div>
+
                 <div id="ra_actions" style="display:flex; justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border); padding-top:1rem;">
                     <button type="button" class="btn-back" onclick="closeDetail()">Batal</button>
                     <button type="button" class="btn-submit-ra" onclick="submitRa()">
@@ -477,12 +491,26 @@
                     </select>
                 </div>
                 <div>
-                    <label class="f-label">Keputusan Eskalasi</label>
-                    <select id="adm_keputusan_eskalasi" class="f-control">
+                    <label class="f-label">Keputusan Eskalasi / Fraud Flagging</label>
+                    <select id="adm_keputusan_eskalasi" class="f-control" onchange="onAdminEskalasiChange()">
                         <option value="Tidak">Tidak Dieskalasi</option>
                         <option value="Eskalasi Kadiv">Eskalasi ke Kadiv SKAI</option>
                         <option value="Eskalasi Direksi">Eskalasi ke Direksi</option>
+                        <option value="Terindikasi Fraud (SOP 09)">Terindikasi Fraud (Teruskan ke SOP 09)</option>
                     </select>
+                </div>
+            </div>
+
+            <!-- Box Disposisi Fraud Khusus Admin saat Approved/Terindikasi Fraud (Poin 8) -->
+            <div id="adm_fraud_action_box" style="display:none; margin-bottom:1rem; background:#fff1f2; border:1px solid #fecdd3; padding:0.75rem 1rem; border-radius:8px;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <div class="fw-bold text-danger small"><i class="bi bi-shield-exclamation me-1"></i> Disposisi Eskalasi Fraud:</div>
+                        <div class="small text-muted">Admin mengonfirmasi temuan ini sebagai indikasi fraud untuk ditindaklanjuti pada SOP 09.</div>
+                    </div>
+                    <a href="#" id="adm_btn_direct_fraud" target="_blank" class="btn btn-sm btn-danger fw-bold shadow-sm">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Buka Form SOP 09 dengan Data Terisi &rarr;
+                    </a>
                 </div>
             </div>
             <div style="margin-bottom:1rem;">
@@ -1061,6 +1089,42 @@ function hitungOtomatisSkorRisiko(tidakCount) {
     } else {
         tlEl.style.color = 'var(--dark)';
         tlEl.style.fontWeight = '600';
+    }
+
+    // Flagging Fraud SOP 09 saat Risk Final Critical (Poin 8)
+    const fraudBanner = document.getElementById('fraud_flagging_banner');
+    if (fraudBanner) {
+        if (riskFinal === 'Critical') {
+            fraudBanner.style.display = 'flex';
+            const exc = document.getElementById('ra_jenis_exception_ra') ? document.getElementById('ra_jenis_exception_ra').value : '';
+            const hasil = document.getElementById('ra_hasil_uji') ? document.getElementById('ra_hasil_uji').value : '';
+            const fCode = currentFinding ? (currentFinding.unit_code || '') : '';
+            const fName = currentFinding ? (currentFinding.unit_name || '') : '';
+            const url = `{{ route('pemeriksaan_awal.pelaporan_awal') }}?source=ONSITE_CRITICAL&dugaan=${encodeURIComponent(exc)}&fakta=${encodeURIComponent(hasil)}&kode_unit=${encodeURIComponent(fCode)}&nama_unit=${encodeURIComponent(fName)}&area=Onsite%20Audit`;
+            const btnEsk = document.getElementById('btn_eskalasi_fraud_onsite');
+            if (btnEsk) btnEsk.href = url;
+        } else {
+            fraudBanner.style.display = 'none';
+        }
+    }
+}
+
+function onAdminEskalasiChange() {
+    const val = document.getElementById('adm_keputusan_eskalasi').value;
+    const box = document.getElementById('adm_fraud_action_box');
+    if (box) {
+        if (val === 'Terindikasi Fraud (SOP 09)') {
+            box.style.display = 'block';
+            const exc = document.getElementById('ra_jenis_exception_ra') ? document.getElementById('ra_jenis_exception_ra').value : '';
+            const hasil = document.getElementById('ra_hasil_uji') ? document.getElementById('ra_hasil_uji').value : '';
+            const fCode = currentFinding ? (currentFinding.unit_code || '') : '';
+            const fName = currentFinding ? (currentFinding.unit_name || '') : '';
+            const url = `{{ route('pemeriksaan_awal.pelaporan_awal') }}?source=APPROVAL_ADMIN_FRAUD&dugaan=${encodeURIComponent(exc)}&fakta=${encodeURIComponent(hasil)}&kode_unit=${encodeURIComponent(fCode)}&nama_unit=${encodeURIComponent(fName)}&area=Onsite%20Audit`;
+            const btnDirect = document.getElementById('adm_btn_direct_fraud');
+            if (btnDirect) btnDirect.href = url;
+        } else {
+            box.style.display = 'none';
+        }
     }
 }
 

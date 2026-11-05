@@ -6,11 +6,17 @@ use App\Models\AuditPlan;
 use App\Models\User;
 use App\Models\Unit;
 use App\Models\FinalAuditPlan;
+use App\Models\SurpriseAuditAssignment;
+use App\Models\Sop07RegisterTl;
+use App\Models\Onsite\OnsiteVisit;
+use App\Models\Sop09RegisterIndikasi;
+use App\Models\PelaporanBulanan\Sop08KalenderLaporan;
+use App\Http\Controllers\Monitoring\MonitoringController;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-public function index()
+    public function index()
     {
         $user        = Auth::user();
         $totalRa     = User::where('role', 'ra')->count();
@@ -21,7 +27,7 @@ public function index()
         $jadwalSelesai = AuditPlan::where('status_approval', 'approved')->count();
         $totalFinalPlan = FinalAuditPlan::count();
 
-        // §5 — Agregat dashboard
+        // SOP 01 Agregat
         $period    = date('Y');
         $units     = Unit::where('is_active', true)->get();
         $riskDist  = $units->groupBy(fn($u) => $u->latestRiskScoring($period)?->final_category ?? 'Belum Dinilai')
@@ -46,10 +52,78 @@ public function index()
             }
         } catch (\Throwable $e) {}
 
+        // =========================================================================
+        // SOP 04: KUNJUNGAN ONSITE CABANG
+        // =========================================================================
+        $totalOnsiteVisits = OnsiteVisit::count();
+        $onsiteBerlangsung = OnsiteVisit::whereIn('status', ['Berlangsung', 'Dijadwalkan', 'Draft'])->count();
+        $pendingOnsiteVisits = OnsiteVisit::whereIn('status', ['Berlangsung', 'Dijadwalkan', 'Draft'])
+            ->orderBy('tanggal_mulai', 'asc')
+            ->take(5)
+            ->get();
+
+        // =========================================================================
+        // SOP 05: SURPRISE AUDIT (SIDAK FISIK)
+        // =========================================================================
+        $totalSurpriseAudit = SurpriseAuditAssignment::count();
+        $saDalamProses      = SurpriseAuditAssignment::whereIn('status_assignment', ['SIAP DILAKSANAKAN', 'DALAM PROSES'])->count();
+        $saPerluPerbaikan   = SurpriseAuditAssignment::where('status_review_admin', 'PERLU PERBAIKAN')->count();
+        $saSelesai          = SurpriseAuditAssignment::where('status_assignment', 'SELESAI')->count();
+
+        $pendingSurpriseAudits = SurpriseAuditAssignment::where('status_assignment', '!=', 'SELESAI')
+            ->orWhere('status_review_admin', 'PERLU PERBAIKAN')
+            ->orderByRaw("FIELD(status_review_admin, 'PERLU PERBAIKAN') DESC")
+            ->orderBy('updated_at', 'desc')
+            ->take(5)
+            ->get();
+
+        // =========================================================================
+        // SOP 07: MONITORING TINDAK LANJUT TERPADU
+        // =========================================================================
+        MonitoringController::autoSyncSurpriseAuditFindings();
+
+        $queryInternal = Sop07RegisterTl::whereIn('sumber_tl', ['SKAI', 'Resident Auditor', 'Internal', 'Surprise Audit', 'Offsite', 'Onsite']);
+        $totalTemuanInternal = (clone $queryInternal)->count();
+        $temuanInternalBelumTl = (clone $queryInternal)->whereIn('status_final', ['OPEN', 'UNDER REVIEW', 'INADEQUATE', 'OVERDUE'])->count();
+        $temuanInternalSudahTl = (clone $queryInternal)->whereIn('status_final', ['CLOSED', 'PROPOSED CLOSED'])->count();
+
+        $queryRegulator = Sop07RegisterTl::whereIn('sumber_tl', ['Regulator', 'OJK', 'Bank Indonesia', 'BI', 'BPK', 'Auditor Eksternal']);
+        $totalTemuanRegulator = (clone $queryRegulator)->count();
+        $temuanRegulatorBelumTl = (clone $queryRegulator)->whereIn('status_final', ['OPEN', 'UNDER REVIEW', 'INADEQUATE', 'OVERDUE'])->count();
+        $temuanRegulatorSudahTl = (clone $queryRegulator)->whereIn('status_final', ['CLOSED', 'PROPOSED CLOSED'])->count();
+
+        $pendingFindings = Sop07RegisterTl::whereIn('status_final', ['OPEN', 'UNDER REVIEW', 'INADEQUATE', 'OVERDUE'])
+            ->orderByRaw("FIELD(prioritas, 'HIGH', 'MEDIUM', 'LOW')")
+            ->orderBy('target_penyelesaian', 'asc')
+            ->take(5)
+            ->get();
+
+        // =========================================================================
+        // SOP 08 & SOP 09: PELAPORAN BULANAN & INDIKASI FRAUD
+        // =========================================================================
+        $totalLaporanBulanan = Sop08KalenderLaporan::count();
+        $laporanBulanIni = Sop08KalenderLaporan::where('periode', 'LIKE', '%' . date('Y') . '%')
+            ->orderBy('id', 'desc')
+            ->first();
+        $laporanBulanIniStatus = $laporanBulanIni ? ($laporanBulanIni->status_final ?: $laporanBulanIni->status_review) : 'Belum Diajukan';
+
+        $activeFraudCases = Sop09RegisterIndikasi::whereIn('status_kasus', ['OPEN', 'INVESTIGASI', 'PROSES'])->count();
+        $pendingFrauds = Sop09RegisterIndikasi::whereIn('status_kasus', ['OPEN', 'INVESTIGASI', 'PROSES'])->take(3)->get();
+
         return view('dashboard', compact(
             'user', 'totalRa', 'totalUnit',
             'jadwalAktif', 'totalJadwal', 'jadwalSelesai', 'totalFinalPlan',
-            'riskDist', 'typeDist', 'freqDist', 'planStats', 'riskTriggerAlarms'
+            'riskDist', 'typeDist', 'freqDist', 'planStats', 'riskTriggerAlarms',
+            // SOP 04 Onsite
+            'totalOnsiteVisits', 'onsiteBerlangsung', 'pendingOnsiteVisits',
+            // SOP 05 Surprise Audit
+            'totalSurpriseAudit', 'saDalamProses', 'saPerluPerbaikan', 'saSelesai', 'pendingSurpriseAudits',
+            // SOP 07 Monitoring
+            'totalTemuanInternal', 'temuanInternalBelumTl', 'temuanInternalSudahTl',
+            'totalTemuanRegulator', 'temuanRegulatorBelumTl', 'temuanRegulatorSudahTl',
+            'pendingFindings',
+            // SOP 08 & 09
+            'totalLaporanBulanan', 'laporanBulanIniStatus', 'activeFraudCases', 'pendingFrauds'
         ));
     }
 }

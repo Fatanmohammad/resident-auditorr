@@ -21,8 +21,19 @@
                     Tujuan Pengiriman Data
                 </label>
                 <div style="padding: 0.6rem 0.8rem; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; color: #1e3a8a; font-weight: 600;">
-                    <i class="bi bi-send-check-fill me-2"></i> Admin Pusat (KCU Palu)
+                    <i class="bi bi-person-badge-fill me-2"></i> Admin
                 </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="font-weight: 600; color: #334155; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">
+                    Periode Data <span style="color: #dc2626;">*</span>
+                </label>
+                <input type="month" name="periode" required class="form-control" style="font-size: 0.9rem; border-radius: 6px;"
+                       value="{{ old('periode', $visit->periode ?? date('Y-m')) }}">
+                <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.35rem; margin-bottom: 0;">
+                    Tentukan bulan dan tahun periode data transaksi CBS yang diuji.
+                </p>
             </div>
 
             <div style="margin-bottom: 2rem;">

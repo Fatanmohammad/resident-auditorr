@@ -175,6 +175,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/kpi-ra', [MonitoringController::class, 'kpiRa'])->name('kpi_ra');
         Route::get('/ringkasan-bulanan', [MonitoringController::class, 'ringkasanBulanan'])->name('ringkasan_bulanan');
         
+        // Halaman Terpadu Monitoring TL (Internal & Regulator) - Revisi Poin 10 & 11
+        Route::get('/terpadu', [MonitoringController::class, 'monitoringTerpadu'])->name('terpadu');
+        Route::post('/upload-regulator', [MonitoringController::class, 'uploadRegulatorExcel'])->name('upload_regulator');
+        Route::post('/upload-internal', [MonitoringController::class, 'uploadInternalExcel'])->name('upload_internal');
+        Route::get('/template-excel/{type}', [MonitoringController::class, 'downloadTemplateExcel'])->name('template_excel');
+        Route::post('/update-tl/{id}', [MonitoringController::class, 'updateTindakLanjut'])->name('update_tl');
+        Route::get('/bukti/{id}', [MonitoringController::class, 'viewBukti'])->name('view_bukti');
+        
         // Export Excel
         Route::get('/export/{sheet}', [MonitoringController::class, 'exportExcel'])->name('export_excel');
     });
@@ -185,28 +193,37 @@ Route::middleware('auth')->group(function () {
     Route::prefix('pemeriksaan-awal')->name('pemeriksaan_awal.')->middleware('role:ra,kabag_ra,kadiv_skai,admin')->group(function () {
         Route::get('/', [PemeriksaanAwalController::class, 'index'])->name('index');
         
-        // Register Indikasi
+        // Submenu 1: Pelaporan Awal
+        Route::get('/pelaporan-awal', [PemeriksaanAwalController::class, 'pelaporanAwal'])->name('pelaporan_awal');
+        Route::post('/pelaporan-awal/store', [PemeriksaanAwalController::class, 'storePelaporanAwal'])->name('pelaporan_awal.store');
+
+        // Kompatibilitas rute lama register
         Route::get('/register', [PemeriksaanAwalController::class, 'register'])->name('register');
         Route::post('/register/store', [PemeriksaanAwalController::class, 'storeRegister'])->name('register.store');
         Route::post('/register/{id}/status', [PemeriksaanAwalController::class, 'updateStatus'])->name('register.status');
         
-        // Triase Awal
-        Route::get('/triase', [PemeriksaanAwalController::class, 'triase'])->name('triase');
-        Route::post('/triase/store', [PemeriksaanAwalController::class, 'storeTriase'])->name('triase.store');
+        // Submenu 2: Daftar Laporan Indikasi Fraud
+        Route::get('/daftar-laporan', [PemeriksaanAwalController::class, 'daftarLaporan'])->name('daftar_laporan');
+        Route::get('/detail-laporan/{id}', [PemeriksaanAwalController::class, 'detailLaporan'])->name('detail_laporan');
         
-        // Chain of Custody
-        Route::get('/bukti-custody', [PemeriksaanAwalController::class, 'buktiCustody'])->name('bukti_custody');
-        Route::post('/bukti-custody/store', [PemeriksaanAwalController::class, 'storeCustody'])->name('bukti_custody.store');
+        // Submenu 3: Status Penanganan & Disposisi Memo
+        Route::get('/status-penanganan', [PemeriksaanAwalController::class, 'statusPenanganan'])->name('status_penanganan');
+        Route::post('/status-penanganan/{id}/memo', [PemeriksaanAwalController::class, 'storeMemoDisposisi'])->name('status_penanganan.memo');
+        Route::post('/status-penanganan/{id}/status', [PemeriksaanAwalController::class, 'updateStatusPenanganan'])->name('status_penanganan.update_status');
         
-        // KKA Pemeriksaan
-        Route::get('/kka', [PemeriksaanAwalController::class, 'kka'])->name('kka');
-        Route::post('/kka/store', [PemeriksaanAwalController::class, 'storeKka'])->name('kka.store');
-        
-        // Keputusan & Eskalasi
-        Route::get('/eskalasi', [PemeriksaanAwalController::class, 'eskalasi'])->name('eskalasi');
-        Route::post('/eskalasi/store', [PemeriksaanAwalController::class, 'storeEskalasi'])->name('eskalasi.store');
-        
-        // Export Excel
+        // Download & Print Actions
+        Route::get('/download-register/{id}', [PemeriksaanAwalController::class, 'printRegister'])->name('download_register');
+        Route::get('/download-bukti/{id}', [PemeriksaanAwalController::class, 'downloadBukti'])->name('download_bukti');
+        Route::get('/print-memo/{id}', [PemeriksaanAwalController::class, 'printMemo'])->name('print_memo');
+
+        // Kompatibilitas rute lama
+        Route::get('/register', [PemeriksaanAwalController::class, 'daftarLaporan'])->name('register');
+        Route::post('/register/store', [PemeriksaanAwalController::class, 'storePelaporanAwal'])->name('register.store');
+        Route::get('/triase', [PemeriksaanAwalController::class, 'statusPenanganan'])->name('triase');
+        Route::post('/triase/store', [PemeriksaanAwalController::class, 'storePelaporanAwal'])->name('triase.store');
+        Route::get('/bukti-custody', [PemeriksaanAwalController::class, 'daftarLaporan'])->name('bukti_custody');
+        Route::get('/kka', [PemeriksaanAwalController::class, 'pelaporanAwal'])->name('kka');
+        Route::get('/eskalasi', [PemeriksaanAwalController::class, 'statusPenanganan'])->name('eskalasi');
         Route::get('/export/{sheet}', [PemeriksaanAwalController::class, 'exportExcel'])->name('export_excel');
     });
 
@@ -223,14 +240,24 @@ Route::middleware('auth')->group(function () {
         // Rute KKA Kas (SOP 05)
         Route::get('/{id}/kas', [SurpriseAuditController::class, 'showKas'])->name('kas');
         Route::post('/{id}/kas', [SurpriseAuditController::class, 'storeKas'])->name('kas.store');
+        Route::get('/{id}/kas/berita-acara', [SurpriseAuditController::class, 'beritaAcaraKas'])->name('kas.berita_acara');
 
         // Rute KKA Kas ATM (SOP 05 - WP-RA-05-D)
         Route::get('/{id}/atm', [SurpriseAuditController::class, 'atm'])->name('atm');
         Route::post('/{id}/atm', [SurpriseAuditController::class, 'storeAtm'])->name('atm.store');
+        Route::delete('/{id}/atm/{detailId}', [SurpriseAuditController::class, 'destroyAtm'])->name('atm.destroy');
 
         // Rute KKA Kartu ATM & PIN Mailer (SOP 05 - WP-RA-05-E)
         Route::get('/{id}/kartu', [SurpriseAuditController::class, 'showKartu'])->name('kartu');
         Route::post('/{id}/kartu', [SurpriseAuditController::class, 'storeKartu'])->name('kartu.store');
+        Route::get('/{id}/kartu/berita-acara', [SurpriseAuditController::class, 'beritaAcaraKartu'])->name('kartu.berita_acara');
+
+        // Review Admin (Approve & Reject) & Permintaan Bukti (Poin 7, 8, 9)
+        Route::post('/{id}/admin-review', [SurpriseAuditController::class, 'adminReview'])->name('admin_review');
+        Route::post('/{id}/minta-bukti', [SurpriseAuditController::class, 'mintaBuktiCabang'])->name('minta_bukti');
+
+        // Viewer Bukti Surprise Audit (Base64 Stream Anti-Deadlock)
+        Route::get('/bukti/{type}/{id}', [SurpriseAuditController::class, 'viewBukti'])->name('view_bukti');
 
         // Rute KKA Dokumen Berharga (SOP 05 - WP-RA-05-G)
         Route::get('/{id}/dokumen-berharga', [SurpriseAuditController::class, 'showDokumenBerharga'])->name('dokumen_berharga');
@@ -362,6 +389,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/kka', [OffsiteKkaController::class, 'index'])->name('offsite.kka.index');
         Route::get('/kka/data', [OffsiteKkaController::class, 'data'])->name('offsite.kka.data');
         Route::get('/kka/{id}/review-data', [OffsiteKkaController::class, 'getReviewData'])->name('offsite.kka.review-data');
+        Route::get('/kka/{id}/view-bukti', [OffsiteKkaController::class, 'viewBukti'])->name('offsite.kka.view-bukti');
 
         // Update KKA oleh RA
         Route::post('/kka/{id}/ra', [OffsiteKkaController::class, 'updateRa'])
@@ -596,5 +624,28 @@ Route::middleware('auth')->group(function () {
         Route::post('/master-parameter/hari-libur', [PelaporanBulananController::class, 'storeHariLibur'])->name('pelaporan-bulanan.master-parameter.store-libur');
         Route::delete('/master-parameter/hari-libur/{id}', [PelaporanBulananController::class, 'destroyHariLibur'])->whereNumber('id')->name('pelaporan-bulanan.master-parameter.destroy-libur');
     });
+
+    // Fallback Streaming Dokumen / Bukti Storage (Anti-hang / Anti-loading pada Server Windows & Laragon)
+    Route::get('/storage/{path}', function ($path) {
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        if ($disk->exists($path)) {
+            $filePath = $disk->path($path);
+        } else if (file_exists(storage_path('app/public/' . $path))) {
+            $filePath = storage_path('app/public/' . $path);
+        } else if (file_exists(public_path('storage/' . $path))) {
+            $filePath = public_path('storage/' . $path);
+        } else {
+            abort(404, 'File bukti tidak ditemukan di penyimpanan server.');
+        }
+
+        $mime = mime_content_type($filePath) ?: 'application/octet-stream';
+        $fileName = basename($filePath);
+
+        return response()->file($filePath, [
+            'Content-Type'        => $mime,
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
+        ]);
+    })->where('path', '.*');
 
 }); // Akhir Route::middleware('auth') (dibuka pada baris 60)

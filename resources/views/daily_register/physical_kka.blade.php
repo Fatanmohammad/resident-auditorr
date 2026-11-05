@@ -566,7 +566,7 @@
                     <!-- KELOMPOK 1: ULE -->
                     <div class="card mb-3 border-0 shadow-sm" style="background:#f8fafc; border-radius:8px;">
                         <div class="card-header bg-transparent border-0 py-2 d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-primary small"><i class="bi bi-cash me-1"></i>KELOMPOK 1 — UANG KERTAS (ULE / LAYAK EDAR)</span>
+                            <span class="fw-bold text-primary small"><i class="bi bi-cash me-1"></i>KELOMPOK 1 ΓÇö UANG KERTAS (ULE / LAYAK EDAR)</span>
                             <span class="small text-muted">Subtotal ULE: <strong id="subtotalUleDisplay" class="text-dark">Rp 0</strong></span>
                         </div>
                         <div class="card-body p-0">
@@ -609,7 +609,7 @@
                     @php $offsetLogam = count($khasanahUleItems); @endphp
                     <div class="card mb-3 border-0 shadow-sm" style="background:#f8fafc; border-radius:8px;">
                         <div class="card-header bg-transparent border-0 py-2 d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-success small"><i class="bi bi-coin me-1"></i>KELOMPOK 2 — UANG LOGAM</span>
+                            <span class="fw-bold text-success small"><i class="bi bi-coin me-1"></i>KELOMPOK 2 ΓÇö UANG LOGAM</span>
                             <span class="small text-muted">Subtotal Logam: <strong id="subtotalLogamDisplay" class="text-dark">Rp 0</strong></span>
                         </div>
                         <div class="card-body p-0">
@@ -653,7 +653,7 @@
                     @php $offsetUtle = $offsetLogam + count($khasanahLogamItems); @endphp
                     <div class="card mb-3 border-0 shadow-sm" style="background:#f8fafc; border-radius:8px;">
                         <div class="card-header bg-transparent border-0 py-2 d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>KELOMPOK 3 — UANG LUSUH (UTLE / TIDAK LAYAK EDAR)</span>
+                            <span class="fw-bold text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>KELOMPOK 3 ΓÇö UANG LUSUH (UTLE / TIDAK LAYAK EDAR)</span>
                             <span class="small text-muted">Subtotal UTLE: <strong id="subtotalUtleDisplay" class="text-dark">Rp 0</strong></span>
                         </div>
                         <div class="card-body p-0">
@@ -781,7 +781,7 @@
                             <div class="atm-card-item" data-atm-index="{{ $mIdx }}">
                                 <div class="atm-card-topbar">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="fs-5 text-primary">🏧</span>
+                                        <span class="fs-5 text-primary">≡ƒÅº</span>
                                         <div class="input-group input-group-sm" style="width: 250px;">
                                             <span class="input-group-text fw-bold bg-white text-muted">ID ATM:</span>
                                             <input type="text" name="atm_machines[{{ $mIdx }}][terminal_id]" class="form-control font-monospace fw-bold fs-6 atm-terminal-id text-primary" placeholder="00128" value="{{ $mach->terminal_id }}" {{ $isAdmin ? 'readonly' : 'required' }}>
@@ -981,7 +981,7 @@
                             <div class="atm-card-item" data-atm-index="0">
                                 <div class="atm-card-topbar">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="fs-5 text-primary">🏧</span>
+                                        <span class="fs-5 text-primary">≡ƒÅº</span>
                                         <div class="input-group input-group-sm" style="width: 250px;">
                                             <span class="input-group-text fw-bold bg-white text-muted">ID ATM:</span>
                                             <input type="text" name="atm_machines[0][terminal_id]" class="form-control font-monospace fw-bold fs-6 atm-terminal-id text-primary" placeholder="00128" value="00128" {{ $isAdmin ? 'readonly' : 'required' }}>
@@ -1181,19 +1181,19 @@
                                     
                                     $groupName = 'Observasi Lingkungan';
                                     if (str_contains($area, 'Titik Alarm')) {
-                                        $groupName = '🚨 1. SPESIFIK 4 TITIK ALARM (PANIC BUTTON)';
+                                        $groupName = '≡ƒÜ¿ 1. SPESIFIK 4 TITIK ALARM (PANIC BUTTON)';
                                     } elseif (str_contains($area, 'Area Terbatas')) {
-                                        $groupName = '🔒 2. SPESIFIK 5 AREA TERBATAS (RESTRICTED ACCESS)';
+                                        $groupName = '≡ƒöÆ 2. SPESIFIK 5 AREA TERBATAS (RESTRICTED ACCESS)';
                                     } elseif ($isCctv) {
-                                        $groupName = '📹 3. MATRIKS 9 TITIK CCTV (ACUAN E.1.5 — WAJIB BACKUP MINIMAL 90 HARI)';
+                                        $groupName = '≡ƒô╣ 3. MATRIKS 9 TITIK CCTV (ACUAN E.1.5 ΓÇö WAJIB BACKUP MINIMAL 90 HARI)';
                                     } elseif (str_contains($area, 'Security') || str_contains($area, 'Kepegawaian')) {
-                                        $groupName = '👮 4. MUTASI & BUKU MUTASI SECURITY SERTA ABSENSI KARYAWAN';
+                                        $groupName = '≡ƒæ« 4. MUTASI & BUKU MUTASI SECURITY SERTA ABSENSI KARYAWAN';
                                     } elseif (str_contains($area, 'Branding Interior')) {
-                                        $groupName = '🏢 5. BRANDING INTERIOR KANTOR (STANDAR CORPORATE BANK SULTENG)';
+                                        $groupName = '≡ƒÅó 5. BRANDING INTERIOR KANTOR (STANDAR CORPORATE BANK SULTENG)';
                                     } elseif (str_contains($area, 'Fasilitas ATM')) {
-                                        $groupName = '🏧 6. SECTION KHUSUS ATM (ACUAN STANDAR AUDIT E.4.4)';
+                                        $groupName = '≡ƒÅº 6. SECTION KHUSUS ATM (ACUAN STANDAR AUDIT E.4.4)';
                                     } elseif (str_contains($area, 'Keselamatan') || str_contains($area, 'Kelistrikan')) {
-                                        $groupName = '🧯 7. KESELAMATAN KERJA & FASILITAS LISTRIK CADANGAN';
+                                        $groupName = '≡ƒº» 7. KESELAMATAN KERJA & FASILITAS LISTRIK CADANGAN';
                                     }
                                 @endphp
 
@@ -1221,7 +1221,7 @@
                                                 <i class="bi bi-shield-check me-1"></i> Wajib Min. 90 Hari
                                             </span>
                                         @else
-                                            <span class="text-muted small">—</span>
+                                            <span class="text-muted small">ΓÇö</span>
                                         @endif
                                     </td>
                                     <td>
@@ -1265,6 +1265,7 @@
                                         <select name="obs_review[{{ $fakeId }}][status_review]" class="form-select border-warning">
                                             <option value="Pending" {{ ($item['status_review'] ?? '') === 'Pending' ? 'selected' : '' }}>Pending</option>
                                             <option value="Approved" {{ ($item['status_review'] ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
+                                            <option value="Approved - Fraud" {{ ($item['status_review'] ?? '') === 'Approved - Fraud' ? 'selected' : '' }}>Approved - Terindikasi Fraud (SOP 09)</option>
                                             <option value="Revisi" {{ ($item['status_review'] ?? '') === 'Revisi' ? 'selected' : '' }}>Revisi</option>
                                         </select>
                                     </td>
@@ -1360,6 +1361,7 @@
                                         <select name="stok_review[{{ $fakeId }}][status_review]" class="form-select border-warning">
                                             <option value="Pending" {{ ($item['status_review'] ?? '') === 'Pending' ? 'selected' : '' }}>Pending</option>
                                             <option value="Approved" {{ ($item['status_review'] ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
+                                            <option value="Approved - Fraud" {{ ($item['status_review'] ?? '') === 'Approved - Fraud' ? 'selected' : '' }}>Approved - Terindikasi Fraud (SOP 09)</option>
                                             <option value="Revisi" {{ ($item['status_review'] ?? '') === 'Revisi' ? 'selected' : '' }}>Revisi</option>
                                         </select>
                                     </td>
@@ -1373,7 +1375,7 @@
                 </div>
 
                 <!-- ========================================================================= -->
-                <!-- TAB 5: REKONSILIASI KARTU ATM (FORMAT TEGAS SECTION A & SECTION B — E.4.3)-->
+                <!-- TAB 5: REKONSILIASI KARTU ATM (FORMAT TEGAS SECTION A & SECTION B ΓÇö E.4.3)-->
                 <!-- ========================================================================= -->
                 <div class="tab-pane fade p-3" id="atm" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -1394,7 +1396,7 @@
                     <div class="section-card">
                         <div class="section-card-header">
                             <div>
-                                <i class="bi bi-table me-1"></i>SECTION A — REKONSILIASI STOK, SALDO BUKU (2 PEMBANDING), &amp; RINCIAN JENIS KARTU
+                                <i class="bi bi-table me-1"></i>SECTION A ΓÇö REKONSILIASI STOK, SALDO BUKU (2 PEMBANDING), &amp; RINCIAN JENIS KARTU
                             </div>
                             @if(!$isAdmin)
                             <button type="button" class="btn btn-xs btn-outline-primary fw-bold" id="btnAddAtmStockRow" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">
@@ -1529,7 +1531,7 @@
                     <div class="section-card">
                         <div class="section-card-header">
                             <div>
-                                <i class="bi bi-shield-check me-1"></i>SECTION B — KONTROL PENGELOLAAN KARTU ATM (CHECKLIST MURNI YA / TIDAK)
+                                <i class="bi bi-shield-check me-1"></i>SECTION B ΓÇö KONTROL PENGELOLAAN KARTU ATM (CHECKLIST MURNI YA / TIDAK)
                             </div>
                             <span class="small text-muted fw-normal">Format checklist murni satu per satu (tanpa tombol otomatis).</span>
                         </div>
@@ -2060,7 +2062,7 @@ document.addEventListener('DOMContentLoaded', function () {
             div.innerHTML = `
                 <div class="atm-card-topbar">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fs-5 text-primary">🏧</span>
+                        <span class="fs-5 text-primary">≡ƒÅº</span>
                         <div class="input-group input-group-sm" style="width: 250px;">
                             <span class="input-group-text fw-bold bg-white text-muted">ID ATM:</span>
                             <input type="text" name="atm_machines[${newMIdx}][terminal_id]" class="form-control font-monospace fw-bold fs-6 atm-terminal-id text-primary" placeholder="00128" value="${newTerminalId}" required>
@@ -2432,7 +2434,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <input type="text" name="barang_cetakan_details[${newIdx}][nama_barang]" class="form-control form-control-sm" placeholder="Nama Barang Cetakan" required>
                 </td>
                 <td>
-                    <input type="text" name="barang_cetakan_details[${newIdx}][kriteria]" class="form-control form-control-sm bct-kriteria-input" placeholder="Nama Barang — Kosong / Belum Digunakan" required>
+                    <input type="text" name="barang_cetakan_details[${newIdx}][kriteria]" class="form-control form-control-sm bct-kriteria-input" placeholder="Nama Barang ΓÇö Kosong / Belum Digunakan" required>
                 </td>
                 <td>
                     <select name="barang_cetakan_details[${newIdx}][satuan]" class="form-select form-select-sm">

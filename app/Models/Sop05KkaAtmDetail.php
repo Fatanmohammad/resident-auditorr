@@ -36,6 +36,11 @@ class Sop05KkaAtmDetail extends Model
         'referensi_bukti',
         'validasi',
         'exception_aktif',
+        'status_tindak_lanjut',
+        'komitmen_tanggal',
+        'file_bukti',
+        'klarifikasi',
+        'minta_bukti_cabang',
     ];
 
     public function assignment()

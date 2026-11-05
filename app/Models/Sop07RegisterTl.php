@@ -64,5 +64,7 @@ class Sop07RegisterTl extends Model
         'tanggal_closed_final',
         'catatan_reviewer',
         'exception_aktif',
+        'status_tindak_lanjut',
+        'klarifikasi',
     ];
 }

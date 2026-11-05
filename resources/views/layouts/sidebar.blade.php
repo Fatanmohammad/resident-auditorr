@@ -221,6 +221,9 @@
                 <i class="bi bi-chevron-down nav-arrow"></i>
             </div>
             <div class="nav-group-children">
+                <a href="{{ route('monitoring.terpadu') }}" class="nav-item {{ request()->routeIs('monitoring.terpadu') ? 'active fw-bold' : '' }}">
+                    <i class="bi bi-layers-fill nav-icon text-primary"></i> Monitoring Terpadu (Internal & Regulator)
+                </a>
                 <a href="{{ route('monitoring.index') }}" class="nav-item {{ request()->routeIs('monitoring.index') ? 'active' : '' }}">
                     <i class="bi bi-speedometer2 nav-icon"></i> Ringkasan & Control
                 </a>
@@ -248,30 +251,21 @@
             </div>
         </div>
 
-        {{-- ===================== MODUL PEMERIKSAAN AWAL FRAUD ===================== --}}
+        {{-- ===================== MODUL PEMERIKSAAN AWAL FRAUD (SOP 09) ===================== --}}
         <div class="nav-group {{ request()->is('pemeriksaan-awal*') ? 'open' : '' }}">
             <div class="nav-group-toggle">
-                <i class="bi bi-shield-exclamation nav-icon"></i> Pemeriksaan Awal Fraud
+                <i class="bi bi-shield-exclamation nav-icon"></i> Indikasi Fraud (SOP 09)
                 <i class="bi bi-chevron-down nav-arrow"></i>
             </div>
             <div class="nav-group-children">
-                <a href="{{ route('pemeriksaan_awal.index') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.index') ? 'active' : '' }}">
-                    <i class="bi bi-speedometer2 nav-icon"></i> Dashboard Indikasi
+                <a href="{{ route('pemeriksaan_awal.pelaporan_awal') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.pelaporan_awal') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-plus nav-icon"></i> Pelaporan Awal
                 </a>
-                <a href="{{ route('pemeriksaan_awal.register') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.register') ? 'active' : '' }}">
-                    <i class="bi bi-journal-plus nav-icon"></i> Register Indikasi
+                <a href="{{ route('pemeriksaan_awal.daftar_laporan') }}" class="nav-item {{ (request()->routeIs('pemeriksaan_awal.daftar_laporan') || request()->routeIs('pemeriksaan_awal.index')) ? 'active' : '' }}">
+                    <i class="bi bi-journal-text nav-icon"></i> Daftar Laporan
                 </a>
-                <a href="{{ route('pemeriksaan_awal.triase') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.triase') ? 'active' : '' }}">
-                    <i class="bi bi-diagram-3 nav-icon"></i> Triase Awal
-                </a>
-                <a href="{{ route('pemeriksaan_awal.bukti_custody') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.bukti_custody') ? 'active' : '' }}">
-                    <i class="bi bi-shield-check nav-icon"></i> Chain of Custody
-                </a>
-                <a href="{{ route('pemeriksaan_awal.kka') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.kka') ? 'active' : '' }}">
-                    <i class="bi bi-journal-check nav-icon"></i> KKA Pemeriksaan
-                </a>
-                <a href="{{ route('pemeriksaan_awal.eskalasi') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.eskalasi') ? 'active' : '' }}">
-                    <i class="bi bi-arrow-up-right-circle nav-icon"></i> Keputusan & Eskalasi
+                <a href="{{ route('pemeriksaan_awal.status_penanganan') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.status_penanganan') ? 'active' : '' }}">
+                    <i class="bi bi-diagram-3 nav-icon"></i> Status Penanganan
                 </a>
             </div>
         </div>
