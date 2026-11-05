@@ -30,20 +30,25 @@ class DumpPengaduanParser
             }
         }
 
-        $idxDate = $headerMap['TGL_PENGADUAN'] 
+        $idxDate = $headerMap['TANGGAL_PENGADUAN']
+            ?? ($headerMap['TGL_PENGADUAN'] 
             ?? ($headerMap['TANGGAL'] 
             ?? ($headerMap['TGL'] 
-            ?? 0));
+            ?? 0)));
 
         $idxJenis = $headerMap['JENIS_PENGADUAN'] 
             ?? ($headerMap['KATEGORI'] 
             ?? ($headerMap['PERIHAL'] 
             ?? ($headerMap['KETERANGAN'] ?? 1)));
 
-        $idxSla = $headerMap['HARI_PENYELESAIAN'] 
+        $idxSla = $headerMap['SLA_HARI']
+            ?? ($headerMap['HARI_PENYELESAIAN'] 
             ?? ($headerMap['SLA'] 
             ?? ($headerMap['HARI'] 
-            ?? ($headerMap['DURASI'] ?? 2)));
+            ?? ($headerMap['DURASI'] ?? 2))));
+
+        $idxArsip = DumpParserHelper::findNoArsipIndex($header ?? []);
+        $idxKetTx = DumpParserHelper::findKetTxIndex($header ?? []);
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
@@ -68,6 +73,9 @@ class DumpPengaduanParser
 
             $jenisPengaduan = strtoupper(trim($row[$idxJenis] ?? ''));
             $hariPenyelesaian = (int) ($row[$idxSla] ?? 0);
+            $noArsip = $idxArsip !== null ? DumpParserHelper::cleanNoArsip($row[$idxArsip] ?? null) : null;
+            $ketTx = $idxKetTx !== null ? DumpParserHelper::cleanKetTx($row[$idxKetTx] ?? null) : null;
+            $deskripsiUtama = $ketTx ?: "Pengaduan: {$jenisPengaduan} ({$hariPenyelesaian} hari)";
 
             // LOGIKA PENGADUAN: Deteksi jika penyelesaian pengaduan melebihi SLA
             $isSangatTerlambat = $hariPenyelesaian > 30; // High Risk
@@ -90,13 +98,14 @@ class DumpPengaduanParser
                     'nominal_terkait'      => 0,
                     'risk_awal'            => $riskLevel,
                     'jenis_exception_awal' => $isSangatTerlambat ? 'Penyelesaian SLA > 30 Hari' : 'Penyelesaian SLA Terlambat (> 14 Hari)',
-                    'deskripsi'            => "Pengaduan: {$jenisPengaduan} ({$hariPenyelesaian} hari)" . ($namaNasabah ? " - Nasabah: {$namaNasabah}" : ''),
-                    'rincian'              => "Pengaduan: {$jenisPengaduan} ({$hariPenyelesaian} hari)",
+                    'deskripsi'            => $deskripsiUtama,
                     'created_at'           => now(),
                     'updated_at'           => now(),
                 ];
 
                 if ($isDailyRegister) {
+                    $itemException['no_arsip'] = $noArsip;
+                    $itemException['rincian'] = $deskripsiUtama;
                     $dailyRegisterData[] = $itemException;
                 } else {
                     $moderateHighRiskData[] = $itemException;
@@ -112,7 +121,7 @@ class DumpPengaduanParser
                     'kategori'        => 'Penyelesaian Tepat Waktu (SLA Terpenuhi)',
                     'nominal_terkait' => 0,
                     'risk_awal'       => 'Low',
-                    'rincian'         => "Pengaduan: {$jenisPengaduan} ({$hariPenyelesaian} hari)",
+                    'rincian'         => $ketTx ?: "Pengaduan: {$jenisPengaduan} ({$hariPenyelesaian} hari)",
                     'created_at'      => now(),
                     'updated_at'      => now(),
                 ];

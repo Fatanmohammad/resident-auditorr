@@ -30,8 +30,11 @@ class DumpCbsParser
         }
 
         $idxDate = $headerMap['TGL_TX'] ?? ($headerMap['TANGGAL'] ?? 0);
-        $idxKet = $headerMap['KET_TX'] ?? ($headerMap['KETERANGAN'] ?? ($headerMap['RINCIAN'] ?? ($headerMap['DESKRIPSI'] ?? ($headerMap['URAIAN'] ?? ($headerMap['TRANSAKSI'] ?? 1)))));
-        $idxNominal = $headerMap['JUMLAH_TX'] ?? ($headerMap['NOMINAL'] ?? 2);
+        $idxArsip = DumpParserHelper::findNoArsipIndex($header ?? []);
+        $idxKetTx = DumpParserHelper::findKetTxIndex($header ?? []);
+        $idxKeterangan = $headerMap['KETERANGAN'] ?? ($headerMap['KET'] ?? null);
+        $idxKet = $idxKetTx ?? ($idxKeterangan ?? ($headerMap['RINCIAN'] ?? ($headerMap['DESKRIPSI'] ?? ($headerMap['URAIAN'] ?? ($headerMap['TRANSAKSI'] ?? 1)))));
+        $idxNominal = $headerMap['JUMLAH_TX'] ?? ($headerMap['NOMINAL'] ?? ($headerMap['JUMLAH'] ?? ($headerMap['NILAI'] ?? ($headerMap['DEBET'] ?? ($headerMap['SALDO'] ?? 2)))));
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
@@ -50,13 +53,17 @@ class DumpCbsParser
                 $tanggal = $parsedDate ? date('Y-m-d', $parsedDate) : now()->toDateString();
             }
 
+            $rawKetTx = $idxKetTx !== null ? DumpParserHelper::cleanKetTx($row[$idxKetTx] ?? null) : null;
+            $rawKet = $idxKeterangan !== null ? trim($row[$idxKeterangan] ?? '') : '';
             $keterangan = strtoupper(trim($row[$idxKet] ?? ''));
-            $nominal = (float) str_replace(['Rp', ',', '.'], '', $row[$idxNominal] ?? 0);
+            $evalText = strtoupper(trim(($rawKet ? $rawKet . ' ' : '') . ($rawKetTx ?: $keterangan)));
+
+            $nominal = (float) str_replace(['Rp', ',', '.', ' '], '', $row[$idxNominal] ?? 0);
 
             // DETEKSI LOGIKA EXCEL SOP 02 & KEYWORD HARDCODE (REVERSAL & TPP)
-            $isReversal = strpos($keterangan, 'REV-') !== false || strpos($keterangan, 'PEMBATALAN') !== false;
+            $isReversal = strpos($evalText, 'REV-') !== false || strpos($evalText, 'PEMBATALAN') !== false;
             $isHighNominal = $nominal >= 50000000;
-            $isTpp = (stripos($keterangan, 'TPP') !== false || stripos($keterangan, 'TUNJANGAN PERBAIKAN PENGHASILAN') !== false);
+            $isTpp = (stripos($evalText, 'TPP') !== false || stripos($evalText, 'TUNJANGAN PERBAIKAN PENGHASILAN') !== false);
 
             $riskLevel = ($isReversal || $isHighNominal || $isTpp) ? ($isHighNominal ? 'High' : 'Moderate') : 'Low';
             
@@ -72,16 +79,18 @@ class DumpCbsParser
                 // =========================================================
                 $sourceSheet = 'KKA_Teller_Kas'; // Default Fallback Teller & Kas
 
-                if (preg_match('/(BIAYA|INTERN|JURNAL INTERN|PENAMPUNG|OVERBOOKING AKUN)/i', $keterangan)) {
+                if (preg_match('/(BIAYA|INTERN|JURNAL INTERN|PENAMPUNG|OVERBOOKING AKUN)/i', $evalText)) {
                     $sourceSheet = 'KKA_Biaya_Beban';
-                } elseif (preg_match('/(KREDIT|PENCAIRAN|ANGSURAN|PELUNASAN)/i', $keterangan)) {
+                } elseif (preg_match('/(KREDIT|PENCAIRAN|ANGSURAN|PELUNASAN)/i', $evalText)) {
                     $sourceSheet = 'KKA_Kredit';
-                } elseif (preg_match('/(TRANSFER|KLIRING|SKN|RTGS|CEK|BG|TPP|TUNJANGAN|KIRIMAN UANG|INWARD|OUTWARD|TELLER|KAS|SETOR|TARIK|OTORISASI|SELISIH KAS|KAS\s*KECIL|KHASANAH|BRANKAS|KAS\s*BESAR)/i', $keterangan)) {
+                } elseif (preg_match('/(TRANSFER|KLIRING|SKN|RTGS|CEK|BG|TPP|TUNJANGAN|KIRIMAN UANG|INWARD|OUTWARD|TELLER|KAS|SETOR|TARIK|OTORISASI|SELISIH KAS|KAS\s*KECIL|KHASANAH|BRANKAS|KAS\s*BESAR)/i', $evalText)) {
                     $sourceSheet = 'KKA_Teller_Kas';
                 }
             } else {
                 $sourceSheet = 'DUMP_01_CBS';
             }
+
+            $jenisException = $isReversal ? 'Indikasi Reversal' : ($isTpp ? 'Transaksi TPP' : 'Nominal Melewati Limit');
 
             if ($isDailyRegister) {
                 if ($riskLevel === 'Low') {
@@ -93,23 +102,25 @@ class DumpCbsParser
                         'kategori'        => 'Transaksi Wajar / Low Risk',
                         'nominal_terkait' => $nominal,
                         'risk_awal'       => 'Low',
-                        'rincian'         => $keterangan,
+                        'rincian'         => $rawKetTx ?: $keterangan,
                     ];
                 } else {
                     $subArea = null;
                     if ($sourceSheet === 'KKA_Teller_Kas') {
-                        if (preg_match('/KAS\s*KECIL/i', $keterangan)) {
+                        if (preg_match('/KAS\s*KECIL/i', $evalText)) {
                             $subArea = ['A2'];
-                        } elseif (preg_match('/(KHASANAH|BRANKAS|KAS\s*BESAR)/i', $keterangan)) {
+                        } elseif (preg_match('/(KHASANAH|BRANKAS|KAS\s*BESAR)/i', $evalText)) {
                             $subArea = ['A3'];
                         } else {
                             $subArea = ['A1'];
                         }
                     }
 
-                    $jenisException = $isReversal ? 'Indikasi Reversal' : ($isTpp ? 'Transaksi TPP' : 'Nominal Melewati Limit');
+                    $noArsip = $idxArsip !== null ? DumpParserHelper::cleanNoArsip($row[$idxArsip] ?? null) : null;
+                    $deskripsiUtama = $rawKetTx ?: ($keterangan ?: $jenisException);
 
                     $dailyRegisterData[] = [
+                        'no_arsip'             => $noArsip,
                         'tanggal_data'         => $tanggal,
                         'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'            => $kodeUnit,
@@ -118,8 +129,8 @@ class DumpCbsParser
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
                         'jenis_exception_awal' => $jenisException,
-                        'deskripsi'            => $keterangan,
-                        'rincian'              => $keterangan,
+                        'deskripsi'            => $deskripsiUtama,
+                        'rincian'              => $deskripsiUtama,
                         'selected_sub_areas'   => $subArea ? json_encode($subArea) : null,
                         'created_at'           => now(),
                         'updated_at'           => now(),
@@ -138,8 +149,7 @@ class DumpCbsParser
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
                         'jenis_exception_awal' => $jenisException,
-                        'deskripsi'            => $keterangan,
-                        'rincian'              => $keterangan,
+                        'deskripsi'            => $rawKetTx ?: $keterangan,
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];

@@ -110,14 +110,35 @@ class DashboardController extends Controller
             ->orderBy('id', 'desc')
             ->first();
         $laporanBulanIniStatus = $laporanBulanIni ? ($laporanBulanIni->status_final ?: $laporanBulanIni->status_review) : 'Belum Diajukan';
-
         $activeFraudCases = Sop09RegisterIndikasi::whereIn('status_kasus', ['OPEN', 'INVESTIGASI', 'PROSES'])->count();
         $pendingFrauds = Sop09RegisterIndikasi::whereIn('status_kasus', ['OPEN', 'INVESTIGASI', 'PROSES'])->take(3)->get();
+
+        // =========================================================================
+        // SOP 02: DAILY REGISTER (KKA HARIAN)
+        // =========================================================================
+        $dailyQuery = \App\Models\DailyRegister\DailyRegisterFinding::whereIn('risk_awal', ['Moderate', 'High']);
+        if ($user && strtolower($user->role) === 'ra') {
+            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
+                ? $user->cabangIdYangDapatDiakses() 
+                : [$user->cabang_id];
+            $unitCodes = Unit::whereIn('cabang_id', $allowedCabangIds)
+                ->whereIn('unit_type', ['KC', 'KCU', 'KP'])
+                ->pluck('unit_code');
+            $dailyQuery->whereIn('kode_unit', $unitCodes);
+        }
+        $dailyTotal = (clone $dailyQuery)->count();
+        $dailySelesai = (clone $dailyQuery)->where(function($q) {
+            $q->where('review_status', \App\Models\DailyRegister\DailyRegisterFinding::STATUS_SELESAI)
+              ->orWhere('status_review', 'Approved');
+        })->count();
+        $dailyBelumDikerjakan = max(0, $dailyTotal - $dailySelesai);
 
         return view('dashboard', compact(
             'user', 'totalRa', 'totalUnit',
             'jadwalAktif', 'totalJadwal', 'jadwalSelesai', 'totalFinalPlan',
             'riskDist', 'typeDist', 'freqDist', 'planStats', 'riskTriggerAlarms',
+            // SOP 02 Daily Register
+            'dailyTotal', 'dailySelesai', 'dailyBelumDikerjakan',
             // SOP 04 Onsite
             'totalOnsiteVisits', 'onsiteBerlangsung', 'pendingOnsiteVisits',
             // SOP 05 Surprise Audit

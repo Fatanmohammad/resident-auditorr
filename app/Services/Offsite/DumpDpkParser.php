@@ -28,11 +28,13 @@ class DumpDpkParser
         }
 
         // Tentukan letak index
-        $idxDate = $headerMap['TGL_BUKA_REK'] ?? ($headerMap['TGL_TX_AKHIR'] ?? 0);
-        $idxStatus = $headerMap['STSDESC'] ?? ($headerMap['KD_STATUS'] ?? 1);
-        $idxNominal = $headerMap['SALDO_AKHIR'] ?? 2;
-        $idxNoRek = $headerMap['NO_REK'] ?? 0;
-        $idxNama = $headerMap['NAMA_SINGKAT'] ?? 2;
+        $idxDate = $headerMap['TGL_BUKA_REK'] ?? ($headerMap['TGL_TX_AKHIR'] ?? ($headerMap['TANGGAL'] ?? 0));
+        $idxStatus = $headerMap['STSDESC'] ?? ($headerMap['KD_STATUS'] ?? ($headerMap['STATUS_REKENING'] ?? ($headerMap['STATUS'] ?? 1)));
+        $idxNominal = $headerMap['SALDO_AKHIR'] ?? ($headerMap['SALDO'] ?? ($headerMap['NOMINAL'] ?? 2));
+        $idxNoRek = $headerMap['NO_REK'] ?? ($headerMap['NO_REKENING'] ?? 0);
+        $idxNama = $headerMap['NAMA_SINGKAT'] ?? ($headerMap['NAMA_NASABAH'] ?? ($headerMap['NAMA'] ?? 2));
+        $idxArsip = DumpParserHelper::findNoArsipIndex($header ?? []);
+        $idxKet = DumpParserHelper::findKetTxIndex($header ?? []);
 
         $lowRiskData = [];
         $moderateHighRiskData = [];
@@ -54,6 +56,8 @@ class DumpDpkParser
             $nominal = (float) ($row[$idxNominal] ?? 0); 
             $noRekening = $row[$idxNoRek] ?? '-';
             $namaNasabah = $row[$idxNama] ?? '-';
+            $noArsip = $idxArsip !== null ? DumpParserHelper::cleanNoArsip($row[$idxArsip] ?? null) : null;
+            $ketTx = $idxKet !== null ? DumpParserHelper::cleanKetTx($row[$idxKet] ?? null) : null;
 
             // --- LOGIKA ALARM KKA ---
             $isDormantActive = ($statusRekening === 'DORMANT' && $nominal > 0);
@@ -62,6 +66,7 @@ class DumpDpkParser
             $riskLevel = ($isDormantActive || $isNewHighValue) ? ($isDormantActive ? 'High' : 'Moderate') : 'Low';
             $jenisTemuan = $isDormantActive ? 'Aktivasi Dormant Ireguler' : 'Rekening Baru Nominal Besar';
             $deskripsiOtomatis = "Terdeteksi anomali pada rekening {$noRekening} atas nama {$namaNasabah} dengan status '{$statusRekening}' dan saldo/nominal Rp " . number_format($nominal, 0, ',', '.') . " di Unit {$kodeUnit}.";
+            $deskripsiUtama = $ketTx ?: $deskripsiOtomatis;
 
             if ($riskLevel === 'High') {
                 $countHigh++;
@@ -79,10 +84,11 @@ class DumpDpkParser
                         'kategori'        => 'Pembukaan/Mutasi Wajar',
                         'nominal_terkait' => $nominal,
                         'risk_awal'       => 'Low',
-                        'rincian'         => 'Status: ' . $statusRekening,
+                        'rincian'         => $ketTx ?: ('Status: ' . $statusRekening),
                     ];
                 } else {
                     $dailyRegisterData[] = [
+                        'no_arsip'             => $noArsip,
                         'tanggal_data'         => $tanggal,
                         'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'            => $kodeUnit,
@@ -91,7 +97,8 @@ class DumpDpkParser
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
                         'jenis_exception_awal' => $jenisTemuan,
-                        'deskripsi'            => $deskripsiOtomatis,
+                        'deskripsi'            => $deskripsiUtama,
+                        'rincian'              => $ketTx ?: $deskripsiOtomatis,
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];
@@ -107,7 +114,7 @@ class DumpDpkParser
                         'nominal_terkait' => $nominal,
                         'risk_awal' => $riskLevel,
                         'jenis_exception_awal' => $jenisTemuan,
-                        'deskripsi' => $deskripsiOtomatis,
+                        'deskripsi' => $deskripsiUtama,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];

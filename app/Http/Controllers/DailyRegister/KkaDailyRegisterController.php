@@ -26,6 +26,14 @@ class KkaDailyRegisterController extends Controller
      */
     public function index(Request $request)
     {
+        // Backfill ringan untuk data existing yang deskripsinya masih kosong atau '-' tapi memiliki nilai di rincian
+        try {
+            DailyRegisterFinding::where(function($q) {
+                $q->whereNull('deskripsi')->orWhere('deskripsi', '')->orWhere('deskripsi', '-');
+            })->whereNotNull('rincian')->where('rincian', '!=', '')->where('rincian', '!=', '-')
+            ->update(['deskripsi' => DB::raw('rincian')]);
+        } catch (\Throwable $e) {}
+
         $path = $request->path();
         
         // Jika route adalah rekapitulasi-cabang
@@ -299,6 +307,14 @@ class KkaDailyRegisterController extends Controller
      */
     public function data(Request $request)
     {
+        // Backfill ringan untuk data existing yang deskripsinya masih kosong atau '-' tapi memiliki nilai di rincian
+        try {
+            DailyRegisterFinding::where(function($q) {
+                $q->whereNull('deskripsi')->orWhere('deskripsi', '')->orWhere('deskripsi', '-');
+            })->whereNotNull('rincian')->where('rincian', '!=', '')->where('rincian', '!=', '-')
+            ->update(['deskripsi' => DB::raw('rincian')]);
+        } catch (\Throwable $e) {}
+
         $user = auth()->user();
         $isRa = ($user && strtolower($user->role) === 'ra');
         $query = DailyRegisterFinding::query();
@@ -523,14 +539,15 @@ class KkaDailyRegisterController extends Controller
             'status'  => 'success',
             'data'    => $findings,
             'summary' => [
-                'total_exception'      => $totalException,
-                'total_nominal'        => (float) $totalNominal,
-                'high_risk'            => $highRiskCount,
-                'selesai_review'       => $selesaiReviewCount,
-                'backlog_count'        => $backlogCount,
-                'tab_counts'           => $tabCounts,
-                'tab_statuses'         => $tabStatuses,
-                'current_sheet_counts' => $currentSheetCounts,
+                'total_exception'        => $totalException,
+                'total_nominal'          => (float) $totalNominal,
+                'high_risk'              => $highRiskCount,
+                'selesai_review'         => $selesaiReviewCount,
+                'total_belum_dikerjakan' => max(0, $totalException - $selesaiReviewCount),
+                'backlog_count'          => $backlogCount,
+                'tab_counts'             => $tabCounts,
+                'tab_statuses'           => $tabStatuses,
+                'current_sheet_counts'   => $currentSheetCounts,
             ]
         ]);
     }

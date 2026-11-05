@@ -253,7 +253,7 @@
             <!-- Dropdown Cetak Arsip PDF Resmi -->
             <div class="dropdown">
                 <button class="btn btn-sm btn-outline-primary dropdown-toggle fw-bold shadow-sm d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px; font-size: 0.82rem; padding: 0.45rem 0.85rem;">
-                    <i class="bi bi-printer"></i> Cetak Berita Acara / Arsip PDF
+                    <i class="bi bi-printer"></i> Cetak Berita Acara
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.83rem;">
                     <li><h6 class="dropdown-header text-uppercase" style="font-size: 0.7rem;">Cetak Per Dokumen</h6></li>
@@ -261,8 +261,43 @@
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-ba-atm', $id) }}" target="_blank"><i class="bi bi-wallet2 me-2 text-info"></i>BA Cash Opname ATM</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-kka-kartu', $id) }}" target="_blank"><i class="bi bi-credit-card-2-front me-2 text-warning"></i>KKA Kartu ATM (E.4.3)</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-kka-cetakan', $id) }}" target="_blank"><i class="bi bi-printer me-2 text-success"></i>KKA Barang Cetakan</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-kka-observasi', $id) }}" target="_blank"><i class="bi bi-eye me-2 text-secondary"></i>KKA Observasi Lingkungan</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item fw-bold text-primary" href="{{ route('daily-register.physical-kka.print-all', $id) }}" target="_blank"><i class="bi bi-collection me-2"></i>Cetak Berkas Lengkap (Dossier Tahap 2)</a></li>
+                </ul>
+            </div>
+
+            <!-- Dropdown Download PDF Resmi -->
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-danger dropdown-toggle fw-bold shadow-sm d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px; font-size: 0.82rem; padding: 0.45rem 0.85rem;">
+                    <i class="bi bi-file-earmark-pdf"></i> Download PDF
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.83rem;">
+                    <li><h6 class="dropdown-header text-uppercase" style="font-size: 0.7rem;">Download PDF Per Dokumen</h6></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-kas', $id) }}"><i class="bi bi-cash-stack me-2 text-primary"></i>PDF Kas Khasanah (Olibs)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-atm', $id) }}"><i class="bi bi-wallet2 me-2 text-info"></i>PDF Cash Opname ATM</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-kartu', $id) }}"><i class="bi bi-credit-card-2-front me-2 text-warning"></i>PDF KKA Kartu ATM (E.4.3)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-cetakan', $id) }}"><i class="bi bi-printer me-2 text-success"></i>PDF KKA Barang Cetakan</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-observasi', $id) }}"><i class="bi bi-eye me-2 text-secondary"></i>PDF KKA Observasi Lingkungan</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item fw-bold text-danger" href="{{ route('daily-register.physical-kka.download-pdf-all', $id) }}"><i class="bi bi-collection me-2"></i>Download PDF Berkas Lengkap (Rekap)</a></li>
+                </ul>
+            </div>
+
+            <!-- Dropdown Download Excel Resmi -->
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-success dropdown-toggle fw-bold shadow-sm d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px; font-size: 0.82rem; padding: 0.45rem 0.85rem;">
+                    <i class="bi bi-file-earmark-excel"></i> Download Excel
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.83rem;">
+                    <li><h6 class="dropdown-header text-uppercase" style="font-size: 0.7rem;">Download Excel Per Dokumen</h6></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-kas', $id) }}"><i class="bi bi-cash-stack me-2 text-primary"></i>Excel Kas Khasanah (Olibs)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-atm', $id) }}"><i class="bi bi-wallet2 me-2 text-info"></i>Excel Cash Opname ATM</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-kartu', $id) }}"><i class="bi bi-credit-card-2-front me-2 text-warning"></i>Excel KKA Kartu ATM (E.4.3)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-cetakan', $id) }}"><i class="bi bi-printer me-2 text-success"></i>Excel KKA Barang Cetakan</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-observasi', $id) }}"><i class="bi bi-eye me-2 text-secondary"></i>Excel KKA Observasi Lingkungan</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item fw-bold text-success" href="{{ route('daily-register.physical-kka.export-excel-all', $id) }}"><i class="bi bi-collection me-2"></i>Download Excel Berkas Lengkap (Rekap)</a></li>
                 </ul>
             </div>
             @endif
@@ -274,35 +309,27 @@
         </div>
     </div>
 
-    <!-- FORM UTAMA -->
-    <form id="formKkaFisik" action="{{ $isAdmin ? route('daily-register.physical-kka.review') : route('daily-register.physical-kka.submit') }}" method="POST" enctype="multipart/form-data">
-        @csrf
-        
-        @if(isset($id))
-            <input type="hidden" name="physical_kka_id" value="{{ $id }}">
-        @endif
-
-        <!-- Global Header Inputs: No. Arsip & Posisi Tanggal Rekonsiliasi -->
-        <div class="card mb-3 border-0 shadow-sm" style="border-radius: 10px; background: #ffffff;">
-            <div class="card-body p-3">
-                <div class="row g-3 align-items-center">
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold mb-1 text-muted"><i class="bi bi-bookmark-check text-primary me-1"></i>Nomor Arsip Dokumen KKA Fisik</label>
-                        <input type="text" name="no_arsip" class="form-control form-control-sm font-monospace fw-bold" value="{{ $noArsip }}" placeholder="ARSIP-KKA-..." {{ $isAdmin ? 'readonly' : 'required' }}>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold mb-1 text-muted"><i class="bi bi-calendar-event text-primary me-1"></i>Posisi Tanggal Rekonsiliasi Fisik</label>
-                        <input type="date" name="posisi_tanggal_rekon" class="form-control form-control-sm" value="{{ $posisiTanggalRekon }}" {{ $isAdmin ? 'readonly' : 'required' }}>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold mb-1 text-muted"><i class="bi bi-building text-primary me-1"></i>Status Arsip Lapangan</label>
-                        <div>
-                            <span class="badge-soft badge-soft-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Siap Cetak Otomatis Tanpa Tertahan Review</span>
-                        </div>
+    <!-- Global Header Inputs: No. Arsip & Posisi Tanggal Rekonsiliasi -->
+    <div class="card mb-3 border-0 shadow-sm" style="border-radius: 10px; background: #ffffff;">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold mb-1 text-muted"><i class="bi bi-bookmark-check text-primary me-1"></i>Nomor Arsip Dokumen KKA Fisik</label>
+                    <input type="text" id="globalNoArsip" class="form-control form-control-sm font-monospace fw-bold" value="{{ $noArsip }}" placeholder="ARSIP-KKA-..." {{ $isAdmin ? 'readonly' : '' }}>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold mb-1 text-muted"><i class="bi bi-calendar-event text-primary me-1"></i>Posisi Tanggal Rekonsiliasi Fisik</label>
+                    <input type="date" id="globalPosisiTanggalRekon" class="form-control form-control-sm" value="{{ $posisiTanggalRekon }}" {{ $isAdmin ? 'readonly' : '' }}>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold mb-1 text-muted"><i class="bi bi-building text-primary me-1"></i>Status Arsip Lapangan</label>
+                    <div>
+                        <span class="badge-soft badge-soft-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Siap Cetak Otomatis Tanpa Tertahan Review</span>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
 @php
     $schedMap = [];
@@ -551,48 +578,57 @@
                 <!-- TAB 1: CASH OPNAME KHASANAH (STANDAR BA PEMERIKSAAN KAS BANK SULTENG)    -->
                 <!-- ========================================================================= -->
                 <div class="tab-pane fade show active p-3" id="cash" role="tabpanel">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <div>
-                            <h6 class="fw-bold mb-1"><i class="bi bi-safe2 text-primary me-2"></i>Pemeriksaan Fisik Kas Khasanah (Berita Acara Kas Besar Olibs)</h6>
-                            <small class="text-muted">Standar resmi BERITA ACARA PEMERIKSAAN KAS Bank Sulteng: 3 Kelompok Uang (ULE, Logam, UTLE) vs Kas Besar Sistem Olibs.</small>
-                        </div>
-                        <div>
-                            <span class="badge-soft badge-soft-primary">
-                                <i class="bi bi-shield-lock me-1"></i> Dual Control Khasanah
-                            </span>
-                        </div>
-                    </div>
+                    <form method="POST" action="{{ $isAdmin ? route('daily-register.physical-kka.review') : route('daily-register.physical-kka.submit') }}" novalidate>
+                        @csrf
+                        @if(isset($id))
+                            <input type="hidden" name="physical_kka_id" value="{{ $id }}">
+                        @endif
+                        <input type="hidden" name="sub_tab" value="kas">
+                        <input type="hidden" name="no_arsip" class="sync-no-arsip" value="{{ $noArsip }}">
+                        <input type="hidden" name="posisi_tanggal_rekon" class="sync-posisi-tanggal" value="{{ $posisiTanggalRekon }}">
 
-                    <!-- KELOMPOK 1: ULE -->
-                    <div class="card mb-3 border-0 shadow-sm" style="background:#f8fafc; border-radius:8px;">
-                        <div class="card-header bg-transparent border-0 py-2 d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-primary small"><i class="bi bi-cash me-1"></i>KELOMPOK 1 ΓÇö UANG KERTAS (ULE / LAYAK EDAR)</span>
-                            <span class="small text-muted">Subtotal ULE: <strong id="subtotalUleDisplay" class="text-dark">Rp 0</strong></span>
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <h6 class="fw-bold mb-1"><i class="bi bi-safe2 text-primary me-2"></i>Pemeriksaan Fisik Kas Khasanah (Berita Acara Kas Besar Olibs)</h6>
+                                <small class="text-muted">Standar resmi BERITA ACARA PEMERIKSAAN KAS Bank Sulteng: 3 Kelompok Uang (ULE, Logam, UTLE) vs Kas Besar Sistem Olibs.</small>
+                            </div>
+                            <div>
+                                <span class="badge-soft badge-soft-primary">
+                                    <i class="bi bi-shield-lock me-1"></i> Dual Control Khasanah
+                                </span>
+                            </div>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-excel mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th style="width:5%;">No</th>
-                                            <th style="width:30%;">Pecahan Uang</th>
-                                            <th style="width:30%;">Jumlah Lembar (Input RA)</th>
-                                            <th style="width:35%;">Total Nominal Fisik (Rp)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($khasanahUleItems as $idx => $item)
-                                        <tr class="cash-calc-row" data-kelompok="ULE" data-nilai="{{ $item['nilai'] }}">
-                                            <td class="text-center fw-bold">{{ $idx + 1 }}</td>
-                                            <td>
-                                                <strong>{{ $item['pecahan'] }}</strong>
-                                                <input type="hidden" name="cash_details[{{ $idx }}][kelompok]" value="ULE">
-                                                <input type="hidden" name="cash_details[{{ $idx }}][objek_persediaan]" value="Uang Kertas Layak Edar">
-                                                <input type="hidden" name="cash_details[{{ $idx }}][pecahan]" value="{{ $item['pecahan'] }}">
-                                            </td>
-                                            <td>
-                                                <input type="number" min="0" step="1" name="cash_details[{{ $idx }}][jumlah_lembar]" class="form-control text-end cash-lembar" placeholder="0" value="{{ $item['jumlah_lembar'] ?? 0 }}" {{ $isAdmin ? 'readonly' : 'required' }}>
-                                            </td>
+
+                        <!-- KELOMPOK 1: ULE -->
+                        <div class="card mb-3 border-0 shadow-sm" style="background:#f8fafc; border-radius:8px;">
+                            <div class="card-header bg-transparent border-0 py-2 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-primary small"><i class="bi bi-cash me-1"></i>KELOMPOK 1 — UANG KERTAS (ULE / LAYAK EDAR)</span>
+                                <span class="small text-muted">Subtotal ULE: <strong id="subtotalUleDisplay" class="text-dark">Rp 0</strong></span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-excel mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:5%;">No</th>
+                                                <th style="width:30%;">Pecahan Uang</th>
+                                                <th style="width:30%;">Jumlah Lembar (Input RA)</th>
+                                                <th style="width:35%;">Total Nominal Fisik (Rp)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($khasanahUleItems as $idx => $item)
+                                            <tr class="cash-calc-row" data-kelompok="ULE" data-nilai="{{ $item['nilai'] }}">
+                                                <td class="text-center fw-bold">{{ $idx + 1 }}</td>
+                                                <td>
+                                                    <strong>{{ $item['pecahan'] }}</strong>
+                                                    <input type="hidden" name="cash_details[{{ $idx }}][kelompok]" value="ULE">
+                                                    <input type="hidden" name="cash_details[{{ $idx }}][objek_persediaan]" value="Uang Kertas Layak Edar">
+                                                    <input type="hidden" name="cash_details[{{ $idx }}][pecahan]" value="{{ $item['pecahan'] }}">
+                                                </td>
+                                                <td>
+                                                    <input type="number" min="0" step="1" name="cash_details[{{ $idx }}][jumlah_lembar]" class="form-control text-end cash-lembar" placeholder="0" value="{{ $item['jumlah_lembar'] ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
+                                                </td>
                                             <td>
                                                 <input type="text" class="form-control text-end fw-bold cash-nominal-display border-0 bg-transparent text-primary" readonly value="Rp {{ number_format($item['nominal'] ?? 0, 0, ',', '.') }}">
                                                 <input type="hidden" name="cash_details[{{ $idx }}][nominal]" class="cash-nominal-raw" value="{{ $item['nominal'] ?? 0 }}">
@@ -635,7 +671,7 @@
                                                 <input type="hidden" name="cash_details[{{ $rowIdx }}][pecahan]" value="{{ $item['pecahan'] }}">
                                             </td>
                                             <td>
-                                                <input type="number" min="0" step="1" name="cash_details[{{ $rowIdx }}][jumlah_lembar]" class="form-control text-end cash-lembar" placeholder="0" value="{{ $item['jumlah_lembar'] ?? 0 }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="number" min="0" step="1" name="cash_details[{{ $rowIdx }}][jumlah_lembar]" class="form-control text-end cash-lembar" placeholder="0" value="{{ $item['jumlah_lembar'] ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
                                             </td>
                                             <td>
                                                 <input type="text" class="form-control text-end fw-bold cash-nominal-display border-0 bg-transparent text-success" readonly value="Rp {{ number_format($item['nominal'] ?? 0, 0, ',', '.') }}">
@@ -679,7 +715,7 @@
                                                 <input type="hidden" name="cash_details[{{ $rowIdx }}][pecahan]" value="{{ $item['pecahan'] }}">
                                             </td>
                                             <td>
-                                                <input type="number" min="0" step="1" name="cash_details[{{ $rowIdx }}][jumlah_lembar]" class="form-control text-end cash-lembar" placeholder="0" value="{{ $item['jumlah_lembar'] ?? 0 }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="number" min="0" step="1" name="cash_details[{{ $rowIdx }}][jumlah_lembar]" class="form-control text-end cash-lembar" placeholder="0" value="{{ $item['jumlah_lembar'] ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
                                             </td>
                                             <td>
                                                 <input type="text" class="form-control text-end fw-bold cash-nominal-display border-0 bg-transparent text-danger" readonly value="Rp {{ number_format($item['nominal'] ?? 0, 0, ',', '.') }}">
@@ -712,7 +748,7 @@
                                     <label class="form-label small fw-bold text-muted">B. Saldo Menurut Kas Besar Sistem Olibs (Rp)</label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-light fw-bold">Rp</span>
-                                        <input type="number" step="any" name="saldo_kas_olibs" id="inputSaldoOlibs" class="form-control fw-bold text-end" value="{{ $saldoKasOlibs ?? 0 }}" placeholder="0" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                        <input type="number" step="any" name="saldo_kas_olibs" id="inputSaldoOlibs" class="form-control fw-bold text-end" value="{{ $saldoKasOlibs ?? 0 }}" placeholder="0" {{ $isAdmin ? 'readonly' : '' }}>
                                     </div>
                                     <small class="text-muted" style="font-size:0.7rem;">Saldo buku kas khasanah pada laporan akhir hari sistem Corebanking Olibs.</small>
                                 </div>
@@ -755,38 +791,68 @@
                             </div>
                         </div>
                     </div>
-                </div>
+
+                    <!-- Action Bar Tab 1: Simpan & Download -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            @if(isset($id))
+                            <a href="{{ route('daily-register.physical-kka.download-pdf-kas', $id) }}" class="btn btn-sm btn-outline-danger fw-bold">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.export-excel-kas', $id) }}" class="btn btn-sm btn-outline-success fw-bold">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Download Excel
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.print-ba-kas', $id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
+                                <i class="bi bi-printer me-1"></i> Cetak BA Kas
+                            </a>
+                            @endif
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="background-color: var(--primary-blue); border-color: var(--primary-blue); border-radius: 8px;">
+                            <i class="bi bi-save me-1"></i> {{ $isAdmin ? 'Simpan Review Admin' : 'Simpan Cash Opname Khasanah' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
                 <!-- ========================================================================= -->
                 <!-- TAB 2: CASH OPNAME MESIN ATM & KASET (MODEL CARD PER MESIN ATM)          -->
                 <!-- ========================================================================= -->
                 <div class="tab-pane fade p-3" id="cash-atm" role="tabpanel">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <div>
-                            <h6 class="fw-bold mb-1"><i class="bi bi-wallet2 text-primary me-2"></i>Cash Opname Mesin ATM &amp; Kaset (Model Card per Mesin)</h6>
-                            <small class="text-muted">Mengacu pada BERITA ACARA CASH OPNAME ATM. Setiap mesin memiliki Card tersendiri dengan tombol + Tambah Kaset dinamis.</small>
-                        </div>
-                        @if(!$isAdmin)
-                        <div>
-                            <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm" id="btnTambahAtmCard">
-                                <i class="bi bi-plus-circle me-1"></i> + Tambah Mesin ATM
-                            </button>
-                        </div>
+                    <form method="POST" action="{{ $isAdmin ? route('daily-register.physical-kka.review') : route('daily-register.physical-kka.submit') }}" novalidate>
+                        @csrf
+                        @if(isset($id))
+                            <input type="hidden" name="physical_kka_id" value="{{ $id }}">
                         @endif
-                    </div>
+                        <input type="hidden" name="sub_tab" value="atm">
+                        <input type="hidden" name="no_arsip" class="sync-no-arsip" value="{{ $noArsip }}">
+                        <input type="hidden" name="posisi_tanggal_rekon" class="sync-posisi-tanggal" value="{{ $posisiTanggalRekon }}">
 
-                    <!-- Container Card Mesin ATM -->
-                    <div id="atmCardsContainer">
-                        @forelse($atmMachines as $mIdx => $mach)
-                            <div class="atm-card-item" data-atm-index="{{ $mIdx }}">
-                                <div class="atm-card-topbar">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="fs-5 text-primary">≡ƒÅº</span>
-                                        <div class="input-group input-group-sm" style="width: 250px;">
-                                            <span class="input-group-text fw-bold bg-white text-muted">ID ATM:</span>
-                                            <input type="text" name="atm_machines[{{ $mIdx }}][terminal_id]" class="form-control font-monospace fw-bold fs-6 atm-terminal-id text-primary" placeholder="00128" value="{{ $mach->terminal_id }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <h6 class="fw-bold mb-1"><i class="bi bi-wallet2 text-primary me-2"></i>Cash Opname Mesin ATM &amp; Kaset (Model Card per Mesin)</h6>
+                                <small class="text-muted">Mengacu pada BERITA ACARA CASH OPNAME ATM. Setiap mesin memiliki Card tersendiri dengan tombol + Tambah Kaset dinamis.</small>
+                            </div>
+                            @if(!$isAdmin)
+                            <div>
+                                <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm" id="btnTambahAtmCard">
+                                    <i class="bi bi-plus-circle me-1"></i> + Tambah Mesin ATM
+                                </button>
+                            </div>
+                            @endif
+                        </div>
+
+                        <!-- Container Card Mesin ATM -->
+                        <div id="atmCardsContainer">
+                            @forelse($atmMachines as $mIdx => $mach)
+                                <div class="atm-card-item" data-atm-index="{{ $mIdx }}">
+                                    <div class="atm-card-topbar">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fs-5 text-primary">🏛️</span>
+                                            <div class="input-group input-group-sm" style="width: 250px;">
+                                                <span class="input-group-text fw-bold bg-white text-muted">ID ATM:</span>
+                                                <input type="text" name="atm_machines[{{ $mIdx }}][terminal_id]" class="form-control font-monospace fw-bold fs-6 atm-terminal-id text-primary" placeholder="00128" value="{{ $mach->terminal_id }}" {{ $isAdmin ? 'readonly' : '' }}>
+                                            </div>
                                         </div>
-                                    </div>
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="badge-soft atm-status-badge {{ $mach->status_uji === 'Selesai Diuji' ? 'badge-soft-success' : 'badge-soft-warning' }}">
                                             <i class="bi bi-check2-circle"></i> {{ $mach->status_uji ?? 'Belum Diuji' }}
@@ -803,7 +869,7 @@
                                     <div class="row g-2">
                                         <div class="col-md-3">
                                             <label class="form-label small fw-bold text-muted mb-0">Lokasi ATM:</label>
-                                            <input type="text" name="atm_machines[{{ $mIdx }}][lokasi]" class="form-control form-control-sm" placeholder="Contoh: ATM Museum / Galeri KC" value="{{ $mach->lokasi }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                            <input type="text" name="atm_machines[{{ $mIdx }}][lokasi]" class="form-control form-control-sm" placeholder="Contoh: ATM Museum / Galeri KC" value="{{ $mach->lokasi }}" {{ $isAdmin ? 'readonly' : '' }}>
                                         </div>
                                         <div class="col-md-2">
                                             <label class="form-label small fw-bold text-muted mb-0">Merk Mesin ATM:</label>
@@ -824,7 +890,7 @@
                                             <label class="form-label small fw-bold text-primary mb-0">Total Saldo Sistem (CBS):</label>
                                             <div class="input-group input-group-sm">
                                                 <span class="input-group-text bg-light fw-bold">Rp</span>
-                                                <input type="number" step="any" name="atm_machines[{{ $mIdx }}][saldo_cbs]" class="form-control form-control-sm text-end fw-bold atm-saldo-cbs" placeholder="0" value="{{ $mach->saldo_cbs ?? 0 }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="number" step="any" name="atm_machines[{{ $mIdx }}][saldo_cbs]" class="form-control form-control-sm text-end fw-bold atm-saldo-cbs" placeholder="0" value="{{ $mach->saldo_cbs ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
                                             </div>
                                         </div>
                                     </div>
@@ -870,7 +936,7 @@
                                                         <input type="number" min="0" step="1" name="atm_machines[{{ $mIdx }}][cassettes][{{ $cIdx }}][jumlah_lembar]" class="form-control form-control-sm text-end kaset-lembar" placeholder="0" value="{{ $cas->jumlah_lembar ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
                                                     </td>
                                                     <td>
-                                                        <input type="number" step="any" name="atm_machines[{{ $mIdx }}][cassettes][{{ $cIdx }}][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="{{ $cas->total_nominal ?? 0 }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                        <input type="number" step="any" name="atm_machines[{{ $mIdx }}][cassettes][{{ $cIdx }}][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="{{ $cas->total_nominal ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
                                                     </td>
                                                     <td class="text-center">
                                                         @if(!$isAdmin)
@@ -898,7 +964,7 @@
                                                         <input type="number" min="0" step="1" name="atm_machines[{{ $mIdx }}][cassettes][{{ $dIdx }}][jumlah_lembar]" class="form-control form-control-sm text-end kaset-lembar" placeholder="0" value="0" {{ $isAdmin ? 'readonly' : '' }}>
                                                     </td>
                                                     <td>
-                                                        <input type="number" step="any" name="atm_machines[{{ $mIdx }}][cassettes][{{ $dIdx }}][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="0" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                        <input type="number" step="any" name="atm_machines[{{ $mIdx }}][cassettes][{{ $dIdx }}][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="0" {{ $isAdmin ? 'readonly' : '' }}>
                                                     </td>
                                                     <td class="text-center">
                                                         @if(!$isAdmin)
@@ -981,10 +1047,10 @@
                             <div class="atm-card-item" data-atm-index="0">
                                 <div class="atm-card-topbar">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="fs-5 text-primary">≡ƒÅº</span>
+                                        <span class="fs-5 text-primary">🏦</span>
                                         <div class="input-group input-group-sm" style="width: 250px;">
                                             <span class="input-group-text fw-bold bg-white text-muted">ID ATM:</span>
-                                            <input type="text" name="atm_machines[0][terminal_id]" class="form-control font-monospace fw-bold fs-6 atm-terminal-id text-primary" placeholder="00128" value="00128" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                            <input type="text" name="atm_machines[0][terminal_id]" class="form-control font-monospace fw-bold fs-6 atm-terminal-id text-primary" placeholder="00128" value="00128" {{ $isAdmin ? 'readonly' : '' }}>
                                         </div>
                                     </div>
                                     <div class="d-flex align-items-center gap-2">
@@ -1003,7 +1069,7 @@
                                     <div class="row g-2">
                                         <div class="col-md-3">
                                             <label class="form-label small fw-bold text-muted mb-0">Lokasi ATM:</label>
-                                            <input type="text" name="atm_machines[0][lokasi]" class="form-control form-control-sm" placeholder="Contoh: ATM Museum / Galeri KC" value="Galeri ATM KC" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                            <input type="text" name="atm_machines[0][lokasi]" class="form-control form-control-sm" placeholder="Contoh: ATM Museum / Galeri KC" value="Galeri ATM KC" {{ $isAdmin ? 'readonly' : '' }}>
                                         </div>
                                         <div class="col-md-2">
                                             <label class="form-label small fw-bold text-muted mb-0">Merk Mesin ATM:</label>
@@ -1024,7 +1090,7 @@
                                             <label class="form-label small fw-bold text-primary mb-0">Total Saldo Sistem (CBS):</label>
                                             <div class="input-group input-group-sm">
                                                 <span class="input-group-text bg-light fw-bold">Rp</span>
-                                                <input type="number" step="any" name="atm_machines[0][saldo_cbs]" class="form-control form-control-sm text-end fw-bold atm-saldo-cbs" placeholder="0" value="0" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="number" step="any" name="atm_machines[0][saldo_cbs]" class="form-control form-control-sm text-end fw-bold atm-saldo-cbs" placeholder="0" value="0" {{ $isAdmin ? 'readonly' : '' }}>
                                             </div>
                                         </div>
                                     </div>
@@ -1067,7 +1133,7 @@
                                                         <input type="number" min="0" step="1" name="atm_machines[0][cassettes][{{ $dIdx }}][jumlah_lembar]" class="form-control form-control-sm text-end kaset-lembar" placeholder="0" value="0" {{ $isAdmin ? 'readonly' : '' }}>
                                                     </td>
                                                     <td>
-                                                        <input type="number" step="any" name="atm_machines[0][cassettes][{{ $dIdx }}][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="0" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                        <input type="number" step="any" name="atm_machines[0][cassettes][{{ $dIdx }}][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="0" {{ $isAdmin ? 'readonly' : '' }}>
                                                     </td>
                                                     <td class="text-center">
                                                         @if(!$isAdmin)
@@ -1130,15 +1196,45 @@
                             </div>
                         @endforelse
                     </div>
-                </div>
+
+                    <!-- Action Bar Tab 2: Simpan & Download -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            @if(isset($id))
+                            <a href="{{ route('daily-register.physical-kka.download-pdf-atm', $id) }}" class="btn btn-sm btn-outline-danger fw-bold">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF ATM
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.export-excel-atm', $id) }}" class="btn btn-sm btn-outline-success fw-bold">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Download Excel ATM
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.print-ba-atm', $id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
+                                <i class="bi bi-printer me-1"></i> Cetak BA ATM
+                            </a>
+                            @endif
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="background-color: var(--primary-blue); border-color: var(--primary-blue); border-radius: 8px;">
+                            <i class="bi bi-save me-1"></i> {{ $isAdmin ? 'Simpan Review Admin' : 'Simpan Cash Opname Mesin ATM' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
                 <!-- ========================================================================= -->
                 <!-- TAB 3: OBSERVASI LINGKUNGAN                                              -->
                 <!-- ========================================================================= -->
                 <div class="tab-pane fade p-3" id="obs" role="tabpanel">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h6 class="fw-bold mb-1"><i class="bi bi-eye me-2 text-primary"></i>KKA_Observasi_Lingkungan (Fasilitas &amp; Keamanan Fisik)</h6>
+                    <form method="POST" action="{{ $isAdmin ? route('daily-register.physical-kka.review') : route('daily-register.physical-kka.submit') }}" novalidate>
+                        @csrf
+                        @if(isset($id))
+                            <input type="hidden" name="physical_kka_id" value="{{ $id }}">
+                        @endif
+                        <input type="hidden" name="sub_tab" value="observasi">
+                        <input type="hidden" name="no_arsip" class="sync-no-arsip" value="{{ $noArsip }}">
+                        <input type="hidden" name="posisi_tanggal_rekon" class="sync-posisi-tanggal" value="{{ $posisiTanggalRekon }}">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-1"><i class="bi bi-eye me-2 text-primary"></i>KKA_Observasi_Lingkungan (Fasilitas &amp; Keamanan Fisik)</h6>
                             <small class="text-muted">Pemeriksaan fisik sarana prasarana, 4 titik alarm, 5 area terbatas, matriks 9 titik CCTV (backup min. 90 hari), mutasi security &amp; absensi, dan fasilitas ATM (E.4.4).</small>
                         </div>
                         <div class="d-flex align-items-center gap-2">
@@ -1225,7 +1321,7 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <select name="obs_details[{{ $index }}][hasil_observasi]" class="form-select hasil-obs" {{ $isAdmin ? 'disabled' : 'required' }}>
+                                        <select name="obs_details[{{ $index }}][hasil_observasi]" class="form-select hasil-obs" {{ $isAdmin ? 'disabled' : '' }}>
                                             <option value="">Pilih Hasil</option>
                                             <option value="Sesuai" {{ ($item['hasil_observasi'] ?? '') === 'Sesuai' ? 'selected' : '' }}>Sesuai</option>
                                             <option value="Tidak Sesuai" {{ ($item['hasil_observasi'] ?? '') === 'Tidak Sesuai' ? 'selected' : '' }}>Tidak Sesuai</option>
@@ -1256,7 +1352,7 @@
                                     </td>
                                     <td><input type="text" class="form-control risk-score border-0 bg-transparent text-center" readonly value="{{ $item['risk_score'] ?? '' }}"></td>
                                     <td><input type="text" class="form-control risk-level border-0 bg-transparent text-center" readonly value="{{ $item['severity_level'] ?? '' }}"></td>
-                                    <td><input type="date" name="obs_details[{{ $index }}][tanggal_uji]" class="form-control" value="{{ $item['tanggal_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : 'required' }}></td>
+                                    <td><input type="date" name="obs_details[{{ $index }}][tanggal_uji]" class="form-control" value="{{ $item['tanggal_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}></td>
                                     
                                     @if($isAdmin)
                                     @php $fakeId = $index + 1; @endphp
@@ -1276,111 +1372,159 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
+
+                    <div class="card-footer bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            @if(isset($id))
+                            <a href="{{ route('daily-register.physical-kka.download-pdf', ['id' => $id, 'type' => 'observasi']) }}" class="btn btn-sm btn-outline-danger fw-bold">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Observasi
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.export-excel', ['id' => $id, 'type' => 'observasi']) }}" class="btn btn-sm btn-outline-success fw-bold">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Download Excel Observasi
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.print-kka-observasi', $id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
+                                <i class="bi bi-printer me-1"></i> Cetak KKA Observasi
+                            </a>
+                            @endif
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="background-color: var(--primary-blue); border-color: var(--primary-blue); border-radius: 8px;">
+                            <i class="bi bi-save me-1"></i> {{ $isAdmin ? 'Simpan Review Admin' : 'Simpan Observasi Lingkungan' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
                 <!-- ========================================================================= -->
                 <!-- TAB 4: REKON STOK CEK / BILYET GIRO                                      -->
                 <!-- ========================================================================= -->
                 <div class="tab-pane fade p-3" id="stok" role="tabpanel">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h6 class="fw-bold mb-1"><i class="bi bi-journal-check me-2 text-primary"></i>KKA_Rekon_Stok_Cek_BG (Pemeriksaan Warkat &amp; Dokumen Berharga)</h6>
-                            <small class="text-muted">Pemeriksaan fisik stok buku cek, bilyet giro, dan sertifikat bilyet deposito dalam brankas.</small>
+                    <form method="POST" action="{{ $isAdmin ? route('daily-register.physical-kka.review') : route('daily-register.physical-kka.submit') }}" novalidate>
+                        @csrf
+                        @if(isset($id))
+                            <input type="hidden" name="physical_kka_id" value="{{ $id }}">
+                        @endif
+                        <input type="hidden" name="sub_tab" value="stok">
+                        <input type="hidden" name="no_arsip" class="sync-no-arsip" value="{{ $noArsip }}">
+                        <input type="hidden" name="posisi_tanggal_rekon" class="sync-posisi-tanggal" value="{{ $posisiTanggalRekon }}">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-1"><i class="bi bi-journal-check me-2 text-primary"></i>KKA_Rekon_Stok_Cek_BG (Pemeriksaan Warkat &amp; Dokumen Berharga)</h6>
+                                <small class="text-muted">Pemeriksaan fisik stok buku cek, bilyet giro, dan sertifikat bilyet deposito dalam brankas.</small>
+                            </div>
                         </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-excel">
-                            <thead>
-                                <tr>
-                                    <th>Sub Area</th>
-                                    <th>Objek / Seri Dokumen</th>
-                                    <th>Keterangan / Kondisi</th>
-                                    <th>Saldo Sistem</th>
-                                    <th style="min-width:120px;">Hasil Fisik</th>
-                                    <th>Selisih</th>
-                                    <th>Status Uji</th>
-                                    <th style="min-width:180px;">Kondisi / Penyebab</th>
-                                    <th>Impact</th>
-                                    <th>Likelihood</th>
-                                    <th>Critical?</th>
-                                    <th>Risk Score</th>
-                                    <th>Risk Level</th>
-                                    <th style="min-width:130px;">Tgl Uji</th>
-                                    @if($isAdmin)
-                                    <th class="bg-warning text-dark">Reviewer</th>
-                                    <th class="bg-warning text-dark" style="min-width:150px;">Status Review</th>
-                                    <th class="bg-warning text-dark" style="min-width:200px;">Catatan Admin</th>
-                                    @endif
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($stokItems as $index => $item)
-                                <tr class="data-row" data-type="stok">
-                                    <td>
-                                        <span class="badge bg-secondary">{{ $item['sub_area'] }}</span>
-                                        <input type="hidden" name="stok_details[{{ $index }}][sub_area]" value="{{ $item['sub_area'] }}">
-                                    </td>
-                                    <td>
-                                        <strong>{{ $item['objek'] }}</strong>
-                                        <input type="hidden" name="stok_details[{{ $index }}][kondisi_objek]" value="{{ $item['objek'] }} | {{ $item['pecahan'] }}">
-                                    </td>
-                                    <td><input type="text" name="stok_details[{{ $index }}][kondisi_aktual]" class="form-control" value="{{ $item['pecahan'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}></td>
-                                    <td><input type="number" name="stok_details[{{ $index }}][saldo_sistem]" class="form-control saldo-sistem border-0 bg-transparent text-end" value="{{ $item['saldo_sistem'] ?? 100 }}" readonly></td>
-                                    <td><input type="number" name="stok_details[{{ $index }}][hasil_fisik]" class="form-control hasil-fisik text-end" placeholder="0" value="{{ $item['hasil_fisik'] ?? '' }}" {{ $isAdmin ? 'readonly' : 'required' }}></td>
-                                    <td><input type="text" class="form-control selisih-display border-0 bg-transparent text-end fw-bold" readonly value="{{ isset($item['saldo_sistem'], $item['hasil_fisik']) && $item['hasil_fisik'] !== '' ? ((float)$item['saldo_sistem'] - (float)$item['hasil_fisik']) : '' }}"></td>
-                                    <td><input type="text" class="form-control status-uji border-0 bg-transparent fw-bold text-center" value="{{ $item['status_uji'] ?? 'BELUM DIUJI' }}" readonly></td>
-                                    <td><input type="text" name="stok_details[{{ $index }}][penyebab]" class="form-control exc-field" placeholder="Keterangan..." value="{{ $item['penyebab'] ?? '' }}" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
-                                    <td>
-                                        <select name="stok_details[{{ $index }}][impact]" class="form-select exc-field impact-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
-                                            @for($val=1; $val<=5; $val++)
-                                                <option value="{{ $val }}" {{ ($item['impact'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
-                                            @endfor
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select name="stok_details[{{ $index }}][likelihood]" class="form-select exc-field likelihood-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
-                                            @for($val=1; $val<=5; $val++)
-                                                <option value="{{ $val }}" {{ ($item['likelihood'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
-                                            @endfor
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select name="stok_details[{{ $index }}][critical_trigger]" class="form-select exc-field critical-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
-                                            <option value="Tidak" {{ ($item['critical_trigger'] ?? 'Tidak') === 'Tidak' ? 'selected' : '' }}>Tidak</option>
-                                            <option value="Ya" {{ ($item['critical_trigger'] ?? '') === 'Ya' ? 'selected' : '' }}>Ya</option>
-                                        </select>
-                                    </td>
-                                    <td><input type="text" class="form-control risk-score border-0 bg-transparent text-center" readonly value="{{ $item['risk_score'] ?? '' }}"></td>
-                                    <td><input type="text" class="form-control risk-level border-0 bg-transparent text-center" readonly value="{{ $item['severity_level'] ?? '' }}"></td>
-                                    <td><input type="date" name="stok_details[{{ $index }}][tanggal_uji]" class="form-control" value="{{ $item['tanggal_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : 'required' }}></td>
-                                    
-                                    @if($isAdmin)
-                                    @php $fakeId = $index + 1; @endphp
-                                    <td><input type="text" class="form-control bg-light" value="{{ auth()->user()->name ?? 'Admin' }}" readonly></td>
-                                    <td>
-                                        <select name="stok_review[{{ $fakeId }}][status_review]" class="form-select border-warning">
-                                            <option value="Pending" {{ ($item['status_review'] ?? '') === 'Pending' ? 'selected' : '' }}>Pending</option>
-                                            <option value="Approved" {{ ($item['status_review'] ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
-                                            <option value="Approved - Fraud" {{ ($item['status_review'] ?? '') === 'Approved - Fraud' ? 'selected' : '' }}>Approved - Terindikasi Fraud (SOP 09)</option>
-                                            <option value="Revisi" {{ ($item['status_review'] ?? '') === 'Revisi' ? 'selected' : '' }}>Revisi</option>
-                                        </select>
-                                    </td>
-                                    <td><input type="text" name="stok_review[{{ $fakeId }}][catatan_reviewer]" class="form-control border-warning" placeholder="Ketik catatan review..." value="{{ $item['catatan_reviewer'] ?? '' }}"></td>
-                                    @endif
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-excel">
+                                <thead>
+                                    <tr>
+                                        <th>Sub Area</th>
+                                        <th>Objek / Seri Dokumen</th>
+                                        <th>Keterangan / Kondisi</th>
+                                        <th>Saldo Sistem</th>
+                                        <th style="min-width:120px;">Hasil Fisik</th>
+                                        <th>Selisih</th>
+                                        <th>Status Uji</th>
+                                        <th style="min-width:180px;">Kondisi / Penyebab</th>
+                                        <th>Impact</th>
+                                        <th>Likelihood</th>
+                                        <th>Critical?</th>
+                                        <th>Risk Score</th>
+                                        <th>Risk Level</th>
+                                        <th style="min-width:130px;">Tgl Uji</th>
+                                        @if($isAdmin)
+                                        <th class="bg-warning text-dark">Reviewer</th>
+                                        <th class="bg-warning text-dark" style="min-width:150px;">Status Review</th>
+                                        <th class="bg-warning text-dark" style="min-width:200px;">Catatan Admin</th>
+                                        @endif
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($stokItems as $index => $item)
+                                    <tr class="data-row" data-type="stok">
+                                        <td>
+                                            <span class="badge bg-secondary">{{ $item['sub_area'] }}</span>
+                                            <input type="hidden" name="stok_details[{{ $index }}][sub_area]" value="{{ $item['sub_area'] }}">
+                                        </td>
+                                        <td>
+                                            <strong>{{ $item['objek'] }}</strong>
+                                            <input type="hidden" name="stok_details[{{ $index }}][kondisi_objek]" value="{{ $item['objek'] }} | {{ $item['pecahan'] }}">
+                                        </td>
+                                        <td><input type="text" name="stok_details[{{ $index }}][kondisi_aktual]" class="form-control" value="{{ $item['pecahan'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}></td>
+                                        <td><input type="number" name="stok_details[{{ $index }}][saldo_sistem]" class="form-control saldo-sistem border-0 bg-transparent text-end" value="{{ $item['saldo_sistem'] ?? 100 }}" readonly></td>
+                                        <td><input type="number" name="stok_details[{{ $index }}][hasil_fisik]" class="form-control hasil-fisik text-end" placeholder="0" value="{{ $item['hasil_fisik'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}></td>
+                                        <td><input type="text" class="form-control selisih-display border-0 bg-transparent text-end fw-bold" readonly value="{{ isset($item['saldo_sistem'], $item['hasil_fisik']) && $item['hasil_fisik'] !== '' ? ((float)$item['saldo_sistem'] - (float)$item['hasil_fisik']) : '' }}"></td>
+                                        <td><input type="text" class="form-control status-uji border-0 bg-transparent fw-bold text-center" value="{{ $item['status_uji'] ?? 'BELUM DIUJI' }}" readonly></td>
+                                        <td><input type="text" name="stok_details[{{ $index }}][penyebab]" class="form-control exc-field" placeholder="Keterangan..." value="{{ $item['penyebab'] ?? '' }}" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
+                                        <td>
+                                            <select name="stok_details[{{ $index }}][impact]" class="form-select exc-field impact-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
+                                                @for($val=1; $val<=5; $val++)
+                                                    <option value="{{ $val }}" {{ ($item['impact'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
+                                                @endfor
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="stok_details[{{ $index }}][likelihood]" class="form-select exc-field likelihood-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
+                                                @for($val=1; $val<=5; $val++)
+                                                    <option value="{{ $val }}" {{ ($item['likelihood'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
+                                                @endfor
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="stok_details[{{ $index }}][critical_trigger]" class="form-select exc-field critical-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
+                                                <option value="Tidak" {{ ($item['critical_trigger'] ?? 'Tidak') === 'Tidak' ? 'selected' : '' }}>Tidak</option>
+                                                <option value="Ya" {{ ($item['critical_trigger'] ?? '') === 'Ya' ? 'selected' : '' }}>Ya</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" class="form-control risk-score border-0 bg-transparent text-center" readonly value="{{ $item['risk_score'] ?? '' }}"></td>
+                                        <td><input type="text" class="form-control risk-level border-0 bg-transparent text-center" readonly value="{{ $item['severity_level'] ?? '' }}"></td>
+                                        <td><input type="date" name="stok_details[{{ $index }}][tanggal_uji]" class="form-control" value="{{ $item['tanggal_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}></td>
+                                        
+                                        @if($isAdmin)
+                                        @php $fakeId = $index + 1; @endphp
+                                        <td><input type="text" class="form-control bg-light" value="{{ auth()->user()->name ?? 'Admin' }}" readonly></td>
+                                        <td>
+                                            <select name="stok_review[{{ $fakeId }}][status_review]" class="form-select border-warning">
+                                                <option value="Pending" {{ ($item['status_review'] ?? '') === 'Pending' ? 'selected' : '' }}>Pending</option>
+                                                <option value="Approved" {{ ($item['status_review'] ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
+                                                <option value="Approved - Fraud" {{ ($item['status_review'] ?? '') === 'Approved - Fraud' ? 'selected' : '' }}>Approved - Terindikasi Fraud (SOP 09)</option>
+                                                <option value="Revisi" {{ ($item['status_review'] ?? '') === 'Revisi' ? 'selected' : '' }}>Revisi</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" name="stok_review[{{ $fakeId }}][catatan_reviewer]" class="form-control border-warning" placeholder="Ketik catatan review..." value="{{ $item['catatan_reviewer'] ?? '' }}"></td>
+                                        @endif
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="card-footer bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3">
+                            <div>
+                                <small class="text-muted"><i class="bi bi-info-circle me-1"></i> Pemeriksaan fisik stok cek &amp; bilyet giro tersimpan per nomor arsip.</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="background-color: var(--primary-blue); border-color: var(--primary-blue); border-radius: 8px;">
+                                <i class="bi bi-save me-1"></i> {{ $isAdmin ? 'Simpan Review Admin' : 'Simpan Rekon Stok Cek/BG' }}
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
                 <!-- ========================================================================= -->
                 <!-- TAB 5: REKONSILIASI KARTU ATM (FORMAT TEGAS SECTION A & SECTION B ΓÇö E.4.3)-->
                 <!-- ========================================================================= -->
                 <div class="tab-pane fade p-3" id="atm" role="tabpanel">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <div>
-                            <h6 class="fw-bold mb-1"><i class="bi bi-credit-card-2-front text-primary me-2"></i>KKA E.4.3 Rekonsiliasi Persediaan Kartu ATM &amp; PIN Mailer</h6>
+                    <form method="POST" action="{{ $isAdmin ? route('daily-register.physical-kka.review') : route('daily-register.physical-kka.submit') }}" novalidate>
+                        @csrf
+                        @if(isset($id))
+                            <input type="hidden" name="physical_kka_id" value="{{ $id }}">
+                        @endif
+                        <input type="hidden" name="sub_tab" value="kartu">
+                        <input type="hidden" name="no_arsip" class="sync-no-arsip" value="{{ $noArsip }}">
+                        <input type="hidden" name="posisi_tanggal_rekon" class="sync-posisi-tanggal" value="{{ $posisiTanggalRekon }}">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <h6 class="fw-bold mb-1"><i class="bi bi-credit-card-2-front text-primary me-2"></i>KKA E.4.3 Rekonsiliasi Persediaan Kartu ATM &amp; PIN Mailer</h6>
                             <small class="text-muted">Terbagi tegas atas Section A (Rekonsiliasi Stok, Saldo Buku &amp; PIN Mailer) dan Section B (Kontrol Pengelolaan Ya/Tidak).</small>
                         </div>
                         @if(isset($id))
@@ -1440,11 +1584,11 @@
                                         <tr class="atm-stock-calc-row">
                                             <td class="text-center fw-bold">{{ $sIdx + 1 }}</td>
                                             <td>
-                                                <input type="text" name="kartu_atm_stock[{{ $sIdx }}][jenis_kartu]" class="form-control form-control-sm fw-bold atm-jenis-name" value="{{ $row['jenis_kartu'] }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="text" name="kartu_atm_stock[{{ $sIdx }}][jenis_kartu]" class="form-control form-control-sm fw-bold atm-jenis-name" value="{{ $row['jenis_kartu'] }}" {{ $isAdmin ? 'readonly' : '' }}>
                                                 <input type="hidden" name="kartu_atm_stock[{{ $sIdx }}][keterangan_lokasi]" value="{{ $row['keterangan_lokasi'] ?? 'Brankas Khasanah' }}">
                                             </td>
                                             <td>
-                                                <input type="number" min="0" step="1" name="kartu_atm_stock[{{ $sIdx }}][qty_fisik_kosong]" class="form-control form-control-sm text-end atm-qty-kosong" placeholder="0" value="{{ $row['qty_fisik_kosong'] ?? 0 }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="number" min="0" step="1" name="kartu_atm_stock[{{ $sIdx }}][qty_fisik_kosong]" class="form-control form-control-sm text-end atm-qty-kosong" placeholder="0" value="{{ $row['qty_fisik_kosong'] ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
                                             </td>
                                             <td>
                                                 <input type="number" min="0" step="1" name="kartu_atm_stock[{{ $sIdx }}][qty_fisik_rusak]" class="form-control form-control-sm text-end atm-qty-rusak" placeholder="0" value="{{ $row['qty_fisik_rusak'] ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
@@ -1453,16 +1597,16 @@
                                                 <input type="text" class="form-control form-control-sm text-end fw-bold atm-total-fisik-display border-0 bg-transparent" readonly value="{{ (int)($row['qty_fisik_kosong'] ?? 0) + (int)($row['qty_fisik_rusak'] ?? 0) }}">
                                             </td>
                                             <td>
-                                                <input type="number" step="any" name="kartu_atm_stock[{{ $sIdx }}][harga_modal]" class="form-control form-control-sm text-end atm-harga-modal" value="{{ $row['harga_modal'] ?? ($row['jenis_kartu'] === 'Kartu Silver' ? 42180 : 68820) }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="number" step="any" name="kartu_atm_stock[{{ $sIdx }}][harga_modal]" class="form-control form-control-sm text-end atm-harga-modal" value="{{ $row['harga_modal'] ?? ($row['jenis_kartu'] === 'Kartu Silver' ? 42180 : 68820) }}" {{ $isAdmin ? 'readonly' : '' }}>
                                             </td>
                                             <td>
                                                 <input type="text" class="form-control form-control-sm text-end fw-bold atm-nominal-fisik-display border-0 bg-transparent text-primary" readonly value="Rp {{ number_format($row['nominal_fisik'] ?? 0, 0, ',', '.') }}">
                                             </td>
                                             <td>
-                                                <input type="number" min="0" step="1" name="kartu_atm_stock[{{ $sIdx }}][saldo_buku_qty]" class="form-control form-control-sm text-end atm-buku-qty" placeholder="0" value="{{ $row['saldo_buku_qty'] ?? 0 }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="number" min="0" step="1" name="kartu_atm_stock[{{ $sIdx }}][saldo_buku_qty]" class="form-control form-control-sm text-end atm-buku-qty" placeholder="0" value="{{ $row['saldo_buku_qty'] ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
                                             </td>
                                             <td>
-                                                <input type="number" step="any" name="kartu_atm_stock[{{ $sIdx }}][saldo_buku_nominal]" class="form-control form-control-sm text-end atm-buku-nom" placeholder="0" value="{{ $row['saldo_buku_nominal'] ?? 0 }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="number" step="any" name="kartu_atm_stock[{{ $sIdx }}][saldo_buku_nominal]" class="form-control form-control-sm text-end atm-buku-nom" placeholder="0" value="{{ $row['saldo_buku_nominal'] ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
                                             </td>
                                             <td>
                                                 <input type="text" class="form-control form-control-sm text-end fw-bold atm-selisih-persediaan-display border-0 bg-transparent" readonly value="0">
@@ -1471,7 +1615,7 @@
                                                 <input type="text" class="form-control form-control-sm text-end atm-kartu-count-display border-0 bg-transparent" readonly value="{{ $row['qty_fisik_kosong'] ?? 0 }}">
                                             </td>
                                             <td>
-                                                <input type="number" min="0" step="1" name="kartu_atm_stock[{{ $sIdx }}][pin_mailer_qty]" class="form-control form-control-sm text-end atm-pin-qty" placeholder="0" value="{{ $row['pin_mailer_qty'] ?? ($row['qty_fisik_kosong'] ?? 0) }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                                <input type="number" min="0" step="1" name="kartu_atm_stock[{{ $sIdx }}][pin_mailer_qty]" class="form-control form-control-sm text-end atm-pin-qty" placeholder="0" value="{{ $row['pin_mailer_qty'] ?? ($row['qty_fisik_kosong'] ?? 0) }}" {{ $isAdmin ? 'readonly' : '' }}>
                                             </td>
                                             <td>
                                                 <input type="text" class="form-control form-control-sm text-end fw-bold atm-selisih-pin-display border-0 bg-transparent" readonly value="0">
@@ -1521,7 +1665,7 @@
                                         Penyebab Selisih / Findings:
                                         <span class="text-danger small fw-normal" id="labelAtmFindingsWajib" style="display:none;">*(Wajib diisi jika terdapat selisih fisik/saldo/PIN!)*</span>
                                     </label>
-                                    <input type="text" name="rekon_kartu_penyebab_selisih" id="inputAtmFindings" class="form-control form-control-sm" value="{{ $rekonKartuPenyebabSelisih }}" placeholder="Tidak terdapat selisih..." {{ $isAdmin ? 'readonly' : 'required' }}>
+                                    <input type="text" name="rekon_kartu_penyebab_selisih" id="inputAtmFindings" class="form-control form-control-sm" value="{{ $rekonKartuPenyebabSelisih }}" placeholder="Tidak terdapat selisih..." {{ $isAdmin ? 'readonly' : '' }}>
                                 </div>
                             </div>
                         </div>
@@ -1531,7 +1675,7 @@
                     <div class="section-card">
                         <div class="section-card-header">
                             <div>
-                                <i class="bi bi-shield-check me-1"></i>SECTION B ΓÇö KONTROL PENGELOLAAN KARTU ATM (CHECKLIST MURNI YA / TIDAK)
+                                <i class="bi bi-shield-check me-1"></i>SECTION B — KONTROL PENGELOLAAN KARTU ATM (CHECKLIST MURNI YA / TIDAK)
                             </div>
                             <span class="small text-muted fw-normal">Format checklist murni satu per satu (tanpa tombol otomatis).</span>
                         </div>
@@ -1576,15 +1720,44 @@
                             </div>
                         </div>
                     </div>
-                </div>
+
+                    <div class="card-footer bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            @if(isset($id))
+                            <a href="{{ route('daily-register.physical-kka.download-pdf', ['id' => $id, 'type' => 'kartu']) }}" class="btn btn-sm btn-outline-danger fw-bold">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Kartu
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.export-excel', ['id' => $id, 'type' => 'kartu']) }}" class="btn btn-sm btn-outline-success fw-bold">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Download Excel Kartu
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.print-kka-kartu', $id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
+                                <i class="bi bi-printer me-1"></i> Cetak KKA Kartu ATM
+                            </a>
+                            @endif
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="background-color: var(--primary-blue); border-color: var(--primary-blue); border-radius: 8px;">
+                            <i class="bi bi-save me-1"></i> {{ $isAdmin ? 'Simpan Review Admin' : 'Simpan Rekon Kartu ATM' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
                 <!-- ========================================================================= -->
                 <!-- TAB 6: REKONSILIASI BARANG CETAKAN (MERGED KRITERIA & CHECKLIST KONTROL) -->
                 <!-- ========================================================================= -->
                 <div class="tab-pane fade p-3" id="cetakan" role="tabpanel">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <div>
-                            <h6 class="fw-bold mb-1"><i class="bi bi-printer text-success me-2"></i>KKA Rekonsiliasi Persediaan Barang Cetakan Berharga</h6>
+                    <form method="POST" action="{{ $isAdmin ? route('daily-register.physical-kka.review') : route('daily-register.physical-kka.submit') }}" novalidate>
+                        @csrf
+                        @if(isset($id))
+                            <input type="hidden" name="physical_kka_id" value="{{ $id }}">
+                        @endif
+                        <input type="hidden" name="sub_tab" value="cetakan">
+                        <input type="hidden" name="no_arsip" class="sync-no-arsip" value="{{ $noArsip }}">
+                        <input type="hidden" name="posisi_tanggal_rekon" class="sync-posisi-tanggal" value="{{ $posisiTanggalRekon }}">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <h6 class="fw-bold mb-1"><i class="bi bi-printer text-success me-2"></i>KKA Rekonsiliasi Persediaan Barang Cetakan Berharga</h6>
                             <small class="text-muted">Memuat Formulir Pembukaan ATM. Kolom Kondisi telah dilebur langsung ke Kriteria (Kosong/Rusak terpisah). Dilengkapi Checklist Kontrol Ya/Tidak.</small>
                         </div>
                         <div class="d-flex gap-2">
@@ -1631,16 +1804,16 @@
                                         <input type="hidden" name="barang_cetakan_details[{{ $bIdx }}][nama_barang]" value="{{ $bItem['nama_barang'] }}">
                                     </td>
                                     <td>
-                                        <input type="text" name="barang_cetakan_details[{{ $bIdx }}][kriteria]" class="form-control form-control-sm bct-kriteria-input" value="{{ $bItem['kriteria'] }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                        <input type="text" name="barang_cetakan_details[{{ $bIdx }}][kriteria]" class="form-control form-control-sm bct-kriteria-input" value="{{ $bItem['kriteria'] }}" {{ $isAdmin ? 'readonly' : '' }}>
                                     </td>
                                     <td>
                                         <input type="text" name="barang_cetakan_details[{{ $bIdx }}][satuan]" class="form-control form-control-sm text-center bg-light" value="{{ $bItem['satuan'] }}" readonly>
                                     </td>
                                     <td>
-                                        <input type="number" step="any" name="barang_cetakan_details[{{ $bIdx }}][stok_sistem]" class="form-control form-control-sm text-end bct-stok-buku" placeholder="0" value="{{ $bItem['stok_sistem'] ?? 0 }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                        <input type="number" step="any" name="barang_cetakan_details[{{ $bIdx }}][stok_sistem]" class="form-control form-control-sm text-end bct-stok-buku" placeholder="0" value="{{ $bItem['stok_sistem'] ?? 0 }}" {{ $isAdmin ? 'readonly' : '' }}>
                                     </td>
                                     <td>
-                                        <input type="number" step="any" name="barang_cetakan_details[{{ $bIdx }}][hasil_fisik]" class="form-control form-control-sm text-end bct-hasil-fisik" placeholder="0" value="{{ $bItem['hasil_fisik'] ?? '' }}" {{ $isAdmin ? 'readonly' : 'required' }}>
+                                        <input type="number" step="any" name="barang_cetakan_details[{{ $bIdx }}][hasil_fisik]" class="form-control form-control-sm text-end bct-hasil-fisik" placeholder="0" value="{{ $bItem['hasil_fisik'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}>
                                     </td>
                                     <td>
                                         <input type="text" class="form-control form-control-sm text-end fw-bold bct-selisih-display border-0 bg-transparent" readonly value="{{ $bItem['selisih'] ?? 0 }}">
@@ -1711,23 +1884,30 @@
                             </div>
                         </div>
                     </div>
-                </div>
 
+                    <div class="card-footer bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            @if(isset($id))
+                            <a href="{{ route('daily-register.physical-kka.download-pdf', ['id' => $id, 'type' => 'cetakan']) }}" class="btn btn-sm btn-outline-danger fw-bold">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Cetakan
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.export-excel', ['id' => $id, 'type' => 'cetakan']) }}" class="btn btn-sm btn-outline-success fw-bold">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Download Excel Cetakan
+                            </a>
+                            <a href="{{ route('daily-register.physical-kka.print-kka-cetakan', $id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
+                                <i class="bi bi-printer me-1"></i> Cetak KKA Cetakan
+                            </a>
+                            @endif
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="background-color: var(--primary-blue); border-color: var(--primary-blue); border-radius: 8px;">
+                            <i class="bi bi-save me-1"></i> {{ $isAdmin ? 'Simpan Review Admin' : 'Simpan Rekon Barang Cetakan' }}
+                        </button>
+                    </div>
+                </form>
             </div>
-        </div>
 
-        <!-- Tombol Aksi Simpan / Submit -->
-        <div class="card-footer bg-white border-top p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-                <small class="text-muted">
-                    <i class="bi bi-info-circle me-1"></i> Form Tahap 2 otomatis tersimpan ke nomor arsip aktif dan dapat langsung dicetak (PDF) oleh RA maupun Auditor.
-                </small>
-            </div>
-            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" id="btnSubmitFinal" style="background-color: var(--primary-blue); border-color: var(--primary-blue); border-radius: 8px; font-size: 0.88rem; padding: 0.55rem 1.4rem;">
-                <i class="bi bi-save me-1"></i> {{ $isAdmin ? 'Simpan Review Admin' : 'Simpan KKA Fisik & Masuk Arsip Cetak' }}
-            </button>
         </div>
-    </form>
+    </div>
 </div>
 
 <!-- ========================================================================= -->
@@ -1797,12 +1977,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 badgeSelisih.classList.add('badge-soft-warning');
                 badgeSelisih.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Ada Selisih: Lebih (+ ' + formatRp(selisih) + ')';
                 if (labelWajib) labelWajib.style.display = 'inline';
-                if (penjelasanInput && !isAdmin) penjelasanInput.required = true;
+                if (penjelasanInput) penjelasanInput.required = false;
             } else {
                 badgeSelisih.classList.add('badge-soft-danger');
                 badgeSelisih.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Ada Selisih: Kurang (- ' + formatRp(Math.abs(selisih)) + ')';
                 if (labelWajib) labelWajib.style.display = 'inline';
-                if (penjelasanInput && !isAdmin) penjelasanInput.required = true;
+                if (penjelasanInput) penjelasanInput.required = false;
             }
         }
     }
@@ -1930,12 +2110,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 selisihBadge.classList.add('badge-soft-warning');
                 selisihBadge.innerHTML = 'Ada Selisih: Lebih (+ ' + formatRp(Math.abs(totalFisik - saldoCbs)) + ')';
                 if (ketWajib) ketWajib.style.display = 'inline';
-                if (ketInput && !isAdmin) ketInput.required = true;
+                if (ketInput) ketInput.required = false;
             } else {
                 selisihBadge.classList.add('badge-soft-danger');
                 selisihBadge.innerHTML = 'Ada Selisih: Kurang (- ' + formatRp(Math.abs(saldoCbs - totalFisik)) + ')';
                 if (ketWajib) ketWajib.style.display = 'inline';
-                if (ketInput && !isAdmin) ketInput.required = true;
+                if (ketInput) ketInput.required = false;
             }
         }
     }
@@ -1997,7 +2177,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <input type="number" min="0" step="1" name="atm_machines[${mIdx}][cassettes][${cIdx}][jumlah_lembar]" class="form-control form-control-sm text-end kaset-lembar" placeholder="0" value="0">
                     </td>
                     <td>
-                        <input type="number" step="any" name="atm_machines[${mIdx}][cassettes][${cIdx}][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="0" required>
+                        <input type="number" step="any" name="atm_machines[${mIdx}][cassettes][${cIdx}][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="0">
                     </td>
                     <td class="text-center">
                         <button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-kaset"><i class="bi bi-x-circle-fill"></i></button>
@@ -2062,10 +2242,10 @@ document.addEventListener('DOMContentLoaded', function () {
             div.innerHTML = `
                 <div class="atm-card-topbar">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fs-5 text-primary">≡ƒÅº</span>
+                        <span class="fs-5 text-primary">🏢</span>
                         <div class="input-group input-group-sm" style="width: 250px;">
                             <span class="input-group-text fw-bold bg-white text-muted">ID ATM:</span>
-                            <input type="text" name="atm_machines[${newMIdx}][terminal_id]" class="form-control font-monospace fw-bold fs-6 atm-terminal-id text-primary" placeholder="00128" value="${newTerminalId}" required>
+                            <input type="text" name="atm_machines[${newMIdx}][terminal_id]" class="form-control font-monospace fw-bold fs-6 atm-terminal-id text-primary" placeholder="00128" value="${newTerminalId}">
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -2082,7 +2262,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="row g-2">
                         <div class="col-md-3">
                             <label class="form-label small fw-bold text-muted mb-0">Lokasi ATM:</label>
-                            <input type="text" name="atm_machines[${newMIdx}][lokasi]" class="form-control form-control-sm" placeholder="Contoh: ATM Museum / Galeri KC" value="ATM Baru Cabang" required>
+                            <input type="text" name="atm_machines[${newMIdx}][lokasi]" class="form-control form-control-sm" placeholder="Contoh: ATM Museum / Galeri KC" value="ATM Baru Cabang">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-bold text-muted mb-0">Merk Mesin ATM:</label>
@@ -2103,7 +2283,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <label class="form-label small fw-bold text-primary mb-0">Total Saldo Sistem (CBS):</label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-light fw-bold">Rp</span>
-                                <input type="number" step="any" name="atm_machines[${newMIdx}][saldo_cbs]" class="form-control form-control-sm text-end fw-bold atm-saldo-cbs" placeholder="0" value="0" required>
+                                <input type="number" step="any" name="atm_machines[${newMIdx}][saldo_cbs]" class="form-control form-control-sm text-end fw-bold atm-saldo-cbs" placeholder="0" value="0">
                             </div>
                         </div>
                     </div>
@@ -2141,7 +2321,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </td>
                                     <td><input type="number" name="atm_machines[${newMIdx}][cassettes][0][denominasi]" class="form-control form-control-sm text-end kaset-denom" value="100000"></td>
                                     <td><input type="number" min="0" step="1" name="atm_machines[${newMIdx}][cassettes][0][jumlah_lembar]" class="form-control form-control-sm text-end kaset-lembar" placeholder="0" value="0"></td>
-                                    <td><input type="number" step="any" name="atm_machines[${newMIdx}][cassettes][0][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="0" required></td>
+                                    <td><input type="number" step="any" name="atm_machines[${newMIdx}][cassettes][0][total_nominal]" class="form-control form-control-sm text-end fw-bold kaset-total-nominal text-primary" placeholder="0" value="0"></td>
                                     <td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-kaset"><i class="bi bi-x-circle-fill"></i></button></td>
                                 </tr>
                             </tbody>
@@ -2338,19 +2518,19 @@ document.addEventListener('DOMContentLoaded', function () {
             tr.innerHTML = `
                 <td class="text-center fw-bold">${newIdx + 1}</td>
                 <td>
-                    <input type="text" name="kartu_atm_stock[${newIdx}][jenis_kartu]" class="form-control form-control-sm fw-bold" placeholder="Nama Jenis Kartu" value="Kartu Tambahan ${newIdx + 1}" required>
+                    <input type="text" name="kartu_atm_stock[${newIdx}][jenis_kartu]" class="form-control form-control-sm fw-bold" placeholder="Nama Jenis Kartu" value="Kartu Tambahan ${newIdx + 1}">
                     <input type="hidden" name="kartu_atm_stock[${newIdx}][keterangan_lokasi]" value="Brankas Khasanah">
                 </td>
-                <td><input type="number" min="0" step="1" name="kartu_atm_stock[${newIdx}][qty_fisik_kosong]" class="form-control form-control-sm text-end atm-qty-kosong" placeholder="0" value="0" required></td>
+                <td><input type="number" min="0" step="1" name="kartu_atm_stock[${newIdx}][qty_fisik_kosong]" class="form-control form-control-sm text-end atm-qty-kosong" placeholder="0" value="0"></td>
                 <td><input type="number" min="0" step="1" name="kartu_atm_stock[${newIdx}][qty_fisik_rusak]" class="form-control form-control-sm text-end atm-qty-rusak" placeholder="0" value="0"></td>
                 <td><input type="text" class="form-control form-control-sm text-end fw-bold atm-total-fisik-display border-0 bg-transparent" readonly value="0"></td>
-                <td><input type="number" step="any" name="kartu_atm_stock[${newIdx}][harga_modal]" class="form-control form-control-sm text-end atm-harga-modal" value="50000" required></td>
+                <td><input type="number" step="any" name="kartu_atm_stock[${newIdx}][harga_modal]" class="form-control form-control-sm text-end atm-harga-modal" value="50000"></td>
                 <td><input type="text" class="form-control form-control-sm text-end fw-bold atm-nominal-fisik-display border-0 bg-transparent text-primary" readonly value="Rp 0"></td>
-                <td><input type="number" min="0" step="1" name="kartu_atm_stock[${newIdx}][saldo_buku_qty]" class="form-control form-control-sm text-end atm-buku-qty" placeholder="0" value="0" required></td>
-                <td><input type="number" step="any" name="kartu_atm_stock[${newIdx}][saldo_buku_nominal]" class="form-control form-control-sm text-end atm-buku-nom" placeholder="0" value="0" required></td>
+                <td><input type="number" min="0" step="1" name="kartu_atm_stock[${newIdx}][saldo_buku_qty]" class="form-control form-control-sm text-end atm-buku-qty" placeholder="0" value="0"></td>
+                <td><input type="number" step="any" name="kartu_atm_stock[${newIdx}][saldo_buku_nominal]" class="form-control form-control-sm text-end atm-buku-nom" placeholder="0" value="0"></td>
                 <td><input type="text" class="form-control form-control-sm text-end fw-bold atm-selisih-persediaan-display border-0 bg-transparent" readonly value="0"></td>
                 <td><input type="text" class="form-control form-control-sm text-end atm-kartu-count-display border-0 bg-transparent" readonly value="0"></td>
-                <td><input type="number" min="0" step="1" name="kartu_atm_stock[${newIdx}][pin_mailer_qty]" class="form-control form-control-sm text-end atm-pin-qty" placeholder="0" value="0" required></td>
+                <td><input type="number" min="0" step="1" name="kartu_atm_stock[${newIdx}][pin_mailer_qty]" class="form-control form-control-sm text-end atm-pin-qty" placeholder="0" value="0"></td>
                 <td><input type="text" class="form-control form-control-sm text-end fw-bold atm-selisih-pin-display border-0 bg-transparent" readonly value="0"></td>
                 <td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-atm-stock"><i class="bi bi-x-circle-fill"></i></button></td>
             `;
@@ -2431,10 +2611,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     </select>
                 </td>
                 <td>
-                    <input type="text" name="barang_cetakan_details[${newIdx}][nama_barang]" class="form-control form-control-sm" placeholder="Nama Barang Cetakan" required>
+                    <input type="text" name="barang_cetakan_details[${newIdx}][nama_barang]" class="form-control form-control-sm" placeholder="Nama Barang Cetakan">
                 </td>
                 <td>
-                    <input type="text" name="barang_cetakan_details[${newIdx}][kriteria]" class="form-control form-control-sm bct-kriteria-input" placeholder="Nama Barang ΓÇö Kosong / Belum Digunakan" required>
+                    <input type="text" name="barang_cetakan_details[${newIdx}][kriteria]" class="form-control form-control-sm bct-kriteria-input" placeholder="Nama Barang — Kosong / Belum Digunakan">
                 </td>
                 <td>
                     <select name="barang_cetakan_details[${newIdx}][satuan]" class="form-select form-select-sm">
@@ -2445,10 +2625,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     </select>
                 </td>
                 <td>
-                    <input type="number" step="any" name="barang_cetakan_details[${newIdx}][stok_sistem]" class="form-control form-control-sm text-end bct-stok-buku" placeholder="0" value="0" required>
+                    <input type="number" step="any" name="barang_cetakan_details[${newIdx}][stok_sistem]" class="form-control form-control-sm text-end bct-stok-buku" placeholder="0" value="0">
                 </td>
                 <td>
-                    <input type="number" step="any" name="barang_cetakan_details[${newIdx}][hasil_fisik]" class="form-control form-control-sm text-end bct-hasil-fisik" placeholder="0" value="0" required>
+                    <input type="number" step="any" name="barang_cetakan_details[${newIdx}][hasil_fisik]" class="form-control form-control-sm text-end bct-hasil-fisik" placeholder="0" value="0">
                 </td>
                 <td>
                     <input type="text" class="form-control form-control-sm text-end fw-bold bct-selisih-display border-0 bg-transparent" readonly value="0">
@@ -2525,6 +2705,71 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('tr[data-type="obs"]').forEach(r => initObsRowListeners(r));
 
+    // =========================================================================
+    // 6. SINKRONISASI NO ARSIP & POSISI TANGGAL GLOBAL KE SELURUH FORM KKA FISIK
+    // =========================================================================
+    const globalNoArsip = document.getElementById('globalNoArsip');
+    if (globalNoArsip) {
+        globalNoArsip.addEventListener('input', function() {
+            document.querySelectorAll('.sync-no-arsip').forEach(el => el.value = this.value);
+        });
+        globalNoArsip.addEventListener('change', function() {
+            document.querySelectorAll('.sync-no-arsip').forEach(el => el.value = this.value);
+        });
+    }
+
+    const globalPosisiTanggalRekon = document.getElementById('globalPosisiTanggalRekon');
+    if (globalPosisiTanggalRekon) {
+        globalPosisiTanggalRekon.addEventListener('change', function() {
+            document.querySelectorAll('.sync-posisi-tanggal').forEach(el => el.value = this.value);
+        });
+        globalPosisiTanggalRekon.addEventListener('input', function() {
+            document.querySelectorAll('.sync-posisi-tanggal').forEach(el => el.value = this.value);
+        });
+    }
+
+    // Pastikan saat form disubmit, nilai terbaru langsung disinkronkan ke input tersembunyi
+    document.querySelectorAll('#physicalKkaTabContent form').forEach(frm => {
+        frm.addEventListener('submit', function() {
+            if (globalNoArsip) {
+                this.querySelectorAll('.sync-no-arsip').forEach(el => el.value = globalNoArsip.value);
+            }
+            if (globalPosisiTanggalRekon) {
+                this.querySelectorAll('.sync-posisi-tanggal').forEach(el => el.value = globalPosisiTanggalRekon.value);
+            }
+        });
+    });
+
+    // =========================================================================
+    // 7. AUTO-AKTIVASI TAB KKA FISIK BERDASARKAN QUERY PARAMETER URL (?tab=...)
+    // =========================================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab) {
+        const tabMap = {
+            'kas': '#cash-tab',
+            'cash': '#cash-tab',
+            'atm': '#cash-atm-tab',
+            'cash-atm': '#cash-atm-tab',
+            'observasi': '#obs-tab',
+            'obs': '#obs-tab',
+            'stok': '#stok-tab',
+            'kartu': '#atm-tab',
+            'cetakan': '#cetakan-tab'
+        };
+        const targetTabSelector = tabMap[activeTab];
+        if (targetTabSelector) {
+            const tabBtn = document.querySelector(targetTabSelector);
+            if (tabBtn) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                    const bsTab = new bootstrap.Tab(tabBtn);
+                    bsTab.show();
+                } else {
+                    tabBtn.click();
+                }
+            }
+        }
+    }
 });
 </script>
 

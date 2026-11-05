@@ -54,6 +54,9 @@ class DumpKreditParser
         $idxNoRek = $headerMap['NO_REK'] 
             ?? ($headerMap['NOREK'] ?? null);
 
+        $idxArsip = DumpParserHelper::findNoArsipIndex($header ?? []);
+        $idxKet = DumpParserHelper::findKetTxIndex($header ?? []);
+
         $lowRiskData = [];
         $moderateHighRiskData = [];
         $dailyRegisterData = [];
@@ -82,6 +85,8 @@ class DumpKreditParser
 
             $namaDebitur = $idxNama !== null ? trim($row[$idxNama] ?? '') : '';
             $noRek = $idxNoRek !== null ? trim($row[$idxNoRek] ?? '') : '';
+            $noArsip = $idxArsip !== null ? DumpParserHelper::cleanNoArsip($row[$idxArsip] ?? null) : null;
+            $ketTx = $idxKet !== null ? DumpParserHelper::cleanKetTx($row[$idxKet] ?? null) : null;
 
             // LOGIKA KREDIT (SOP 02):
             // 1. Plafon Jumbo (>= Rp 500.000.000) -> High Risk
@@ -100,6 +105,7 @@ class DumpKreditParser
 
                 $rincian = ($isKolTurun ? "Kolektibilitas {$kolektibilitas}" : "Plafon Jumbo")
                     . ($namaDebitur ? " ({$namaDebitur})" : '');
+                $deskripsiUtama = $ketTx ?: $rincian;
 
                 $itemException = [
                     'tanggal_data'         => $tanggal,
@@ -110,13 +116,14 @@ class DumpKreditParser
                     'nominal_terkait'      => $plafon,
                     'risk_awal'            => $riskLevel,
                     'jenis_exception_awal' => $isKolTurun ? 'Penurunan Kolektibilitas' : 'Pencairan Plafon Jumbo',
-                    'deskripsi'            => $rincian,
-                    'rincian'              => $rincian,
+                    'deskripsi'            => $deskripsiUtama,
                     'created_at'           => now(),
                     'updated_at'           => now(),
                 ];
 
                 if ($isDailyRegister) {
+                    $itemException['no_arsip'] = $noArsip;
+                    $itemException['rincian'] = $deskripsiUtama;
                     $dailyRegisterData[] = $itemException;
                 } else {
                     $moderateHighRiskData[] = $itemException;
@@ -132,7 +139,7 @@ class DumpKreditParser
                     'kategori'        => 'Pencairan / Angsuran Wajar',
                     'nominal_terkait' => $plafon,
                     'risk_awal'       => 'Low',
-                    'rincian'         => "Kol: {$kolektibilitas}" . ($namaDebitur ? " - {$namaDebitur}" : ''),
+                    'rincian'         => $ketTx ?: ("Kol: {$kolektibilitas}" . ($namaDebitur ? " - {$namaDebitur}" : '')),
                     'created_at'      => now(),
                     'updated_at'      => now(),
                 ];

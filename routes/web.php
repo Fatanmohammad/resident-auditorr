@@ -451,6 +451,23 @@ Route::middleware('auth')->group(function () {
         Route::get('/physical-kka/{id}/print-kka-cetakan', [PhysicalKkaController::class, 'printKkaCetakan'])->name('daily-register.physical-kka.print-kka-cetakan');
         Route::get('/physical-kka/{id}/print-kka-observasi', [PhysicalKkaController::class, 'printKkaObservasi'])->name('daily-register.physical-kka.print-kka-observasi');
         Route::get('/physical-kka/{id}/print-all', [PhysicalKkaController::class, 'printAll'])->name('daily-register.physical-kka.print-all');
+
+        // Download Excel & PDF KKA Fisik (Per Bagian & Rekap Semua)
+        Route::get('/physical-kka/{id}/export-excel/{type?}', [PhysicalKkaController::class, 'exportExcel'])->name('daily-register.physical-kka.export-excel');
+        Route::get('/physical-kka/{id}/download-pdf/{type?}', [PhysicalKkaController::class, 'downloadPdf'])->name('daily-register.physical-kka.download-pdf');
+        Route::get('/physical-kka/{id}/export-excel-kas', [PhysicalKkaController::class, 'exportExcelKas'])->name('daily-register.physical-kka.export-excel-kas');
+        Route::get('/physical-kka/{id}/export-excel-atm', [PhysicalKkaController::class, 'exportExcelAtm'])->name('daily-register.physical-kka.export-excel-atm');
+        Route::get('/physical-kka/{id}/export-excel-kartu', [PhysicalKkaController::class, 'exportExcelKartu'])->name('daily-register.physical-kka.export-excel-kartu');
+        Route::get('/physical-kka/{id}/export-excel-cetakan', [PhysicalKkaController::class, 'exportExcelCetakan'])->name('daily-register.physical-kka.export-excel-cetakan');
+        Route::get('/physical-kka/{id}/export-excel-observasi', [PhysicalKkaController::class, 'exportExcelObservasi'])->name('daily-register.physical-kka.export-excel-observasi');
+        Route::get('/physical-kka/{id}/export-excel-all', [PhysicalKkaController::class, 'exportExcelAll'])->name('daily-register.physical-kka.export-excel-all');
+
+        Route::get('/physical-kka/{id}/download-pdf-kas', [PhysicalKkaController::class, 'downloadPdfKas'])->name('daily-register.physical-kka.download-pdf-kas');
+        Route::get('/physical-kka/{id}/download-pdf-atm', [PhysicalKkaController::class, 'downloadPdfAtm'])->name('daily-register.physical-kka.download-pdf-atm');
+        Route::get('/physical-kka/{id}/download-pdf-kartu', [PhysicalKkaController::class, 'downloadPdfKartu'])->name('daily-register.physical-kka.download-pdf-kartu');
+        Route::get('/physical-kka/{id}/download-pdf-cetakan', [PhysicalKkaController::class, 'downloadPdfCetakan'])->name('daily-register.physical-kka.download-pdf-cetakan');
+        Route::get('/physical-kka/{id}/download-pdf-observasi', [PhysicalKkaController::class, 'downloadPdfObservasi'])->name('daily-register.physical-kka.download-pdf-observasi');
+        Route::get('/physical-kka/{id}/download-pdf-all', [PhysicalKkaController::class, 'downloadPdfAll'])->name('daily-register.physical-kka.download-pdf-all');
         
         Route::get('/klarifikasi', [\App\Http\Controllers\DailyRegister\KlarifikasiController::class, 'index'])->name('daily-register.klarifikasi.index');
         Route::post('/klarifikasi/submit', [\App\Http\Controllers\DailyRegister\KlarifikasiController::class, 'submit'])->name('daily-register.klarifikasi.submit');

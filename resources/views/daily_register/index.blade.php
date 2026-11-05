@@ -12,8 +12,11 @@
     .dashboard-header h4 { font-weight: 700; color: var(--text-dark); margin-bottom: 0.3rem; }
     .dashboard-header p { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 0; }
 
-    .summary-cards-wrapper { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; margin-bottom: 1.25rem; }
-    @media (max-width: 992px) {
+    .summary-cards-wrapper { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.85rem; margin-bottom: 1.25rem; }
+    @media (max-width: 1200px) {
+        .summary-cards-wrapper { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 768px) {
         .summary-cards-wrapper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     .stat-card {
@@ -496,7 +499,7 @@
     </div>
     @endif
 
-    <!-- 4 SUMMARY CARDS -->
+    <!-- 5 SUMMARY CARDS -->
     <div class="summary-cards-wrapper" id="summaryCardsSampling">
         <div class="stat-card">
             <div class="stat-icon bg-light-gray"><i class="bi bi-file-earmark-text"></i></div>
@@ -504,6 +507,14 @@
                 <h6>TOTAL EXCEPTION</h6>
                 <h3 id="statTotalException">0</h3>
                 <p>Sampel Transaksi</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fff7ed; color:#ea580c;"><i class="bi bi-hourglass-split"></i></div>
+            <div class="stat-details">
+                <h6>BELUM DIKERJAKAN</h6>
+                <h3 id="statBelumDikerjakan" style="color: #ea580c;">0</h3>
+                <p>Perlu Diuji / Backlog</p>
             </div>
         </div>
         <div class="stat-card">
@@ -1466,6 +1477,10 @@
 
                 document.getElementById('totalDataCount').innerText = globalFindings.length;
                 document.getElementById('statTotalException').innerText = summary.total_exception ?? globalFindings.length;
+                const totalBelumAll = summary.total_belum_dikerjakan ?? Math.max(0, (summary.total_exception ?? globalFindings.length) - (summary.selesai_review ?? 0));
+                if (document.getElementById('statBelumDikerjakan')) {
+                    document.getElementById('statBelumDikerjakan').innerText = totalBelumAll;
+                }
                 document.getElementById('statTotalNominal').innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(summary.total_nominal || 0);
                 document.getElementById('statHighRisk').innerText = summary.high_risk ?? 0;
                 document.getElementById('statSelesaiReview').innerText = summary.selesai_review ?? 0;
@@ -1805,7 +1820,13 @@
             let riskBadge = `<span class="badge" style="border-radius:12px; padding:0.25rem 0.55rem; font-size:0.72rem; ${riskBadgeStyle}">${riskVal}</span>`;
             let nominalStr = item.nominal_terkait > 0 ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(item.nominal_terkait) : '-';
             let userMakerDisplay = (!item.user_maker || item.user_maker === '-') ? 'Sistem / Tidak Tercatat' : item.user_maker;
-            let deskripsiDisplay = item.deskripsi || item.catatan_rule || item.rincian || '-';
+            let deskripsiDisplay = (item.deskripsi && item.deskripsi !== '-') 
+                ? item.deskripsi 
+                : ((item.ket_tx && item.ket_tx !== '-') 
+                    ? item.ket_tx 
+                    : ((item.rincian && item.rincian !== '-') 
+                        ? item.rincian 
+                        : (item.catatan_rule || item.jenis_exception_awal || '-')));
             let deskripsiClean = deskripsiDisplay.replace(/"/g, '&quot;');
 
             const tr = `<tr class="${rowClass}">
@@ -1900,7 +1921,14 @@
         }
 
         document.getElementById('sum_risk_badge').innerHTML = `<span style="background-color:${badgeBgColor}; color:${badgeTextColor}; border:1px solid ${badgeBorderColor}; border-radius:12px; padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;">${item.risk_final || item.risk_awal || 'Moderate'}</span>`;
-        document.getElementById('sum_deskripsi').innerText = item.deskripsi || item.rincian || '-';
+        let detailDeskripsi = (item.deskripsi && item.deskripsi !== '-') 
+            ? item.deskripsi 
+            : ((item.ket_tx && item.ket_tx !== '-') 
+                ? item.ket_tx 
+                : ((item.rincian && item.rincian !== '-') 
+                    ? item.rincian 
+                    : (item.catatan_rule || item.jenis_exception_awal || '-')));
+        document.getElementById('sum_deskripsi').innerText = detailDeskripsi;
 
         // 1. Alert Box Revisi & Riwayat Box (Requirement 5)
         const alertBox = document.getElementById('alertBoxRevisi');
@@ -1938,7 +1966,7 @@
         document.getElementById('sys_risk_awal').innerHTML = document.getElementById('sum_risk_badge').innerHTML;
         document.getElementById('sys_exception_awal').innerText = item.jenis_exception_awal || item.deskripsi || '-';
         
-        document.getElementById('sys_catatan_rule').innerText = item.deskripsi || item.catatan_rule || '-';
+        document.getElementById('sys_catatan_rule').innerText = detailDeskripsi;
         document.getElementById('sys_prosedur_uji').innerText = item.prosedur_uji || 'Uji Ketaatan & Keabsahan Dokumen Transaksi Offsite';
 
         // Populate Section 2 (RA)

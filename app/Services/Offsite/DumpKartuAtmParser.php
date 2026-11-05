@@ -36,8 +36,9 @@ class DumpKartuAtmParser
 
         // Cari index kolom dinamis berdasarkan nama kolom
         $idxDate = $headerMap['TANGGAL'] ?? ($headerMap['TGL'] ?? ($headerMap['TGL_TX'] ?? 0));
-        $idxArsip = $headerMap['NO_ARSIP'] ?? ($headerMap['NOARSIP'] ?? ($headerMap['NO_SURAT'] ?? ($headerMap['NO_BUKTI'] ?? 1)));
-        $idxKet = $headerMap['KETERANGAN'] ?? ($headerMap['KET'] ?? ($headerMap['URAIAN'] ?? 2));
+        $idxArsip = DumpParserHelper::findNoArsipIndex($header ?? []) ?? ($headerMap['NO_ARSIP'] ?? ($headerMap['NOARSIP'] ?? ($headerMap['NO_SURAT'] ?? ($headerMap['NO_BUKTI'] ?? 1))));
+        $idxKet = $headerMap['KETERANGAN'] ?? ($headerMap['KET'] ?? ($headerMap['URAIAN'] ?? ($headerMap['STATUS'] ?? 2)));
+        $idxKetTx = DumpParserHelper::findKetTxIndex($header ?? []);
         $idxNominal = $headerMap['NOMINAL'] ?? ($headerMap['BIAYA'] ?? ($headerMap['JUMLAH'] ?? ($headerMap['NILAI'] ?? 3)));
         $idxUser = $headerMap['USER_ID'] ?? ($headerMap['USERID'] ?? ($headerMap['USER'] ?? ($headerMap['PETUGAS'] ?? 4)));
 
@@ -65,7 +66,10 @@ class DumpKartuAtmParser
             }
 
             $noArsip = trim($row[$idxArsip] ?? '');
-            $keterangan = trim($row[$idxKet] ?? '-');
+            $rawKet = trim($row[$idxKet] ?? '-');
+            $rawKetTx = $idxKetTx !== null ? trim($row[$idxKetTx] ?? '') : '';
+            $keterangan = ($rawKet !== '-' && $rawKet !== '') ? $rawKet : $rawKetTx;
+            $evalText = "{$rawKet} {$rawKetTx}";
             $nominal = (float) str_replace(['Rp', ',', '.', ' '], '', $row[$idxNominal] ?? 0);
             $userId = trim($row[$idxUser] ?? '');
 
@@ -86,8 +90,8 @@ class DumpKartuAtmParser
             $isMaterial = $nominal >= 10000000; // Pengeluaran/biaya kartu >= 10 Juta (Certainty)
             
             // Keyword Triggers di Keterangan
-            $hasSelisihHilang = (bool) preg_match('/(SELISIH|HILANG|TERTELAN|VOID|ANOMALI)/i', $keterangan);
-            $hasRusakKoreksi  = (bool) preg_match('/(RUSAK|CACAT|KOREKSI|PEMBATALAN|MANUAL|RETUR)/i', $keterangan);
+            $hasSelisihHilang = (bool) preg_match('/(SELISIH|HILANG|TERTELAN|VOID|ANOMALI)/i', $evalText);
+            $hasRusakKoreksi  = (bool) preg_match('/(RUSAK|CACAT|KOREKSI|PEMBATALAN|MANUAL|RETUR)/i', $evalText);
 
             // Tentukan Level Risiko & Jenis Exception
             $riskLevel = 'Low';
@@ -132,7 +136,12 @@ class DumpKartuAtmParser
             // --- 3. PEMBENTUKAN RECORD DATABASE ---
             if ($isDailyRegister) {
                 if ($riskLevel !== 'Low') {
+                    $cleanNoArsip = DumpParserHelper::cleanNoArsip($noArsip);
+                    $ketTx = DumpParserHelper::cleanKetTx($rawKetTx ?: $keterangan);
+                    $deskripsiUtama = $ketTx ?: ($deskripsiException ?: 'Mutasi Kartu ATM');
+
                     $dailyRegisterData[] = [
+                        'no_arsip'             => $cleanNoArsip,
                         'tanggal_data'         => $tanggal,
                         'periode'              => $periode ?: date('Y-m-01', strtotime($tanggal)),
                         'kode_unit'            => $kodeUnit,
@@ -141,7 +150,8 @@ class DumpKartuAtmParser
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
                         'jenis_exception_awal' => $jenisException,
-                        'deskripsi'            => $deskripsiException,
+                        'deskripsi'            => $deskripsiUtama,
+                        'rincian'              => $deskripsiUtama,
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];

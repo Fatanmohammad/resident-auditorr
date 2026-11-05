@@ -75,6 +75,9 @@ class DumpBiayaParser
             }
         }
 
+        $idxArsip = DumpParserHelper::findNoArsipIndex($header ?? []);
+        $idxKetTx = DumpParserHelper::findKetTxIndex($header ?? []);
+
         $lowRiskData = [];
         $moderateHighRiskData = [];
         $dailyRegisterData = [];
@@ -100,6 +103,9 @@ class DumpBiayaParser
             $rawNominal = trim($row[$idxNominal] ?? 0);
             $cleanNominal = preg_replace('/[,.]00$/', '', $rawNominal);
             $nominal = (float) str_replace(['Rp', ',', '.', ' '], '', $cleanNominal);
+            $noArsip = $idxArsip !== null ? DumpParserHelper::cleanNoArsip($row[$idxArsip] ?? null) : null;
+            $ketTx = $idxKetTx !== null ? DumpParserHelper::cleanKetTx($row[$idxKetTx] ?? null) : null;
+            $deskripsiUtama = $ketTx ?: ('Akun: ' . ($akunGl ?: 'Beban Operasional'));
 
             // LOGIKA BIAYA (SOP 02):
             // 1. Biaya Jumbo (>= Rp 25.000.000) -> High Risk
@@ -128,13 +134,14 @@ class DumpBiayaParser
                     'nominal_terkait'      => $nominal,
                     'risk_awal'            => $riskLevel,
                     'jenis_exception_awal' => $isAkunSensitif ? 'Akun GL Sensitif' : 'Nominal Biaya Melebihi Toleransi',
-                    'deskripsi'            => 'Akun: ' . ($akunGl ?: 'Beban Operasional') . ($keterangan ? ' - ' . $keterangan : ''),
-                    'rincian'              => 'Akun: ' . ($akunGl ?: 'Beban Operasional'),
+                    'deskripsi'            => $deskripsiUtama,
                     'created_at'           => now(),
                     'updated_at'           => now(),
                 ];
 
                 if ($isDailyRegister) {
+                    $itemException['no_arsip'] = $noArsip;
+                    $itemException['rincian'] = $deskripsiUtama;
                     $dailyRegisterData[] = $itemException;
                 } else {
                     $moderateHighRiskData[] = $itemException;
