@@ -297,11 +297,13 @@ class MonitoringController extends Controller
                 $target = !empty($row[7]) ? date('Y-m-d', strtotime($row[7])) : date('Y-m-d', strtotime('+30 days'));
                 $prioritas = !empty($row[8]) ? strtoupper(trim($row[8])) : 'HIGH';
                 $statusFinal = !empty($row[9]) ? strtoupper(trim($row[9])) : 'OPEN';
+                $kodeUnit = !empty($row[10]) ? trim($row[10]) : '000';
 
                 Sop07RegisterTl::updateOrCreate([
                     'tl_id' => $tlId,
                 ], [
                     'sumber_tl' => $sumber,
+                    'kode_unit' => $kodeUnit,
                     'nama_unit' => $unit,
                     'nomor_laporan' => $noLap,
                     'tanggal_laporan' => $tglLap,
@@ -349,11 +351,13 @@ class MonitoringController extends Controller
                 $target = !empty($row[7]) ? date('Y-m-d', strtotime($row[7])) : date('Y-m-d', strtotime('+30 days'));
                 $prioritas = !empty($row[8]) ? strtoupper(trim($row[8])) : 'MEDIUM';
                 $statusFinal = !empty($row[9]) ? strtoupper(trim($row[9])) : 'OPEN';
+                $kodeUnit = !empty($row[10]) ? trim($row[10]) : '000';
 
                 Sop07RegisterTl::updateOrCreate([
                     'tl_id' => $tlId,
                 ], [
                     'sumber_tl' => $sumber,
+                    'kode_unit' => $kodeUnit,
                     'nama_unit' => $unit,
                     'nomor_laporan' => $noLap,
                     'tanggal_laporan' => $tglLap,
@@ -571,8 +575,9 @@ HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
                 'tl_id' => 'SA-KAS-' . $k->id,
             ], [
                 'sumber_tl' => 'Surprise Audit',
+                'kode_unit' => $assignment->kode_unit ?? $assignment->unit_code ?? '000',
                 'nama_unit' => $assignment->nama_unit ?? 'Bank Sulteng',
-                'nomor_laporan' => $assignment->nomor_assignment ?: $assignment->visit_id,
+                'nomor_laporan' => $assignment->nomor_assignment ?: ($assignment->visit_id ?: 'ST-RA/SA/' . date('Ym') . '/001'),
                 'tanggal_laporan' => $assignment->tanggal_rencana ?: date('Y-m-d'),
                 'rekomendasi_temuan' => $uraianTemuan,
                 'komitmen_auditee' => $k->klarifikasi ?: 'Penyesuaian rekening kas operasional cabang.',
@@ -601,8 +606,9 @@ HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
                 'tl_id' => 'SA-KARTU-' . $kr->id,
             ], [
                 'sumber_tl' => 'Surprise Audit',
+                'kode_unit' => $assignment->kode_unit ?? $assignment->unit_code ?? '000',
                 'nama_unit' => $assignment->nama_unit ?? 'Bank Sulteng',
-                'nomor_laporan' => $assignment->nomor_assignment ?: $assignment->visit_id,
+                'nomor_laporan' => $assignment->nomor_assignment ?: ($assignment->visit_id ?: 'ST-RA/SA/' . date('Ym') . '/001'),
                 'tanggal_laporan' => $assignment->tanggal_rencana ?: date('Y-m-d'),
                 'rekomendasi_temuan' => $uraianTemuan,
                 'komitmen_auditee' => $kr->klarifikasi ?: ($kr->findings_tabel2 ?: 'Penyelarasan stok fisik PIN Mailer dan persediaan buku.'),
@@ -632,8 +638,9 @@ HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
                 'tl_id' => 'SA-ATM-' . $at->id,
             ], [
                 'sumber_tl' => 'Surprise Audit',
+                'kode_unit' => $assignment->kode_unit ?? $assignment->unit_code ?? '000',
                 'nama_unit' => $assignment->nama_unit ?? 'Bank Sulteng',
-                'nomor_laporan' => $assignment->nomor_assignment ?: $assignment->visit_id,
+                'nomor_laporan' => $assignment->nomor_assignment ?: ($assignment->visit_id ?: 'ST-RA/SA/' . date('Ym') . '/001'),
                 'tanggal_laporan' => $assignment->tanggal_rencana ?: date('Y-m-d'),
                 'rekomendasi_temuan' => $uraianTemuan,
                 'komitmen_auditee' => $at->klarifikasi ?: 'Penyesuaian jurnal selisih kaset ATM.',
@@ -653,6 +660,7 @@ HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
                 [
                     'tl_id' => 'REG-2025-001',
                     'sumber_tl' => 'OJK',
+                    'kode_unit' => '001',
                     'nama_unit' => 'Kantor Cabang Utama Palu',
                     'nomor_laporan' => 'S-142/KO.04/2025',
                     'tanggal_laporan' => '2025-08-15',
@@ -668,6 +676,7 @@ HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
                 [
                     'tl_id' => 'REG-2025-002',
                     'sumber_tl' => 'Bank Indonesia',
+                    'kode_unit' => '002',
                     'nama_unit' => 'Kantor Cabang Tolitoli',
                     'nomor_laporan' => 'BI/PLW/SP/2025/088',
                     'tanggal_laporan' => '2025-09-02',
@@ -683,6 +692,7 @@ HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
                 [
                     'tl_id' => 'REG-2025-003',
                     'sumber_tl' => 'OJK',
+                    'kode_unit' => '003',
                     'nama_unit' => 'Kantor Cabang Luwuk',
                     'nomor_laporan' => 'S-189/KO.04/2025',
                     'tanggal_laporan' => '2025-09-18',
@@ -698,6 +708,7 @@ HTML, 200, ['Content-Type' => 'text/html; charset=utf-8']);
                 [
                     'tl_id' => 'REG-2025-004',
                     'sumber_tl' => 'OJK',
+                    'kode_unit' => '004',
                     'nama_unit' => 'Kantor Cabang Kolonodale',
                     'nomor_laporan' => 'S-205/KO.04/2025',
                     'tanggal_laporan' => '2025-07-10',

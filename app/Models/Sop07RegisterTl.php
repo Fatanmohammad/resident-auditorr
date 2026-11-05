@@ -67,4 +67,46 @@ class Sop07RegisterTl extends Model
         'status_tindak_lanjut',
         'klarifikasi',
     ];
+
+    protected $attributes = [
+        'kode_unit' => '000',
+        'nama_unit' => 'Bank Sulteng',
+        'nomor_laporan' => '-',
+        'rekomendasi_temuan' => '-',
+        'komitmen_auditee' => '-',
+        'status_final' => 'OPEN',
+        'status_workflow' => 'MONITOR/REMINDER',
+        'status_reminder' => 'NORMAL',
+        'aging_bucket' => 'LANCAR',
+        'kelengkapan' => 'VALID',
+        'closure_authority' => 'SKAI/Owner Temuan',
+        'exception_aktif' => 'Tidak',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (empty($model->kode_unit)) {
+                $model->kode_unit = '000';
+            }
+            if (empty($model->nama_unit)) {
+                $model->nama_unit = 'Bank Sulteng';
+            }
+            if (empty($model->nomor_laporan)) {
+                $model->nomor_laporan = '-';
+            }
+            if (empty($model->tanggal_laporan)) {
+                $model->tanggal_laporan = date('Y-m-d');
+            }
+            if (empty($model->target_penyelesaian)) {
+                $model->target_penyelesaian = date('Y-m-d', strtotime('+30 days'));
+            }
+            if (empty($model->rekomendasi_temuan)) {
+                $model->rekomendasi_temuan = '-';
+            }
+            if (empty($model->komitmen_auditee)) {
+                $model->komitmen_auditee = '-';
+            }
+        });
+    }
 }

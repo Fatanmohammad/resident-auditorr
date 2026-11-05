@@ -72,7 +72,7 @@ class DashboardController extends Controller
 
         $pendingSurpriseAudits = SurpriseAuditAssignment::where('status_assignment', '!=', 'SELESAI')
             ->orWhere('status_review_admin', 'PERLU PERBAIKAN')
-            ->orderByRaw("FIELD(status_review_admin, 'PERLU PERBAIKAN') DESC")
+            ->orderByRaw("CASE WHEN status_review_admin = 'PERLU PERBAIKAN' THEN 0 ELSE 1 END ASC")
             ->orderBy('updated_at', 'desc')
             ->take(5)
             ->get();
@@ -80,7 +80,11 @@ class DashboardController extends Controller
         // =========================================================================
         // SOP 07: MONITORING TINDAK LANJUT TERPADU
         // =========================================================================
-        MonitoringController::autoSyncSurpriseAuditFindings();
+        try {
+            MonitoringController::autoSyncSurpriseAuditFindings();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Dashboard autoSyncSurpriseAuditFindings warning: ' . $e->getMessage());
+        }
 
         $queryInternal = Sop07RegisterTl::whereIn('sumber_tl', ['SKAI', 'Resident Auditor', 'Internal', 'Surprise Audit', 'Offsite', 'Onsite']);
         $totalTemuanInternal = (clone $queryInternal)->count();
@@ -93,7 +97,7 @@ class DashboardController extends Controller
         $temuanRegulatorSudahTl = (clone $queryRegulator)->whereIn('status_final', ['CLOSED', 'PROPOSED CLOSED'])->count();
 
         $pendingFindings = Sop07RegisterTl::whereIn('status_final', ['OPEN', 'UNDER REVIEW', 'INADEQUATE', 'OVERDUE'])
-            ->orderByRaw("FIELD(prioritas, 'HIGH', 'MEDIUM', 'LOW')")
+            ->orderByRaw("CASE WHEN prioritas = 'HIGH' THEN 1 WHEN prioritas = 'MEDIUM' THEN 2 WHEN prioritas = 'LOW' THEN 3 ELSE 4 END ASC")
             ->orderBy('target_penyelesaian', 'asc')
             ->take(5)
             ->get();
