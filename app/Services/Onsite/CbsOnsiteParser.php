@@ -31,15 +31,21 @@ class CbsOnsiteParser
 
         $file = fopen($filePath, 'r');
 
-        // Auto-detect delimiter dari baris pertama (koma, titik koma, atau tab)
+        // Auto-detect delimiter secara akurat dari baris pertama (hitung frekuensi pemisah)
         $firstLine = fgets($file);
-        $delimiter = ',';
-        if (str_contains($firstLine, "\t")) {
-            $delimiter = "\t";
-        } elseif (str_contains($firstLine, ';')) {
-            $delimiter = ';';
-        }
         rewind($file);
+
+        $counts = [
+            ','  => substr_count($firstLine, ','),
+            ';'  => substr_count($firstLine, ';'),
+            "\t" => substr_count($firstLine, "\t"),
+            '|'  => substr_count($firstLine, '|'),
+        ];
+        arsort($counts);
+        $delimiter = array_key_first($counts);
+        if ($counts[$delimiter] === 0) {
+            $delimiter = ',';
+        }
 
         $header = fgetcsv($file, 0, $delimiter);
         if (!$header) {
@@ -47,91 +53,96 @@ class CbsOnsiteParser
             throw new \Exception("File CSV kosong atau tidak memiliki header.");
         }
 
-        // Bangun mapping kolom dinamis
+        // Bangun mapping kolom dinamis (bersihkan dari spasi, karakter non-alphanumeric, & BOM)
         $headerMap = [];
         foreach ($header as $index => $colName) {
-            $cleanCol = strtoupper(trim(preg_replace('/^\xEF\xBB\xBF/', '', (string)$colName)));
-            $headerMap[$cleanCol] = $index;
-        }
-
-        // Cari letak kolom KD_TX (atau variasi ID_DATA_CBS, KDTX, ID_TX, dsb)
-        $idxKdTx = $headerMap['KD_TX'] 
-            ?? ($headerMap['KDTX'] 
-            ?? ($headerMap['ID_DATA_CBS'] 
-            ?? ($headerMap['ID_TX'] 
-            ?? ($headerMap['KODE_TX'] 
-            ?? ($headerMap['TX_ID'] 
-            ?? ($headerMap['ID'] ?? null))))));
-
-        if ($idxKdTx === null) {
-            // Jika ID_DATA_CBS ada di kolom pertama dan KD_TX ada di sebelahnya
-            if (isset($header[1]) && strtoupper(trim($header[1])) === 'KD_TX') {
-                $idxKdTx = 1;
-            } else {
-                $firstCol = strtoupper(trim(str_replace("\xEF\xBB\xBF", '', $header[0] ?? '')));
-                fclose($file);
-                throw new \Exception("File bukan format CBS yang valid. Kolom 'KD_TX' atau 'ID_DATA_CBS' tidak ditemukan dalam header (header pertama: '{$firstCol}').");
+            $cleanCol = strtoupper(trim(preg_replace('/[^A-Za-z0-9_]/', '', (string)$colName)));
+            if ($cleanCol !== '') {
+                $headerMap[$cleanCol] = $index;
             }
         }
 
-        // Pemetaan kolom fleksibel berdasarkan nama header atau urutan relatif
-        $idxKdCab = $headerMap['KD_CAB'] 
-            ?? ($headerMap['KDCAB'] 
-            ?? ($headerMap['KODE_CAB'] 
-            ?? ($headerMap['KODE_CABANG'] 
-            ?? ($headerMap['CABANG'] ?? ($idxKdTx + 1)))));
+        // 1. Cari kolom ID Transaksi / KD_TX
+        $idxKdTx = null;
+        foreach (['KD_TX', 'KDTX', 'ID_DATA_CBS', 'IDDATACBS', 'ID_TX', 'IDTX', 'KODE_TX', 'TX_ID', 'ID'] as $k) {
+            if (isset($headerMap[$k])) { $idxKdTx = $headerMap[$k]; break; }
+        }
+        if ($idxKdTx === null) {
+            $idxKdTx = 0; // Fallback kolom pertama
+        }
 
-        $idxNoRek = $headerMap['NO_REK'] 
-            ?? ($headerMap['NOREK'] 
-            ?? ($headerMap['NO_REKENING'] 
-            ?? ($headerMap['REKENING'] ?? ($idxKdTx + 2))));
+        // 2. KD_CAB
+        $idxKdCab = null;
+        foreach (['KD_CAB', 'KDCAB', 'KODE_CAB', 'KODECAB', 'KODE_CABANG', 'CABANG'] as $k) {
+            if (isset($headerMap[$k])) { $idxKdCab = $headerMap[$k]; break; }
+        }
 
-        $idxNoArsip = $headerMap['NO_ARSIP'] 
-            ?? ($headerMap['NOARSIP'] 
-            ?? ($headerMap['NO_BUKTI'] 
-            ?? ($headerMap['ARSIP'] ?? ($idxKdTx + 3))));
+        // 3. NO_REK
+        $idxNoRek = null;
+        foreach (['NO_REK', 'NOREK', 'NO_REKENING', 'NOREKENING', 'REKENING'] as $k) {
+            if (isset($headerMap[$k])) { $idxNoRek = $headerMap[$k]; break; }
+        }
 
-        $idxKetTx = $headerMap['KET_TX'] 
-            ?? ($headerMap['KET'] 
-            ?? ($headerMap['KETERANGAN'] 
-            ?? ($headerMap['DESKRIPSI'] 
-            ?? ($headerMap['URAIAN'] ?? ($idxKdTx + 4)))));
+        // 4. NO_ARSIP
+        $idxNoArsip = null;
+        foreach (['NO_ARSIP', 'NOARSIP', 'NO_BUKTI', 'NOBUKTI', 'ARSIP', 'BUKTI', 'NO_SURAT'] as $k) {
+            if (isset($headerMap[$k])) { $idxNoArsip = $headerMap[$k]; break; }
+        }
 
-        $idxDbKr = $headerMap['DB_KR'] 
-            ?? ($headerMap['DBKR'] 
-            ?? ($headerMap['D_K'] 
-            ?? ($headerMap['DK'] 
-            ?? ($headerMap['DEBET_KREDIT'] ?? ($idxKdTx + 5)))));
+        // 5. KET_TX
+        $idxKetTx = null;
+        foreach (['KET_TX', 'KETTX', 'KETERANGAN', 'KET', 'DESKRIPSI', 'URAIAN', 'RINCIAN', 'TRANSAKSI'] as $k) {
+            if (isset($headerMap[$k])) { $idxKetTx = $headerMap[$k]; break; }
+        }
 
-        $idxTxtype = $headerMap['TXTYPE'] 
-            ?? ($headerMap['TX_TYPE'] 
-            ?? ($headerMap['JENIS_TX'] 
-            ?? ($headerMap['TIPE_TX'] ?? ($idxKdTx + 6))));
+        // 6. DB_KR
+        $idxDbKr = null;
+        foreach (['DB_KR', 'DBKR', 'D_K', 'DK', 'DEBET_KREDIT', 'DEBETKREDIT', 'TIPE'] as $k) {
+            if (isset($headerMap[$k])) { $idxDbKr = $headerMap[$k]; break; }
+        }
 
-        $idxKdUser = $headerMap['KD_USER'] 
-            ?? ($headerMap['KDUSER'] 
-            ?? ($headerMap['KODE_USER'] 
-            ?? ($headerMap['USER_ID'] 
-            ?? ($headerMap['USERID'] 
-            ?? ($headerMap['USER'] ?? ($idxKdTx + 7))))));
+        // 7. TXTYPE
+        $idxTxtype = null;
+        foreach (['TXTYPE', 'TX_TYPE', 'JENIS_TX', 'JENISTX', 'TIPE_TX', 'TIPETX'] as $k) {
+            if (isset($headerMap[$k])) { $idxTxtype = $headerMap[$k]; break; }
+        }
 
-        $idxTglTx = $headerMap['TGL_TX'] 
-            ?? ($headerMap['TGLTX'] 
-            ?? ($headerMap['TGL'] 
-            ?? ($headerMap['TANGGAL'] 
-            ?? ($headerMap['TANGGAL_TX'] ?? ($idxKdTx + 8)))));
+        // 8. KD_USER
+        $idxKdUser = null;
+        foreach (['KD_USER', 'KDUSER', 'KODE_USER', 'KODEUSER', 'USER_ID', 'USERID', 'USER', 'PETUGAS', 'TELLER'] as $k) {
+            if (isset($headerMap[$k])) { $idxKdUser = $headerMap[$k]; break; }
+        }
 
-        $idxTimeStamp = $headerMap['TIME_STAMP'] 
-            ?? ($headerMap['TIMESTAMP'] 
-            ?? ($headerMap['JAM'] 
-            ?? ($headerMap['WAKTU'] 
-            ?? ($headerMap['TIME'] ?? ($idxKdTx + 9)))));
+        // 9. TGL_TX
+        $idxTglTx = null;
+        foreach (['TGL_TX', 'TGLTX', 'TGL_TRANSAKSI', 'TGLTRANSAKSI', 'TANGGAL_TX', 'TANGGALTX', 'TANGGAL_TRANSAKSI', 'TANGGALTRANSAKSI', 'TANGGAL', 'TGL', 'DATE', 'TRX_DATE'] as $k) {
+            if (isset($headerMap[$k])) { $idxTglTx = $headerMap[$k]; break; }
+        }
 
-        $idxJumlahTx = $headerMap['JUMLAH_TX'] 
-            ?? ($headerMap['JUMLAHTX'] 
-            ?? ($headerMap['NOMINAL'] 
-            ?? ($headerMap['JUMLAH'] 
-            ?? ($headerMap['NILAI'] ?? ($idxKdTx + 10)))));
+        // 10. TIME_STAMP
+        $idxTimeStamp = null;
+        foreach (['TIME_STAMP', 'TIMESTAMP', 'JAM', 'WAKTU', 'TIME'] as $k) {
+            if (isset($headerMap[$k])) { $idxTimeStamp = $headerMap[$k]; break; }
+        }
+
+        // 11. JUMLAH_TX
+        $idxJumlahTx = null;
+        foreach (['JUMLAH_TX', 'JUMLAHTX', 'JUMLAH', 'NOMINAL', 'NILAI', 'SALDO_AKHIR', 'SALDO', 'DEBET', 'KREDIT', 'BAKI_DEBET'] as $k) {
+            if (isset($headerMap[$k])) { $idxJumlahTx = $headerMap[$k]; break; }
+        }
+
+        // Positional fallback jika ada kolom yang belum terpetakan namanya
+        $colCount = count($header);
+        if ($idxKdCab === null)     $idxKdCab     = min($idxKdTx + 1, $colCount - 1);
+        if ($idxNoRek === null)     $idxNoRek     = min($idxKdTx + 2, $colCount - 1);
+        if ($idxNoArsip === null)   $idxNoArsip   = min($idxKdTx + 3, $colCount - 1);
+        if ($idxKetTx === null)     $idxKetTx     = min($idxKdTx + 4, $colCount - 1);
+        if ($idxDbKr === null)      $idxDbKr      = min($idxKdTx + 5, $colCount - 1);
+        if ($idxTxtype === null)    $idxTxtype    = min($idxKdTx + 6, $colCount - 1);
+        if ($idxKdUser === null)    $idxKdUser    = min($idxKdTx + 7, $colCount - 1);
+        if ($idxTglTx === null)     $idxTglTx     = min($idxKdTx + 8, $colCount - 1);
+        if ($idxTimeStamp === null) $idxTimeStamp = min($idxKdTx + 9, $colCount - 1);
+        if ($idxJumlahTx === null)  $idxJumlahTx  = min($idxKdTx + 10, $colCount - 1);
 
         // Hapus data lama untuk kunjungan ini (delete-before-insert)
         OnsitePopulation::where('onsite_visit_id', $visit->id)->delete();
@@ -139,14 +150,40 @@ class CbsOnsiteParser
         \App\Models\Onsite\OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id)->delete();
 
         $rows = [];
+        $rawRowsInspected = 0;
+        $fallbackDate = $visit->tanggal_mulai ? date('Y-m-d', strtotime($visit->tanggal_mulai)) : now()->toDateString();
+
         while (($row = fgetcsv($file, 0, $delimiter)) !== false) {
-            if (empty(array_filter($row, fn($val) => $val !== null && trim((string)$val) !== ''))) continue;
+            if (empty(array_filter($row, fn($val) => $val !== null && trim((string)$val) !== ''))) {
+                continue;
+            }
 
-            $tglRaw = trim($row[$idxTglTx] ?? '');
+            $rawRowsInspected++;
+
+            // Cari tanggal transaksi
+            $tglRaw = trim((string)($row[$idxTglTx] ?? ''));
             $tglTx  = $this->parseDate($tglRaw);
-            if (!$tglTx) continue;
 
-            $dbKr = strtoupper(trim($row[$idxDbKr] ?? ''));
+            // Jika tanggal di kolom tsb tidak valid, scan seluruh kolom pada baris ini
+            if (!$tglTx) {
+                foreach ($row as $val) {
+                    $valStr = trim((string)$val);
+                    if ($valStr !== '' && strlen($valStr) >= 8) {
+                        $candidate = $this->parseDate($valStr);
+                        if ($candidate) {
+                            $tglTx = $candidate;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Fallback ke tanggal kunjungan / hari ini jika baris tidak memuat format tanggal (JANGAN LEWATKAN BARIS!)
+            if (!$tglTx) {
+                $tglTx = $fallbackDate;
+            }
+
+            $dbKr = strtoupper(trim((string)($row[$idxDbKr] ?? '')));
             if ($dbKr === 'DEBET' || $dbKr === 'D') {
                 $dbKr = 'D';
             } elseif ($dbKr === 'KREDIT' || $dbKr === 'K') {
@@ -155,34 +192,51 @@ class CbsOnsiteParser
                 $dbKr = 'D'; // Default fallback debit
             }
 
-            $rawJumlah = trim($row[$idxJumlahTx] ?? '0');
+            $rawJumlah = trim((string)($row[$idxJumlahTx] ?? '0'));
             $cleanJumlah = preg_replace('/[,.]00$/', '', $rawJumlah);
             $cleanJumlah = str_replace(['Rp', ',', ' '], '', $cleanJumlah);
             $jumlah = (float) $cleanJumlah;
 
-            $noArsip = trim($row[$idxNoArsip] ?? '');
+            // Jika nominal 0, cari kolom numerik lain pada baris ini
+            if ($jumlah == 0) {
+                foreach ($row as $val) {
+                    $cleanVal = str_replace(['Rp', ',', '.', ' '], '', trim((string)$val));
+                    if (is_numeric($cleanVal) && (float)$cleanVal >= 1000) {
+                        $jumlah = (float)$cleanVal;
+                        break;
+                    }
+                }
+            }
+
+            $noArsip = trim((string)($row[$idxNoArsip] ?? ''));
             if ($noArsip === '') {
-                $noArsip = 'ARS-' . uniqid();
+                $noArsip = 'ARS-' . str_pad($rawRowsInspected, 4, '0', STR_PAD_LEFT);
+            }
+
+            $ketTx = trim((string)($row[$idxKetTx] ?? ''));
+            if ($ketTx === '') {
+                $ketTx = 'Transaksi CBS No ' . $rawRowsInspected;
             }
 
             $rows[] = [
-                'kd_tx'     => trim($row[$idxKdTx] ?? ''),
-                'kd_cab'    => trim($row[$idxKdCab] ?? ''),
-                'no_rek'    => trim($row[$idxNoRek] ?? ''),
+                'kd_tx'     => trim((string)($row[$idxKdTx] ?? 'TX' . $rawRowsInspected)),
+                'kd_cab'    => trim((string)($row[$idxKdCab] ?? $visit->kode_unit)),
+                'no_rek'    => trim((string)($row[$idxNoRek] ?? '-')),
                 'no_arsip'  => $noArsip,
-                'ket_tx'    => trim($row[$idxKetTx] ?? ''),
+                'ket_tx'    => $ketTx,
                 'db_kr'     => $dbKr,
-                'txtype'    => trim($row[$idxTxtype] ?? ''),
-                'kd_user'   => trim($row[$idxKdUser] ?? ''),
+                'txtype'    => trim((string)($row[$idxTxtype] ?? 'TRX')),
+                'kd_user'   => trim((string)($row[$idxKdUser] ?? 'SYSTEM')),
                 'tgl_tx'    => $tglTx,
-                'time_stamp'=> trim($row[$idxTimeStamp] ?? ''),
+                'time_stamp'=> trim((string)($row[$idxTimeStamp] ?? '09:00:00')),
                 'jumlah_tx' => $jumlah,
             ];
         }
         fclose($file);
 
         if (empty($rows)) {
-            throw new \Exception('File CBS tidak mengandung data transaksi yang valid.');
+            $headerStr = implode(', ', array_slice($header, 0, 10));
+            throw new \Exception("File CBS tidak mengandung data transaksi (hanya terbaca header: [{$headerStr}], total baris terdeteksi: {$rawRowsInspected}). Pastikan file memuat baris data transaksi.");
         }
 
         // Hitung Stable Score per kd_user per tgl_tx
@@ -263,6 +317,13 @@ class CbsOnsiteParser
             ->where('db_kr', 'D')
             ->get()
             ->keyBy('populasi_key');
+
+        // Fallback jika tidak ada record dengan flag debit 'D', ambil seluruh populasi
+        if ($populations->isEmpty()) {
+            $populations = OnsitePopulation::where('onsite_visit_id', $visit->id)
+                ->get()
+                ->keyBy('populasi_key');
+        }
 
         $dipilih = [];
         $kkaInsert = [];
