@@ -31,19 +31,107 @@ class CbsOnsiteParser
 
         $file = fopen($filePath, 'r');
 
-        // Auto-detect delimiter dari baris pertama
+        // Auto-detect delimiter dari baris pertama (koma, titik koma, atau tab)
         $firstLine = fgets($file);
-        $delimiter = str_contains($firstLine, "\t") ? "\t" : ',';
+        $delimiter = ',';
+        if (str_contains($firstLine, "\t")) {
+            $delimiter = "\t";
+        } elseif (str_contains($firstLine, ';')) {
+            $delimiter = ';';
+        }
         rewind($file);
 
         $header = fgetcsv($file, 0, $delimiter);
-
-        // Strip BOM UTF-8 dan whitespace dari kolom pertama header
-        $firstCol = strtoupper(trim(str_replace("\xEF\xBB\xBF", '', $header[0] ?? '')));
-        if (!$header || $firstCol !== 'KD_TX') {
+        if (!$header) {
             fclose($file);
-            throw new \Exception("File bukan format CBS yang valid. Header pertama harus KD_TX, ditemukan: '{$firstCol}'");
+            throw new \Exception("File CSV kosong atau tidak memiliki header.");
         }
+
+        // Bangun mapping kolom dinamis
+        $headerMap = [];
+        foreach ($header as $index => $colName) {
+            $cleanCol = strtoupper(trim(preg_replace('/^\xEF\xBB\xBF/', '', (string)$colName)));
+            $headerMap[$cleanCol] = $index;
+        }
+
+        // Cari letak kolom KD_TX (atau variasi ID_DATA_CBS, KDTX, ID_TX, dsb)
+        $idxKdTx = $headerMap['KD_TX'] 
+            ?? ($headerMap['KDTX'] 
+            ?? ($headerMap['ID_DATA_CBS'] 
+            ?? ($headerMap['ID_TX'] 
+            ?? ($headerMap['KODE_TX'] 
+            ?? ($headerMap['TX_ID'] 
+            ?? ($headerMap['ID'] ?? null))))));
+
+        if ($idxKdTx === null) {
+            // Jika ID_DATA_CBS ada di kolom pertama dan KD_TX ada di sebelahnya
+            if (isset($header[1]) && strtoupper(trim($header[1])) === 'KD_TX') {
+                $idxKdTx = 1;
+            } else {
+                $firstCol = strtoupper(trim(str_replace("\xEF\xBB\xBF", '', $header[0] ?? '')));
+                fclose($file);
+                throw new \Exception("File bukan format CBS yang valid. Kolom 'KD_TX' atau 'ID_DATA_CBS' tidak ditemukan dalam header (header pertama: '{$firstCol}').");
+            }
+        }
+
+        // Pemetaan kolom fleksibel berdasarkan nama header atau urutan relatif
+        $idxKdCab = $headerMap['KD_CAB'] 
+            ?? ($headerMap['KDCAB'] 
+            ?? ($headerMap['KODE_CAB'] 
+            ?? ($headerMap['KODE_CABANG'] 
+            ?? ($headerMap['CABANG'] ?? ($idxKdTx + 1)))));
+
+        $idxNoRek = $headerMap['NO_REK'] 
+            ?? ($headerMap['NOREK'] 
+            ?? ($headerMap['NO_REKENING'] 
+            ?? ($headerMap['REKENING'] ?? ($idxKdTx + 2))));
+
+        $idxNoArsip = $headerMap['NO_ARSIP'] 
+            ?? ($headerMap['NOARSIP'] 
+            ?? ($headerMap['NO_BUKTI'] 
+            ?? ($headerMap['ARSIP'] ?? ($idxKdTx + 3))));
+
+        $idxKetTx = $headerMap['KET_TX'] 
+            ?? ($headerMap['KET'] 
+            ?? ($headerMap['KETERANGAN'] 
+            ?? ($headerMap['DESKRIPSI'] 
+            ?? ($headerMap['URAIAN'] ?? ($idxKdTx + 4)))));
+
+        $idxDbKr = $headerMap['DB_KR'] 
+            ?? ($headerMap['DBKR'] 
+            ?? ($headerMap['D_K'] 
+            ?? ($headerMap['DK'] 
+            ?? ($headerMap['DEBET_KREDIT'] ?? ($idxKdTx + 5)))));
+
+        $idxTxtype = $headerMap['TXTYPE'] 
+            ?? ($headerMap['TX_TYPE'] 
+            ?? ($headerMap['JENIS_TX'] 
+            ?? ($headerMap['TIPE_TX'] ?? ($idxKdTx + 6))));
+
+        $idxKdUser = $headerMap['KD_USER'] 
+            ?? ($headerMap['KDUSER'] 
+            ?? ($headerMap['KODE_USER'] 
+            ?? ($headerMap['USER_ID'] 
+            ?? ($headerMap['USERID'] 
+            ?? ($headerMap['USER'] ?? ($idxKdTx + 7))))));
+
+        $idxTglTx = $headerMap['TGL_TX'] 
+            ?? ($headerMap['TGLTX'] 
+            ?? ($headerMap['TGL'] 
+            ?? ($headerMap['TANGGAL'] 
+            ?? ($headerMap['TANGGAL_TX'] ?? ($idxKdTx + 8)))));
+
+        $idxTimeStamp = $headerMap['TIME_STAMP'] 
+            ?? ($headerMap['TIMESTAMP'] 
+            ?? ($headerMap['JAM'] 
+            ?? ($headerMap['WAKTU'] 
+            ?? ($headerMap['TIME'] ?? ($idxKdTx + 9)))));
+
+        $idxJumlahTx = $headerMap['JUMLAH_TX'] 
+            ?? ($headerMap['JUMLAHTX'] 
+            ?? ($headerMap['NOMINAL'] 
+            ?? ($headerMap['JUMLAH'] 
+            ?? ($headerMap['NILAI'] ?? ($idxKdTx + 10)))));
 
         // Hapus data lama untuk kunjungan ini (delete-before-insert)
         OnsitePopulation::where('onsite_visit_id', $visit->id)->delete();
@@ -52,24 +140,43 @@ class CbsOnsiteParser
 
         $rows = [];
         while (($row = fgetcsv($file, 0, $delimiter)) !== false) {
-            if (count($row) < 11) continue;
+            if (empty(array_filter($row, fn($val) => $val !== null && trim((string)$val) !== ''))) continue;
 
-            $tglRaw = trim($row[8] ?? '');
+            $tglRaw = trim($row[$idxTglTx] ?? '');
             $tglTx  = $this->parseDate($tglRaw);
             if (!$tglTx) continue;
 
+            $dbKr = strtoupper(trim($row[$idxDbKr] ?? ''));
+            if ($dbKr === 'DEBET' || $dbKr === 'D') {
+                $dbKr = 'D';
+            } elseif ($dbKr === 'KREDIT' || $dbKr === 'K') {
+                $dbKr = 'K';
+            } else {
+                $dbKr = 'D'; // Default fallback debit
+            }
+
+            $rawJumlah = trim($row[$idxJumlahTx] ?? '0');
+            $cleanJumlah = preg_replace('/[,.]00$/', '', $rawJumlah);
+            $cleanJumlah = str_replace(['Rp', ',', ' '], '', $cleanJumlah);
+            $jumlah = (float) $cleanJumlah;
+
+            $noArsip = trim($row[$idxNoArsip] ?? '');
+            if ($noArsip === '') {
+                $noArsip = 'ARS-' . uniqid();
+            }
+
             $rows[] = [
-                'kd_tx'     => trim($row[0] ?? ''),
-                'kd_cab'    => trim($row[1] ?? ''),
-                'no_rek'    => trim($row[2] ?? ''),
-                'no_arsip'  => trim($row[3] ?? ''),
-                'ket_tx'    => trim($row[4] ?? ''),
-                'db_kr'     => strtoupper(trim($row[5] ?? '')),
-                'txtype'    => trim($row[6] ?? ''),
-                'kd_user'   => trim($row[7] ?? ''),
+                'kd_tx'     => trim($row[$idxKdTx] ?? ''),
+                'kd_cab'    => trim($row[$idxKdCab] ?? ''),
+                'no_rek'    => trim($row[$idxNoRek] ?? ''),
+                'no_arsip'  => $noArsip,
+                'ket_tx'    => trim($row[$idxKetTx] ?? ''),
+                'db_kr'     => $dbKr,
+                'txtype'    => trim($row[$idxTxtype] ?? ''),
+                'kd_user'   => trim($row[$idxKdUser] ?? ''),
                 'tgl_tx'    => $tglTx,
-                'time_stamp'=> trim($row[9] ?? ''),
-                'jumlah_tx' => (float) str_replace(',', '', trim($row[10] ?? '0')),
+                'time_stamp'=> trim($row[$idxTimeStamp] ?? ''),
+                'jumlah_tx' => $jumlah,
             ];
         }
         fclose($file);
@@ -317,8 +424,20 @@ class CbsOnsiteParser
 
     private function parseDate(string $raw): ?string
     {
-        if (empty($raw)) return null;
-        $clean = str_replace('/', '-', trim($raw));
+        $trimmed = trim($raw);
+        if ($trimmed === '') return null;
+
+        // Jika serial number Excel (contoh: 45230)
+        if (is_numeric($trimmed) && (int)$trimmed > 30000 && (int)$trimmed < 60000) {
+            return date('Y-m-d', ((int)$trimmed - 25569) * 86400);
+        }
+
+        // Format YYYYMMDD (contoh: 20261102)
+        if (is_numeric($trimmed) && strlen($trimmed) === 8) {
+            return substr($trimmed, 0, 4) . '-' . substr($trimmed, 4, 2) . '-' . substr($trimmed, 6, 2);
+        }
+
+        $clean = str_replace('/', '-', $trimmed);
         $ts = strtotime($clean);
         return $ts ? date('Y-m-d', $ts) : null;
     }
