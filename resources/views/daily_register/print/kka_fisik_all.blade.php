@@ -179,13 +179,18 @@
 
     <div class="page-break"></div>
 
-    <!-- 4. KKA BARANG CETAKAN -->
-    @include('daily_register.print.kka_barang_cetakan', ['isDossier' => true])
+    <!-- 4. KKA REKONSILIASI STOK CEK & BILYET GIRO -->
+    @include('daily_register.print.kka_stok_cek_bg', ['isDossier' => true, 'eval' => $evalStok])
 
     <div class="page-break"></div>
 
-    <!-- 5. KKA OBSERVASI LINGKUNGAN & MATRIKS CCTV (E.1.5 & E.4.4) -->
-    @include('daily_register.print.kka_observasi', ['isDossier' => true])
+    <!-- 5. KKA BARANG CETAKAN -->
+    @include('daily_register.print.kka_barang_cetakan', ['isDossier' => true, 'eval' => $evalCetakan])
+
+    <div class="page-break"></div>
+
+    <!-- 6. KKA OBSERVASI LINGKUNGAN & MATRIKS CCTV (E.1.5 & E.4.4) -->
+    @include('daily_register.print.kka_observasi', ['isDossier' => true, 'eval' => $evalObs])
 
 </body>
 </html>

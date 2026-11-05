@@ -260,6 +260,7 @@
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-ba-kas', $id) }}" target="_blank"><i class="bi bi-cash-stack me-2 text-primary"></i>BA Kas Khasanah (Olibs)</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-ba-atm', $id) }}" target="_blank"><i class="bi bi-wallet2 me-2 text-info"></i>BA Cash Opname ATM</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-kka-kartu', $id) }}" target="_blank"><i class="bi bi-credit-card-2-front me-2 text-warning"></i>KKA Kartu ATM (E.4.3)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-kka-stok', $id) }}" target="_blank"><i class="bi bi-journal-check me-2 text-primary"></i>KKA Stok Cek/BG</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-kka-cetakan', $id) }}" target="_blank"><i class="bi bi-printer me-2 text-success"></i>KKA Barang Cetakan</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.print-kka-observasi', $id) }}" target="_blank"><i class="bi bi-eye me-2 text-secondary"></i>KKA Observasi Lingkungan</a></li>
                     <li><hr class="dropdown-divider"></li>
@@ -277,6 +278,7 @@
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-kas', $id) }}"><i class="bi bi-cash-stack me-2 text-primary"></i>PDF Kas Khasanah (Olibs)</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-atm', $id) }}"><i class="bi bi-wallet2 me-2 text-info"></i>PDF Cash Opname ATM</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-kartu', $id) }}"><i class="bi bi-credit-card-2-front me-2 text-warning"></i>PDF KKA Kartu ATM (E.4.3)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-stok', $id) }}"><i class="bi bi-journal-check me-2 text-primary"></i>PDF KKA Stok Cek/BG</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-cetakan', $id) }}"><i class="bi bi-printer me-2 text-success"></i>PDF KKA Barang Cetakan</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.download-pdf-observasi', $id) }}"><i class="bi bi-eye me-2 text-secondary"></i>PDF KKA Observasi Lingkungan</a></li>
                     <li><hr class="dropdown-divider"></li>
@@ -294,6 +296,7 @@
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-kas', $id) }}"><i class="bi bi-cash-stack me-2 text-primary"></i>Excel Kas Khasanah (Olibs)</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-atm', $id) }}"><i class="bi bi-wallet2 me-2 text-info"></i>Excel Cash Opname ATM</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-kartu', $id) }}"><i class="bi bi-credit-card-2-front me-2 text-warning"></i>Excel KKA Kartu ATM (E.4.3)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-stok', $id) }}"><i class="bi bi-journal-check me-2 text-primary"></i>Excel KKA Stok Cek/BG</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-cetakan', $id) }}"><i class="bi bi-printer me-2 text-success"></i>Excel KKA Barang Cetakan</a></li>
                     <li><a class="dropdown-item" href="{{ route('daily-register.physical-kka.export-excel-observasi', $id) }}"><i class="bi bi-eye me-2 text-secondary"></i>Excel KKA Observasi Lingkungan</a></li>
                     <li><hr class="dropdown-divider"></li>
@@ -1249,18 +1252,12 @@
                         <table class="table table-bordered table-excel align-middle">
                             <thead>
                                 <tr>
+                                    <th style="width:30px;">No</th>
                                     <th style="min-width:180px;">Area Observasi</th>
                                     <th style="min-width:220px;">Kriteria yang Diharapkan</th>
                                     <th style="min-width:140px;" class="text-center">Backup Rekaman (E.1.5)</th>
                                     <th style="min-width:140px;">Hasil Uji</th>
                                     <th style="min-width:180px;">Kondisi Aktual</th>
-                                    <th style="min-width:180px;">Penyebab &amp; Keterangan</th>
-                                    <th>Impact</th>
-                                    <th>Likelihood</th>
-                                    <th>Critical?</th>
-                                    <th>Risk Score</th>
-                                    <th>Risk Level</th>
-                                    <th style="min-width:130px;">Tgl Uji</th>
                                     @if($isAdmin)
                                     <th class="bg-warning text-dark">Reviewer</th>
                                     <th class="bg-warning text-dark" style="min-width:150px;">Status Review</th>
@@ -1277,25 +1274,25 @@
                                     
                                     $groupName = 'Observasi Lingkungan';
                                     if (str_contains($area, 'Titik Alarm')) {
-                                        $groupName = '≡ƒÜ¿ 1. SPESIFIK 4 TITIK ALARM (PANIC BUTTON)';
+                                        $groupName = '🚨 1. SPESIFIK 4 TITIK ALARM (PANIC BUTTON)';
                                     } elseif (str_contains($area, 'Area Terbatas')) {
-                                        $groupName = '≡ƒöÆ 2. SPESIFIK 5 AREA TERBATAS (RESTRICTED ACCESS)';
+                                        $groupName = '🔒 2. SPESIFIK 5 AREA TERBATAS (RESTRICTED ACCESS)';
                                     } elseif ($isCctv) {
-                                        $groupName = '≡ƒô╣ 3. MATRIKS 9 TITIK CCTV (ACUAN E.1.5 ΓÇö WAJIB BACKUP MINIMAL 90 HARI)';
+                                        $groupName = '📹 3. MATRIKS 9 TITIK CCTV (ACUAN E.1.5 — WAJIB BACKUP MINIMAL 90 HARI)';
                                     } elseif (str_contains($area, 'Security') || str_contains($area, 'Kepegawaian')) {
-                                        $groupName = '≡ƒæ« 4. MUTASI & BUKU MUTASI SECURITY SERTA ABSENSI KARYAWAN';
+                                        $groupName = '👮 4. MUTASI & BUKU MUTASI SECURITY SERTA ABSENSI KARYAWAN';
                                     } elseif (str_contains($area, 'Branding Interior')) {
-                                        $groupName = '≡ƒÅó 5. BRANDING INTERIOR KANTOR (STANDAR CORPORATE BANK SULTENG)';
+                                        $groupName = '🏢 5. BRANDING INTERIOR KANTOR (STANDAR CORPORATE BANK SULTENG)';
                                     } elseif (str_contains($area, 'Fasilitas ATM')) {
-                                        $groupName = '≡ƒÅº 6. SECTION KHUSUS ATM (ACUAN STANDAR AUDIT E.4.4)';
+                                        $groupName = '🏧 6. SECTION KHUSUS ATM (ACUAN STANDAR AUDIT E.4.4)';
                                     } elseif (str_contains($area, 'Keselamatan') || str_contains($area, 'Kelistrikan')) {
-                                        $groupName = '≡ƒº» 7. KESELAMATAN KERJA & FASILITAS LISTRIK CADANGAN';
+                                        $groupName = '🧯 7. KESELAMATAN KERJA & FASILITAS LISTRIK CADANGAN';
                                     }
                                 @endphp
 
                                 @if($groupName !== $lastGroup)
                                 <tr class="table-light">
-                                    <td colspan="{{ $isAdmin ? 15 : 12 }}" class="fw-bold text-primary py-2 px-3" style="background:#f1f5f9; border-top: 2px solid #cbd5e1; font-size: 0.82rem;">
+                                    <td colspan="{{ $isAdmin ? 9 : 6 }}" class="fw-bold text-primary py-2 px-3" style="background:#f1f5f9; border-top: 2px solid #cbd5e1; font-size: 0.82rem;">
                                         {{ $groupName }}
                                     </td>
                                 </tr>
@@ -1303,6 +1300,7 @@
                                 @endif
 
                                 <tr class="data-row" data-type="obs">
+                                    <td class="text-center fw-bold">{{ $index + 1 }}</td>
                                     <td>
                                         <strong>{{ $item['area'] }}</strong>
                                         <input type="hidden" name="obs_details[{{ $index }}][area_observasi]" value="{{ $item['area'] }}">
@@ -1317,7 +1315,7 @@
                                                 <i class="bi bi-shield-check me-1"></i> Wajib Min. 90 Hari
                                             </span>
                                         @else
-                                            <span class="text-muted small">ΓÇö</span>
+                                            <span class="text-muted small">—</span>
                                         @endif
                                     </td>
                                     <td>
@@ -1329,30 +1327,6 @@
                                         </select>
                                     </td>
                                     <td><input type="text" name="obs_details[{{ $index }}][kondisi_aktual]" class="form-control" placeholder="Observasi lapangan..." value="{{ $item['kondisi_aktual'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}></td>
-                                    <td><input type="text" name="obs_details[{{ $index }}][penyebab]" class="form-control exc-field" placeholder="Keterangan..." value="{{ $item['penyebab'] ?? '' }}" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
-                                    <td>
-                                        <select name="obs_details[{{ $index }}][impact]" class="form-select exc-field impact-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
-                                            @for($val=1; $val<=5; $val++)
-                                                <option value="{{ $val }}" {{ ($item['impact'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
-                                            @endfor
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select name="obs_details[{{ $index }}][likelihood]" class="form-select exc-field likelihood-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
-                                            @for($val=1; $val<=5; $val++)
-                                                <option value="{{ $val }}" {{ ($item['likelihood'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
-                                            @endfor
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select name="obs_details[{{ $index }}][critical_trigger]" class="form-select exc-field critical-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
-                                            <option value="Tidak" {{ ($item['critical_trigger'] ?? 'Tidak') === 'Tidak' ? 'selected' : '' }}>Tidak</option>
-                                            <option value="Ya" {{ ($item['critical_trigger'] ?? '') === 'Ya' ? 'selected' : '' }}>Ya</option>
-                                        </select>
-                                    </td>
-                                    <td><input type="text" class="form-control risk-score border-0 bg-transparent text-center" readonly value="{{ $item['risk_score'] ?? '' }}"></td>
-                                    <td><input type="text" class="form-control risk-level border-0 bg-transparent text-center" readonly value="{{ $item['severity_level'] ?? '' }}"></td>
-                                    <td><input type="date" name="obs_details[{{ $index }}][tanggal_uji]" class="form-control" value="{{ $item['tanggal_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}></td>
                                     
                                     @if($isAdmin)
                                     @php $fakeId = $index + 1; @endphp
@@ -1373,13 +1347,90 @@
                         </table>
                     </div>
 
+                    <!-- CARD EVALUASI & PENILAIAN RISIKO TUNGGAL (OBSERVASI LINGKUNGAN) -->
+                    <div class="card border-primary-subtle shadow-sm my-3 eval-card" id="evalCardObs" style="border-radius: 10px; overflow: hidden;">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3" style="background-color: #1e3a8a !important;">
+                            <span class="fw-bold"><i class="bi bi-shield-check me-2"></i>Ringkasan Evaluasi &amp; Penilaian Risiko Halaman</span>
+                            <span class="badge bg-light text-primary fw-semibold">Evaluasi Keseluruhan Observasi Lingkungan</span>
+                        </div>
+                        <div class="card-body p-3 bg-light-subtle">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-calendar-event me-1"></i>Tanggal Uji (Tgl Uji) <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="date" name="tgl_uji" class="form-control form-control-sm eval-tgl-uji" value="{{ $evalObs['tgl_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-card-text me-1"></i>Penyebab &amp; Keterangan <span class="text-danger eval-req-indicator" style="display:none;">* (Wajib diisi jika terdapat temuan Tidak Sesuai)</span>
+                                    </label>
+                                    <textarea name="penyebab_keterangan" rows="2" class="form-control form-control-sm eval-penyebab @error('penyebab_keterangan') is-invalid @enderror" placeholder="Catat penjelasan penyebab / rincian temuan fisik / keterangan keseluruhan pemeriksaan observasi lingkungan..." {{ $isAdmin ? 'readonly' : '' }}>{{ old('penyebab_keterangan', $evalObs['penyebab_keterangan'] ?? '') }}</textarea>
+                                    <div class="invalid-feedback">{{ $errors->first('penyebab_keterangan') ?: 'Penyebab & keterangan wajib diisi karena terdapat item yang dinilai Tidak Sesuai.' }}</div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="p-2 border rounded bg-white shadow-xs">
+                                        <div class="row g-2 align-items-center text-center">
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1">Impact (1-5)</label>
+                                                <select name="impact" class="form-select form-select-sm eval-impact" {{ $isAdmin ? 'disabled' : '' }}>
+                                                    @for($i = 1; $i <= 5; $i++)
+                                                        <option value="{{ $i }}" {{ ($evalObs['impact'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1">Likelihood (1-5)</label>
+                                                <select name="likelihood" class="form-select form-select-sm eval-likelihood" {{ $isAdmin ? 'disabled' : '' }}>
+                                                    @for($i = 1; $i <= 5; $i++)
+                                                        <option value="{{ $i }}" {{ ($evalObs['likelihood'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1">Critical</label>
+                                                <select name="is_critical" class="form-select form-select-sm eval-critical" {{ $isAdmin ? 'disabled' : '' }}>
+                                                    <option value="0" {{ empty($evalObs['is_critical']) ? 'selected' : '' }}>Tidak</option>
+                                                    <option value="1" {{ !empty($evalObs['is_critical']) ? 'selected' : '' }}>Ya</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1">Risk Score</label>
+                                                <input type="text" name="risk_score" class="form-control form-control-sm text-center fw-bold eval-risk-score bg-light border-0" value="{{ $evalObs['risk_score'] ?? 1 }}" readonly>
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label small fw-bold text-muted mb-1">Risk Level</label>
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <input type="hidden" name="risk_level" class="eval-risk-level-input" value="{{ $evalObs['risk_level'] ?? 'Low' }}">
+                                                    @php
+                                                        $lvlBadgeObs = match($evalObs['risk_level'] ?? 'Low') {
+                                                            'High' => 'bg-danger text-white',
+                                                            'Moderate to High' => 'bg-danger-subtle text-danger-emphasis border border-danger',
+                                                            'Moderate' => 'bg-warning text-dark',
+                                                            'Low to Moderate' => 'bg-info text-dark',
+                                                            default => 'bg-success text-white',
+                                                        };
+                                                    @endphp
+                                                    <span class="badge px-3 py-2 fs-6 eval-risk-level-badge {{ $lvlBadgeObs }}">
+                                                        {{ $evalObs['risk_level'] ?? 'Low' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card-footer bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3">
                         <div class="d-flex flex-wrap align-items-center gap-2">
                             @if(isset($id))
-                            <a href="{{ route('daily-register.physical-kka.download-pdf', ['id' => $id, 'type' => 'observasi']) }}" class="btn btn-sm btn-outline-danger fw-bold">
+                            <a href="{{ route('daily-register.physical-kka.download-pdf-observasi', $id) }}" class="btn btn-sm btn-outline-danger fw-bold">
                                 <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Observasi
                             </a>
-                            <a href="{{ route('daily-register.physical-kka.export-excel', ['id' => $id, 'type' => 'observasi']) }}" class="btn btn-sm btn-outline-success fw-bold">
+                            <a href="{{ route('daily-register.physical-kka.export-excel-observasi', $id) }}" class="btn btn-sm btn-outline-success fw-bold">
                                 <i class="bi bi-file-earmark-excel me-1"></i> Download Excel Observasi
                             </a>
                             <a href="{{ route('daily-register.physical-kka.print-kka-observasi', $id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
@@ -1414,23 +1465,17 @@
                             </div>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-bordered table-excel">
+                            <table class="table table-bordered table-excel align-middle">
                                 <thead>
                                     <tr>
-                                        <th>Sub Area</th>
-                                        <th>Objek / Seri Dokumen</th>
-                                        <th>Keterangan / Kondisi</th>
-                                        <th>Saldo Sistem</th>
-                                        <th style="min-width:120px;">Hasil Fisik</th>
-                                        <th>Selisih</th>
-                                        <th>Status Uji</th>
-                                        <th style="min-width:180px;">Kondisi / Penyebab</th>
-                                        <th>Impact</th>
-                                        <th>Likelihood</th>
-                                        <th>Critical?</th>
-                                        <th>Risk Score</th>
-                                        <th>Risk Level</th>
-                                        <th style="min-width:130px;">Tgl Uji</th>
+                                        <th style="width:35px;" class="text-center">No</th>
+                                        <th style="min-width:110px;">Sub Area</th>
+                                        <th style="min-width:220px;">Kriteria / Jenis Warkat</th>
+                                        <th style="min-width:180px;">Keterangan / Kondisi</th>
+                                        <th style="min-width:110px;" class="text-end">Saldo Buku</th>
+                                        <th style="min-width:120px;" class="text-end">Jumlah Fisik</th>
+                                        <th style="min-width:110px;" class="text-end">Selisih</th>
+                                        <th style="min-width:120px;" class="text-center">Status Cek</th>
                                         @if($isAdmin)
                                         <th class="bg-warning text-dark">Reviewer</th>
                                         <th class="bg-warning text-dark" style="min-width:150px;">Status Review</th>
@@ -1440,57 +1485,80 @@
                                 </thead>
                                 <tbody>
                                     @foreach($stokItems as $index => $item)
-                                    <tr class="data-row" data-type="stok">
+                                    @php
+                                        $isCtrl = ($item['sub_area'] === 'Kontrol');
+                                        $saldoSys = (float)($item['saldo_sistem'] ?? 100);
+                                        $hasilFis = $item['hasil_fisik'] ?? '';
+                                        $selisihVal = ($hasilFis !== '' && !$isCtrl) ? ($saldoSys - (float)$hasilFis) : 0;
+                                    @endphp
+                                    <tr class="data-row stok-calc-row" data-type="stok" data-is-ctrl="{{ $isCtrl ? '1' : '0' }}">
+                                        <td class="text-center fw-bold">{{ $index + 1 }}</td>
                                         <td>
-                                            <span class="badge bg-secondary">{{ $item['sub_area'] }}</span>
+                                            <span class="badge {{ $isCtrl ? 'bg-primary' : 'bg-secondary' }}">{{ $item['sub_area'] }}</span>
                                             <input type="hidden" name="stok_details[{{ $index }}][sub_area]" value="{{ $item['sub_area'] }}">
                                         </td>
                                         <td>
                                             <strong>{{ $item['objek'] }}</strong>
                                             <input type="hidden" name="stok_details[{{ $index }}][kondisi_objek]" value="{{ $item['objek'] }} | {{ $item['pecahan'] }}">
                                         </td>
-                                        <td><input type="text" name="stok_details[{{ $index }}][kondisi_aktual]" class="form-control" value="{{ $item['pecahan'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}></td>
-                                        <td><input type="number" name="stok_details[{{ $index }}][saldo_sistem]" class="form-control saldo-sistem border-0 bg-transparent text-end" value="{{ $item['saldo_sistem'] ?? 100 }}" readonly></td>
-                                        <td><input type="number" name="stok_details[{{ $index }}][hasil_fisik]" class="form-control hasil-fisik text-end" placeholder="0" value="{{ $item['hasil_fisik'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}></td>
-                                        <td><input type="text" class="form-control selisih-display border-0 bg-transparent text-end fw-bold" readonly value="{{ isset($item['saldo_sistem'], $item['hasil_fisik']) && $item['hasil_fisik'] !== '' ? ((float)$item['saldo_sistem'] - (float)$item['hasil_fisik']) : '' }}"></td>
-                                        <td><input type="text" class="form-control status-uji border-0 bg-transparent fw-bold text-center" value="{{ $item['status_uji'] ?? 'BELUM DIUJI' }}" readonly></td>
-                                        <td><input type="text" name="stok_details[{{ $index }}][penyebab]" class="form-control exc-field" placeholder="Keterangan..." value="{{ $item['penyebab'] ?? '' }}" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}></td>
+                                        <td><input type="text" name="stok_details[{{ $index }}][kondisi_aktual]" class="form-control form-control-sm" value="{{ $item['pecahan'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}></td>
                                         <td>
-                                            <select name="stok_details[{{ $index }}][impact]" class="form-select exc-field impact-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
-                                                @for($val=1; $val<=5; $val++)
-                                                    <option value="{{ $val }}" {{ ($item['impact'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
-                                                @endfor
-                                            </select>
+                                            @if($isCtrl)
+                                                <input type="hidden" name="stok_details[{{ $index }}][saldo_sistem]" value="0">
+                                                <div class="text-center text-muted small">—</div>
+                                            @else
+                                                <input type="number" name="stok_details[{{ $index }}][saldo_sistem]" class="form-control form-control-sm saldo-sistem border-0 bg-transparent text-end" value="{{ $item['saldo_sistem'] ?? 100 }}" readonly>
+                                            @endif
                                         </td>
                                         <td>
-                                            <select name="stok_details[{{ $index }}][likelihood]" class="form-select exc-field likelihood-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
-                                                @for($val=1; $val<=5; $val++)
-                                                    <option value="{{ $val }}" {{ ($item['likelihood'] ?? 1) == $val ? 'selected' : '' }}>{{ $val }}</option>
-                                                @endfor
-                                            </select>
+                                            @if($isCtrl)
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    <div class="form-check form-check-inline m-0">
+                                                        <input class="form-check-input stok-ctrl-radio" type="radio" name="stok_details[{{ $index }}][status_uji]" id="stokCtrlYa_{{ $index }}" value="Ya" {{ ($item['status_uji'] ?? 'Ya') === 'Ya' ? 'checked' : '' }} {{ $isAdmin ? 'disabled' : '' }}>
+                                                        <label class="form-check-label small fw-bold text-success" for="stokCtrlYa_{{ $index }}">Ya</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline m-0">
+                                                        <input class="form-check-input stok-ctrl-radio" type="radio" name="stok_details[{{ $index }}][status_uji]" id="stokCtrlTidak_{{ $index }}" value="Tidak" {{ ($item['status_uji'] ?? '') === 'Tidak' ? 'checked' : '' }} {{ $isAdmin ? 'disabled' : '' }}>
+                                                        <label class="form-check-label small fw-bold text-danger" for="stokCtrlTidak_{{ $index }}">Tidak</label>
+                                                    </div>
+                                                </div>
+                                                <input type="hidden" name="stok_details[{{ $index }}][hasil_fisik]" value="0">
+                                            @else
+                                                <input type="number" name="stok_details[{{ $index }}][hasil_fisik]" class="form-control form-control-sm hasil-fisik text-end stok-fisik-input" placeholder="0" value="{{ $item['hasil_fisik'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}>
+                                            @endif
                                         </td>
                                         <td>
-                                            <select name="stok_details[{{ $index }}][critical_trigger]" class="form-select exc-field critical-sel" {{ ($item['status_uji'] ?? '') === 'Exception' ? '' : 'disabled' }}>
-                                                <option value="Tidak" {{ ($item['critical_trigger'] ?? 'Tidak') === 'Tidak' ? 'selected' : '' }}>Tidak</option>
-                                                <option value="Ya" {{ ($item['critical_trigger'] ?? '') === 'Ya' ? 'selected' : '' }}>Ya</option>
-                                            </select>
+                                            @if($isCtrl)
+                                                <div class="text-center text-muted small">—</div>
+                                            @else
+                                                <input type="text" class="form-control form-control-sm selisih-display border-0 bg-transparent text-end fw-bold stok-selisih-display {{ abs($selisihVal) >= 0.01 ? 'text-danger' : 'text-success' }}" readonly value="{{ $hasilFis !== '' ? $selisihVal : '' }}">
+                                            @endif
                                         </td>
-                                        <td><input type="text" class="form-control risk-score border-0 bg-transparent text-center" readonly value="{{ $item['risk_score'] ?? '' }}"></td>
-                                        <td><input type="text" class="form-control risk-level border-0 bg-transparent text-center" readonly value="{{ $item['severity_level'] ?? '' }}"></td>
-                                        <td><input type="date" name="stok_details[{{ $index }}][tanggal_uji]" class="form-control" value="{{ $item['tanggal_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}></td>
+                                        <td class="text-center">
+                                            @if($isCtrl)
+                                                <span class="badge-soft stok-status-badge {{ ($item['status_uji'] ?? '') === 'Tidak' ? 'badge-soft-danger' : 'badge-soft-success' }}">
+                                                    {{ ($item['status_uji'] ?? 'Ya') === 'Tidak' ? 'Tidak' : 'Ya' }}
+                                                </span>
+                                            @else
+                                                <input type="hidden" name="stok_details[{{ $index }}][status_uji]" class="stok-status-input" value="{{ $item['status_uji'] ?? 'Sesuai' }}">
+                                                <span class="badge-soft stok-status-badge {{ ($item['status_uji'] ?? '') === 'Exception' || abs($selisihVal) >= 0.01 ? 'badge-soft-danger' : 'badge-soft-success' }}">
+                                                    {{ abs($selisihVal) >= 0.01 ? 'Selisih' : ($item['status_uji'] ?? 'Sesuai') }}
+                                                </span>
+                                            @endif
+                                        </td>
                                         
                                         @if($isAdmin)
                                         @php $fakeId = $index + 1; @endphp
-                                        <td><input type="text" class="form-control bg-light" value="{{ auth()->user()->name ?? 'Admin' }}" readonly></td>
+                                        <td><input type="text" class="form-control form-control-sm bg-light" value="{{ auth()->user()->name ?? 'Admin' }}" readonly></td>
                                         <td>
-                                            <select name="stok_review[{{ $fakeId }}][status_review]" class="form-select border-warning">
+                                            <select name="stok_review[{{ $fakeId }}][status_review]" class="form-select form-select-sm border-warning">
                                                 <option value="Pending" {{ ($item['status_review'] ?? '') === 'Pending' ? 'selected' : '' }}>Pending</option>
                                                 <option value="Approved" {{ ($item['status_review'] ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
                                                 <option value="Approved - Fraud" {{ ($item['status_review'] ?? '') === 'Approved - Fraud' ? 'selected' : '' }}>Approved - Terindikasi Fraud (SOP 09)</option>
                                                 <option value="Revisi" {{ ($item['status_review'] ?? '') === 'Revisi' ? 'selected' : '' }}>Revisi</option>
                                             </select>
                                         </td>
-                                        <td><input type="text" name="stok_review[{{ $fakeId }}][catatan_reviewer]" class="form-control border-warning" placeholder="Ketik catatan review..." value="{{ $item['catatan_reviewer'] ?? '' }}"></td>
+                                        <td><input type="text" name="stok_review[{{ $fakeId }}][catatan_reviewer]" class="form-control form-control-sm border-warning" placeholder="Ketik catatan review..." value="{{ $item['catatan_reviewer'] ?? '' }}"></td>
                                         @endif
                                     </tr>
                                     @endforeach
@@ -1498,9 +1566,96 @@
                             </table>
                         </div>
 
+                        <!-- CARD EVALUASI & PENILAIAN RISIKO TUNGGAL (REKON STOK CEK / BG) -->
+                        <div class="card border-primary-subtle shadow-sm my-3 eval-card" id="evalCardStok" style="border-radius: 10px; overflow: hidden;">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3" style="background-color: #1e3a8a !important;">
+                                <span class="fw-bold"><i class="bi bi-shield-check me-2"></i>Ringkasan Evaluasi &amp; Penilaian Risiko Halaman</span>
+                                <span class="badge bg-light text-primary fw-semibold">Evaluasi Keseluruhan Stok Cek &amp; Bilyet Giro</span>
+                            </div>
+                            <div class="card-body p-3 bg-light-subtle">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold small text-secondary">
+                                            <i class="bi bi-calendar-event me-1"></i>Tanggal Uji (Tgl Uji) <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" name="tgl_uji" class="form-control form-control-sm eval-tgl-uji" value="{{ $evalStok['tgl_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <label class="form-label fw-bold small text-secondary">
+                                            <i class="bi bi-card-text me-1"></i>Penyebab &amp; Keterangan <span class="text-danger eval-req-indicator" style="display:none;">* (Wajib diisi jika terdapat selisih atau kontrol negatif)</span>
+                                        </label>
+                                        <textarea name="penyebab_keterangan" rows="2" class="form-control form-control-sm eval-penyebab @error('penyebab_keterangan') is-invalid @enderror" placeholder="Catat penjelasan penyebab selisih / rincian temuan fisik / keterangan keseluruhan pemeriksaan warkat cek &amp; bilyet giro..." {{ $isAdmin ? 'readonly' : '' }}>{{ old('penyebab_keterangan', $evalStok['penyebab_keterangan'] ?? '') }}</textarea>
+                                        <div class="invalid-feedback">{{ $errors->first('penyebab_keterangan') ?: 'Penyebab & keterangan wajib diisi karena terdapat selisih atau kontrol yang dijawab Tidak.' }}</div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div class="p-2 border rounded bg-white shadow-xs">
+                                            <div class="row g-2 align-items-center text-center">
+                                                <div class="col-6 col-md-2">
+                                                    <label class="form-label small fw-bold text-muted mb-1">Impact (1-5)</label>
+                                                    <select name="impact" class="form-select form-select-sm eval-impact" {{ $isAdmin ? 'disabled' : '' }}>
+                                                        @for($i = 1; $i <= 5; $i++)
+                                                            <option value="{{ $i }}" {{ ($evalStok['impact'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                                        @endfor
+                                                    </select>
+                                                </div>
+                                                <div class="col-6 col-md-2">
+                                                    <label class="form-label small fw-bold text-muted mb-1">Likelihood (1-5)</label>
+                                                    <select name="likelihood" class="form-select form-select-sm eval-likelihood" {{ $isAdmin ? 'disabled' : '' }}>
+                                                        @for($i = 1; $i <= 5; $i++)
+                                                            <option value="{{ $i }}" {{ ($evalStok['likelihood'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                                        @endfor
+                                                    </select>
+                                                </div>
+                                                <div class="col-6 col-md-2">
+                                                    <label class="form-label small fw-bold text-muted mb-1">Critical</label>
+                                                    <select name="is_critical" class="form-select form-select-sm eval-critical" {{ $isAdmin ? 'disabled' : '' }}>
+                                                        <option value="0" {{ empty($evalStok['is_critical']) ? 'selected' : '' }}>Tidak</option>
+                                                        <option value="1" {{ !empty($evalStok['is_critical']) ? 'selected' : '' }}>Ya</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6 col-md-2">
+                                                    <label class="form-label small fw-bold text-muted mb-1">Risk Score</label>
+                                                    <input type="text" name="risk_score" class="form-control form-control-sm text-center fw-bold eval-risk-score bg-light border-0" value="{{ $evalStok['risk_score'] ?? 1 }}" readonly>
+                                                </div>
+                                                <div class="col-12 col-md-4">
+                                                    <label class="form-label small fw-bold text-muted mb-1">Risk Level</label>
+                                                    <div class="d-flex align-items-center justify-content-center gap-2">
+                                                        <input type="hidden" name="risk_level" class="eval-risk-level-input" value="{{ $evalStok['risk_level'] ?? 'Low' }}">
+                                                        @php
+                                                            $lvlBadgeStok = match($evalStok['risk_level'] ?? 'Low') {
+                                                                'High' => 'bg-danger text-white',
+                                                                'Moderate to High' => 'bg-danger-subtle text-danger-emphasis border border-danger',
+                                                                'Moderate' => 'bg-warning text-dark',
+                                                                'Low to Moderate' => 'bg-info text-dark',
+                                                                default => 'bg-success text-white',
+                                                            };
+                                                        @endphp
+                                                        <span class="badge px-3 py-2 fs-6 eval-risk-level-badge {{ $lvlBadgeStok }}">
+                                                            {{ $evalStok['risk_level'] ?? 'Low' }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="card-footer bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3">
-                            <div>
-                                <small class="text-muted"><i class="bi bi-info-circle me-1"></i> Pemeriksaan fisik stok cek &amp; bilyet giro tersimpan per nomor arsip.</small>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                @if(isset($id))
+                                <a href="{{ route('daily-register.physical-kka.download-pdf-stok', $id) }}" class="btn btn-sm btn-outline-danger fw-bold">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Stok Cek/BG
+                                </a>
+                                <a href="{{ route('daily-register.physical-kka.export-excel-stok', $id) }}" class="btn btn-sm btn-outline-success fw-bold">
+                                    <i class="bi bi-file-earmark-excel me-1"></i> Download Excel Stok Cek/BG
+                                </a>
+                                <a href="{{ route('daily-register.physical-kka.print-kka-stok', $id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
+                                    <i class="bi bi-printer me-1"></i> Cetak KKA Stok Cek/BG
+                                </a>
+                                @endif
                             </div>
                             <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" style="background-color: var(--primary-blue); border-color: var(--primary-blue); border-radius: 8px;">
                                 <i class="bi bi-save me-1"></i> {{ $isAdmin ? 'Simpan Review Admin' : 'Simpan Rekon Stok Cek/BG' }}
@@ -1780,15 +1935,14 @@
                             <thead>
                                 <tr>
                                     <th style="width: 3%;">No</th>
-                                    <th style="width: 12%;">Kategori</th>
-                                    <th style="width: 20%;">Objek / Nama Barang</th>
-                                    <th style="width: 23%;">Kriteria Pengujian (Objek &amp; Kondisi)</th>
-                                    <th style="width: 5%;">Satuan</th>
-                                    <th style="width: 9%;">Saldo Buku</th>
-                                    <th style="width: 9%;">Hasil Fisik</th>
-                                    <th style="width: 7%;">Selisih</th>
-                                    <th style="width: 5%;">Status</th>
-                                    <th style="min-width: 130px;">Keterangan / Sebab</th>
+                                    <th style="width: 14%;">Kategori</th>
+                                    <th style="width: 22%;">Objek / Nama Barang</th>
+                                    <th style="width: 26%;">Kriteria Pengujian (Objek &amp; Kondisi)</th>
+                                    <th style="width: 6%;">Satuan</th>
+                                    <th style="width: 10%;">Saldo Buku</th>
+                                    <th style="width: 10%;">Jumlah Fisik</th>
+                                    <th style="width: 9%;">Selisih</th>
+                                    <th style="width: 6%;">Status</th>
                                     <th style="width: 4%; text-align: center;">Aksi</th>
                                 </tr>
                             </thead>
@@ -1822,9 +1976,6 @@
                                         <span class="badge-soft bct-status-badge {{ ($bItem['status_uji'] ?? '') === 'EXCEPTION' ? 'badge-soft-danger' : 'badge-soft-success' }}">
                                             {{ $bItem['status_uji'] ?? 'Sesuai' }}
                                         </span>
-                                    </td>
-                                    <td>
-                                        <input type="text" name="barang_cetakan_details[{{ $bIdx }}][penyebab]" class="form-control form-control-sm" placeholder="Keterangan..." value="{{ $bItem['penyebab'] ?? '' }}" {{ $isAdmin ? 'readonly' : '' }}>
                                     </td>
                                     <td class="text-center text-muted">
                                         <i class="bi bi-dash"></i>
@@ -1885,13 +2036,90 @@
                         </div>
                     </div>
 
+                    <!-- CARD EVALUASI & PENILAIAN RISIKO TUNGGAL (BARANG CETAKAN) -->
+                    <div class="card border-primary-subtle shadow-sm my-3 eval-card" id="evalCardCetakan" style="border-radius: 10px; overflow: hidden;">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3" style="background-color: #1e3a8a !important;">
+                            <span class="fw-bold"><i class="bi bi-shield-check me-2"></i>Ringkasan Evaluasi &amp; Penilaian Risiko Halaman</span>
+                            <span class="badge bg-light text-primary fw-semibold">Evaluasi Keseluruhan Barang Cetakan Berharga</span>
+                        </div>
+                        <div class="card-body p-3 bg-light-subtle">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-calendar-event me-1"></i>Tanggal Uji (Tgl Uji) <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="date" name="tgl_uji" class="form-control form-control-sm eval-tgl-uji" value="{{ $evalCetakan['tgl_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-card-text me-1"></i>Penyebab &amp; Keterangan <span class="text-danger eval-req-indicator" style="display:none;">* (Wajib diisi jika terdapat selisih atau kontrol negatif)</span>
+                                    </label>
+                                    <textarea name="penyebab_keterangan" rows="2" class="form-control form-control-sm eval-penyebab @error('penyebab_keterangan') is-invalid @enderror" placeholder="Catat penjelasan penyebab selisih / rincian temuan fisik / keterangan keseluruhan pemeriksaan barang cetakan..." {{ $isAdmin ? 'readonly' : '' }}>{{ old('penyebab_keterangan', $evalCetakan['penyebab_keterangan'] ?? '') }}</textarea>
+                                    <div class="invalid-feedback">{{ $errors->first('penyebab_keterangan') ?: 'Penyebab & keterangan wajib diisi karena terdapat selisih fisik atau butir kontrol bernilai Tidak.' }}</div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="p-2 border rounded bg-white shadow-xs">
+                                        <div class="row g-2 align-items-center text-center">
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1">Impact (1-5)</label>
+                                                <select name="impact" class="form-select form-select-sm eval-impact" {{ $isAdmin ? 'disabled' : '' }}>
+                                                    @for($i = 1; $i <= 5; $i++)
+                                                        <option value="{{ $i }}" {{ ($evalCetakan['impact'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1">Likelihood (1-5)</label>
+                                                <select name="likelihood" class="form-select form-select-sm eval-likelihood" {{ $isAdmin ? 'disabled' : '' }}>
+                                                    @for($i = 1; $i <= 5; $i++)
+                                                        <option value="{{ $i }}" {{ ($evalCetakan['likelihood'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1">Critical</label>
+                                                <select name="is_critical" class="form-select form-select-sm eval-critical" {{ $isAdmin ? 'disabled' : '' }}>
+                                                    <option value="0" {{ empty($evalCetakan['is_critical']) ? 'selected' : '' }}>Tidak</option>
+                                                    <option value="1" {{ !empty($evalCetakan['is_critical']) ? 'selected' : '' }}>Ya</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1">Risk Score</label>
+                                                <input type="text" name="risk_score" class="form-control form-control-sm text-center fw-bold eval-risk-score bg-light border-0" value="{{ $evalCetakan['risk_score'] ?? 1 }}" readonly>
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label small fw-bold text-muted mb-1">Risk Level</label>
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <input type="hidden" name="risk_level" class="eval-risk-level-input" value="{{ $evalCetakan['risk_level'] ?? 'Low' }}">
+                                                    @php
+                                                        $lvlBadgeCetakan = match($evalCetakan['risk_level'] ?? 'Low') {
+                                                            'High' => 'bg-danger text-white',
+                                                            'Moderate to High' => 'bg-danger-subtle text-danger-emphasis border border-danger',
+                                                            'Moderate' => 'bg-warning text-dark',
+                                                            'Low to Moderate' => 'bg-info text-dark',
+                                                            default => 'bg-success text-white',
+                                                        };
+                                                    @endphp
+                                                    <span class="badge px-3 py-2 fs-6 eval-risk-level-badge {{ $lvlBadgeCetakan }}">
+                                                        {{ $evalCetakan['risk_level'] ?? 'Low' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card-footer bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3">
                         <div class="d-flex flex-wrap align-items-center gap-2">
                             @if(isset($id))
-                            <a href="{{ route('daily-register.physical-kka.download-pdf', ['id' => $id, 'type' => 'cetakan']) }}" class="btn btn-sm btn-outline-danger fw-bold">
+                            <a href="{{ route('daily-register.physical-kka.download-pdf-cetakan', $id) }}" class="btn btn-sm btn-outline-danger fw-bold">
                                 <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Cetakan
                             </a>
-                            <a href="{{ route('daily-register.physical-kka.export-excel', ['id' => $id, 'type' => 'cetakan']) }}" class="btn btn-sm btn-outline-success fw-bold">
+                            <a href="{{ route('daily-register.physical-kka.export-excel-cetakan', $id) }}" class="btn btn-sm btn-outline-success fw-bold">
                                 <i class="bi bi-file-earmark-excel me-1"></i> Download Excel Cetakan
                             </a>
                             <a href="{{ route('daily-register.physical-kka.print-kka-cetakan', $id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
@@ -2581,7 +2809,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function initBctRowListeners(row) {
         row.querySelectorAll('.bct-stok-buku, .bct-hasil-fisik').forEach(inp => {
-            inp.addEventListener('input', () => calcBctRow(row));
+            inp.addEventListener('input', () => {
+                calcBctRow(row);
+                if (window.evalCetakanHandler) window.evalCetakanHandler.update();
+            });
+            inp.addEventListener('change', () => {
+                calcBctRow(row);
+                if (window.evalCetakanHandler) window.evalCetakanHandler.update();
+            });
         });
         calcBctRow(row);
     }
@@ -2636,9 +2871,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td class="text-center">
                     <span class="badge-soft badge-soft-success bct-status-badge">Sesuai</span>
                 </td>
-                <td>
-                    <input type="text" name="barang_cetakan_details[${newIdx}][penyebab]" class="form-control form-control-sm" placeholder="Keterangan...">
-                </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-bct" title="Hapus Baris"><i class="bi bi-x-circle-fill"></i></button>
                 </td>
@@ -2648,62 +2880,264 @@ document.addEventListener('DOMContentLoaded', function () {
             tr.querySelector('.btn-remove-bct').addEventListener('click', function() {
                 tr.remove();
                 reindexBctRows();
+                if (evalCetakanHandler) evalCetakanHandler.update();
             });
             initBctRowListeners(tr);
+            if (evalCetakanHandler) evalCetakanHandler.update();
         });
     }
 
     // =========================================================================
-    // 5. LOGIKA OBSERVASI LINGKUNGAN (DYNAMIC EXCEPTION & SEVERITY CALCULATION)
+    // 5. FRAMEWORK UNIFIED EVALUATION & PENILAIAN RISIKO (TAB 3, TAB 4, TAB 6)
     // =========================================================================
-    function calcSeverity(impact, likelihood, isCritical) {
-        const score = impact * likelihood;
-        let level = 'Rendah';
-        if (isCritical || score >= 15) {
-            level = 'Kritis';
-        } else if (score >= 10) {
-            level = 'Tinggi';
-        } else if (score >= 5) {
-            level = 'Sedang';
-        }
-        return { score, level };
-    }
+    function setupUnifiedEvaluationCard(config) {
+        const card = document.getElementById(config.cardId);
+        if (!card) return null;
 
-    function initObsRowListeners(row) {
-        const selectHasil = row.querySelector('.hasil-obs');
-        const excFields = row.querySelectorAll('.exc-field');
-        const impactSel = row.querySelector('.impact-sel');
-        const likelihoodSel = row.querySelector('.likelihood-sel');
-        const criticalSel = row.querySelector('.critical-sel');
-        const scoreInp = row.querySelector('.risk-score');
-        const levelInp = row.querySelector('.risk-level');
+        const impactSel = card.querySelector('.eval-impact');
+        const likelihoodSel = card.querySelector('.eval-likelihood');
+        const criticalSel = card.querySelector('.eval-critical');
+        const scoreInp = card.querySelector('.eval-risk-score');
+        const levelInp = card.querySelector('.eval-risk-level-input');
+        const levelBadge = card.querySelector('.eval-risk-level-badge');
+        const penyebabInp = card.querySelector('.eval-penyebab');
+        const reqIndicator = card.querySelector('.eval-req-indicator');
+        const form = card.closest('form');
 
-        function updateObsRow() {
-            const isException = (selectHasil && selectHasil.value === 'Tidak Sesuai');
-            excFields.forEach(f => {
-                f.disabled = !isException;
-            });
+        function update() {
+            const hasException = config.checkException();
+            const isCrit = (criticalSel?.value === '1' || criticalSel?.value === 'Ya' || criticalSel?.value === 'true');
+            let impact = parseInt(impactSel?.value) || 1;
+            let likelihood = parseInt(likelihoodSel?.value) || 1;
+            impact = Math.max(1, Math.min(5, impact));
+            likelihood = Math.max(1, Math.min(5, likelihood));
 
-            if (isException) {
-                const impact = parseInt(impactSel?.value) || 1;
-                const likelihood = parseInt(likelihoodSel?.value) || 1;
-                const isCrit = (criticalSel?.value === 'Ya');
-                const res = calcSeverity(impact, likelihood, isCrit);
-                if (scoreInp) scoreInp.value = res.score;
-                if (levelInp) levelInp.value = res.level;
+            let score = impact * likelihood;
+            let level = 'Low';
+
+            if (isCrit) {
+                score = Math.max(score, 20);
+                level = 'High';
+            } else if (!hasException) {
+                level = 'Low';
             } else {
-                if (scoreInp) scoreInp.value = 0;
-                if (levelInp) levelInp.value = 'Rendah';
+                if (score >= 20) {
+                    level = 'High';
+                } else if (score >= 15) {
+                    level = 'Moderate to High';
+                } else if (score >= 10) {
+                    level = 'Moderate';
+                } else if (score >= 5) {
+                    level = 'Low to Moderate';
+                } else {
+                    level = 'Low to Moderate';
+                }
+            }
+
+            if (scoreInp) scoreInp.value = score;
+            if (levelInp) levelInp.value = level;
+
+            if (levelBadge) {
+                levelBadge.innerText = level;
+                levelBadge.className = 'badge px-3 py-2 fs-6 eval-risk-level-badge ';
+                if (level === 'High') {
+                    levelBadge.classList.add('bg-danger', 'text-white');
+                } else if (level === 'Moderate to High') {
+                    levelBadge.classList.add('bg-danger-subtle', 'text-danger-emphasis', 'border', 'border-danger');
+                } else if (level === 'Moderate') {
+                    levelBadge.classList.add('bg-warning', 'text-dark');
+                } else if (level === 'Low to Moderate') {
+                    levelBadge.classList.add('bg-info', 'text-dark');
+                } else {
+                    levelBadge.classList.add('bg-success', 'text-white');
+                }
+            }
+
+            if (penyebabInp) {
+                if (hasException) {
+                    if (reqIndicator) reqIndicator.style.display = 'inline';
+                    penyebabInp.required = true;
+                } else {
+                    if (reqIndicator) reqIndicator.style.display = 'none';
+                    penyebabInp.required = false;
+                    penyebabInp.classList.remove('is-invalid');
+                }
             }
         }
 
-        if (selectHasil) selectHasil.addEventListener('change', updateObsRow);
-        if (impactSel) impactSel.addEventListener('change', updateObsRow);
-        if (likelihoodSel) likelihoodSel.addEventListener('change', updateObsRow);
-        if (criticalSel) criticalSel.addEventListener('change', updateObsRow);
+        if (impactSel) {
+            impactSel.addEventListener('change', update);
+            impactSel.addEventListener('input', update);
+        }
+        if (likelihoodSel) {
+            likelihoodSel.addEventListener('change', update);
+            likelihoodSel.addEventListener('input', update);
+        }
+        if (criticalSel) {
+            criticalSel.addEventListener('change', update);
+            criticalSel.addEventListener('input', update);
+        }
+
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const hasException = config.checkException();
+                if (hasException && penyebabInp && !penyebabInp.value.trim()) {
+                    e.preventDefault();
+                    penyebabInp.classList.add('is-invalid');
+                    penyebabInp.focus();
+                    alert('Penyebab & Keterangan wajib diisi pada form ini karena terdeteksi selisih / hasil pemeriksaan tidak sesuai!');
+                    return false;
+                } else if (penyebabInp) {
+                    penyebabInp.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        update();
+        return { update };
     }
 
-    document.querySelectorAll('tr[data-type="obs"]').forEach(r => initObsRowListeners(r));
+    // A. Setup Evaluation untuk Tab 3 (Observasi)
+    const evalObsHandler = setupUnifiedEvaluationCard({
+        cardId: 'evalCardObs',
+        checkException: function() {
+            let hasEx = false;
+            document.querySelectorAll('#obs select.hasil-obs').forEach(sel => {
+                if (sel.value === 'Tidak Sesuai' || sel.value === 'Tidak' || sel.value === 'Kurang Baik') hasEx = true;
+            });
+            return hasEx;
+        }
+    });
+
+    document.querySelectorAll('#obs select.hasil-obs').forEach(sel => {
+        sel.addEventListener('change', function() {
+            if (evalObsHandler) evalObsHandler.update();
+        });
+    });
+
+    // B. Setup Evaluation & Kalkulasi Baris untuk Tab 4 (Stok Cek/BG)
+    function calcStokRow(row) {
+        const isCtrl = row.dataset.isCtrl === '1';
+        if (isCtrl) return;
+
+        const sysInp = row.querySelector('.saldo-sistem');
+        const fisInp = row.querySelector('.stok-fisik-input');
+        const selDisp = row.querySelector('.stok-selisih-display');
+        const statBadge = row.querySelector('.stok-status-badge');
+        const statInp = row.querySelector('.stok-status-input');
+
+        const sys = parseFloat(sysInp?.value) || 0;
+        const fisVal = fisInp?.value;
+        if (fisVal === '' || fisVal === null || isNaN(parseFloat(fisVal))) {
+            if (selDisp) {
+                selDisp.value = '';
+                selDisp.className = 'form-control form-control-sm selisih-display border-0 bg-transparent text-end fw-bold stok-selisih-display';
+            }
+            if (statBadge) {
+                statBadge.className = 'badge-soft badge-soft-secondary stok-status-badge';
+                statBadge.innerText = 'Belum Diuji';
+            }
+            if (statInp) statInp.value = 'BELUM DIUJI';
+            return;
+        }
+
+        const fis = parseFloat(fisVal) || 0;
+        const sel = sys - fis;
+        if (selDisp) {
+            selDisp.value = sel;
+            selDisp.className = 'form-control form-control-sm selisih-display border-0 bg-transparent text-end fw-bold stok-selisih-display ' + (Math.abs(sel) >= 0.01 ? 'text-danger' : 'text-success');
+        }
+
+        if (Math.abs(sel) >= 0.01) {
+            if (statBadge) {
+                statBadge.className = 'badge-soft badge-soft-danger stok-status-badge';
+                statBadge.innerText = 'Selisih';
+            }
+            if (statInp) statInp.value = 'Exception';
+        } else {
+            if (statBadge) {
+                statBadge.className = 'badge-soft badge-soft-success stok-status-badge';
+                statBadge.innerText = 'Sesuai';
+            }
+            if (statInp) statInp.value = 'Sesuai';
+        }
+    }
+
+    const evalStokHandler = setupUnifiedEvaluationCard({
+        cardId: 'evalCardStok',
+        checkException: function() {
+            let hasEx = false;
+            document.querySelectorAll('#stok .stok-calc-row').forEach(row => {
+                const isCtrl = row.dataset.isCtrl === '1';
+                if (isCtrl) {
+                    const checkedRadio = row.querySelector('.stok-ctrl-radio:checked');
+                    if (checkedRadio && checkedRadio.value === 'Tidak') hasEx = true;
+                } else {
+                    const sysInp = row.querySelector('.saldo-sistem');
+                    const fisInp = row.querySelector('.stok-fisik-input');
+                    if (fisInp && fisInp.value !== '') {
+                        const sys = parseFloat(sysInp?.value) || 0;
+                        const fis = parseFloat(fisInp.value) || 0;
+                        if (Math.abs(sys - fis) >= 0.01) hasEx = true;
+                    }
+                }
+            });
+            return hasEx;
+        }
+    });
+
+    document.querySelectorAll('#stok .stok-calc-row').forEach(row => {
+        const fisInp = row.querySelector('.stok-fisik-input');
+        if (fisInp) {
+            fisInp.addEventListener('input', function() {
+                calcStokRow(row);
+                if (evalStokHandler) evalStokHandler.update();
+            });
+            fisInp.addEventListener('change', function() {
+                calcStokRow(row);
+                if (evalStokHandler) evalStokHandler.update();
+            });
+            calcStokRow(row);
+        }
+        row.querySelectorAll('.stok-ctrl-radio').forEach(rad => {
+            rad.addEventListener('change', function() {
+                const badge = row.querySelector('.stok-status-badge');
+                if (badge) {
+                    badge.className = 'badge-soft stok-status-badge ' + (this.value === 'Tidak' ? 'badge-soft-danger' : 'badge-soft-success');
+                    badge.innerText = this.value;
+                }
+                if (evalStokHandler) evalStokHandler.update();
+            });
+        });
+    });
+
+    // C. Setup Evaluation untuk Tab 6 (Barang Cetakan)
+    const evalCetakanHandler = setupUnifiedEvaluationCard({
+        cardId: 'evalCardCetakan',
+        checkException: function() {
+            let hasEx = false;
+            document.querySelectorAll('#tbodyBarangCetakan .bct-calc-row').forEach(row => {
+                const stokInp = row.querySelector('.bct-stok-buku');
+                const fisikInp = row.querySelector('.bct-hasil-fisik');
+                if (fisikInp && fisikInp.value !== '') {
+                    const stok = parseFloat(stokInp?.value) || 0;
+                    const fisik = parseFloat(fisikInp.value) || 0;
+                    if (Math.abs(fisik - stok) >= 0.01) hasEx = true;
+                }
+            });
+            document.querySelectorAll('#cetakan .bct-ctrl-radio:checked').forEach(r => {
+                if (r.value === 'Tidak') hasEx = true;
+            });
+            return hasEx;
+        }
+    });
+    window.evalCetakanHandler = evalCetakanHandler;
+
+    document.querySelectorAll('#cetakan .bct-ctrl-radio').forEach(r => {
+        r.addEventListener('change', function() {
+            if (evalCetakanHandler) evalCetakanHandler.update();
+        });
+    });
 
     // =========================================================================
     // 6. SINKRONISASI NO ARSIP & POSISI TANGGAL GLOBAL KE SELURUH FORM KKA FISIK
@@ -2741,10 +3175,10 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // =========================================================================
-    // 7. AUTO-AKTIVASI TAB KKA FISIK BERDASARKAN QUERY PARAMETER URL (?tab=...)
+    // 7. AUTO-AKTIVASI TAB KKA FISIK BERDASARKAN QUERY PARAMETER URL (?tab=...) ATAU SESSION old('sub_tab')
     // =========================================================================
     const urlParams = new URLSearchParams(window.location.search);
-    const activeTab = urlParams.get('tab');
+    const activeTab = urlParams.get('tab') || '{{ old("sub_tab", "") }}';
     if (activeTab) {
         const tabMap = {
             'kas': '#cash-tab',

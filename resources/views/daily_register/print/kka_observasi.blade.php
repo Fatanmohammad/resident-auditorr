@@ -1,3 +1,7 @@
+@php
+    $evalData = $eval ?? (isset($evalObs) ? $evalObs : ($kka ? $kka->getEvaluationSummary('observasi') : []));
+@endphp
+
 @if(!isset($isDossier) || !$isDossier)
 <!DOCTYPE html>
 <html lang="id">
@@ -212,12 +216,71 @@
                             </td>
                             <td>
                                 <div>{{ $kondisi ?: 'Sesuai standar operasional.' }}</div>
-                                @if($penyebab)
-                                    <div style="color: #dc2626; font-size: 7pt; margin-top: 2px;"><em>Ket: {{ $penyebab }}</em></div>
-                                @endif
                             </td>
                         </tr>
                     @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BLOK EVALUASI & PENILAIAN RISIKO TUNGGAL -->
+    <div class="section-box" style="border-color: #2563eb;">
+        <div class="section-header" style="background: #1e40af;">
+            <span>RINGKASAN EVALUASI &amp; PENILAIAN RISIKO KKA</span>
+            <span>Berlaku Menyeluruh untuk Halaman Observasi Lingkungan &amp; Fisik</span>
+        </div>
+        <div class="section-body" style="background: #f8fafc;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 8px;">
+                <tr>
+                    <td style="width: 22%; font-weight: bold; padding: 4px; border-bottom: 1px solid #e2e8f0;">Tanggal Uji:</td>
+                    <td style="width: 78%; padding: 4px; border-bottom: 1px solid #e2e8f0;">
+                        {{ \Carbon\Carbon::parse($evalData['tgl_uji'] ?? now())->translatedFormat('d F Y') }}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold; padding: 4px; vertical-align: top; border-bottom: 1px solid #e2e8f0;">Penyebab &amp; Keterangan:</td>
+                    <td style="padding: 4px; border-bottom: 1px solid #e2e8f0; white-space: pre-line;">
+                        {{ $evalData['penyebab_keterangan'] ?: 'Nihil / Seluruh pengujian fisik lingkungan, matriks CCTV, dan perimeter pengamanan kantor memenuhi ketentuan.' }}
+                    </td>
+                </tr>
+            </table>
+
+            <table style="width: 100%; border-collapse: collapse; font-size: 8pt; text-align: center; border: 1px solid #cbd5e1; background: #fff;">
+                <thead>
+                    <tr style="background: #e2e8f0; font-weight: bold;">
+                        <th style="padding: 5px; border: 1px solid #cbd5e1; width: 20%;">Impact (1-5)</th>
+                        <th style="padding: 5px; border: 1px solid #cbd5e1; width: 20%;">Likelihood (1-5)</th>
+                        <th style="padding: 5px; border: 1px solid #cbd5e1; width: 20%;">Critical</th>
+                        <th style="padding: 5px; border: 1px solid #cbd5e1; width: 20%;">Risk Score</th>
+                        <th style="padding: 5px; border: 1px solid #cbd5e1; width: 20%;">Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 6px; font-weight: bold; border: 1px solid #cbd5e1;">{{ $evalData['impact'] ?? 1 }}</td>
+                        <td style="padding: 6px; font-weight: bold; border: 1px solid #cbd5e1;">{{ $evalData['likelihood'] ?? 1 }}</td>
+                        <td style="padding: 6px; font-weight: bold; border: 1px solid #cbd5e1;">
+                            <span class="badge-status {{ ($evalData['is_critical'] ?? false) ? 'badge-danger' : 'badge-success' }}">
+                                {{ ($evalData['is_critical'] ?? false) ? 'Ya' : 'Tidak' }}
+                            </span>
+                        </td>
+                        <td style="padding: 6px; font-weight: bold; border: 1px solid #cbd5e1;">{{ $evalData['risk_score'] ?? 1 }}</td>
+                        <td style="padding: 6px; font-weight: bold; border: 1px solid #cbd5e1;">
+                            @php
+                                $lvl = $evalData['risk_level'] ?? 'Low';
+                                $lvlClass = match($lvl) {
+                                    'Low' => 'badge-success',
+                                    'Low to Moderate' => 'badge-info',
+                                    'Moderate' => 'badge-warning',
+                                    'Moderate to High' => 'badge-danger',
+                                    'High' => 'badge-danger',
+                                    default => 'badge-success'
+                                };
+                            @endphp
+                            <span class="badge-status {{ $lvlClass }}">{{ $lvl }}</span>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>

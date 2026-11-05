@@ -449,6 +449,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/physical-kka/{id}/print-ba-atm', [PhysicalKkaController::class, 'printBaAtm'])->name('daily-register.physical-kka.print-ba-atm');
         Route::get('/physical-kka/{id}/print-kka-kartu', [PhysicalKkaController::class, 'printKkaKartu'])->name('daily-register.physical-kka.print-kka-kartu');
         Route::get('/physical-kka/{id}/print-kka-cetakan', [PhysicalKkaController::class, 'printKkaCetakan'])->name('daily-register.physical-kka.print-kka-cetakan');
+        Route::get('/physical-kka/{id}/print-kka-stok', [PhysicalKkaController::class, 'printKkaStok'])->name('daily-register.physical-kka.print-kka-stok');
         Route::get('/physical-kka/{id}/print-kka-observasi', [PhysicalKkaController::class, 'printKkaObservasi'])->name('daily-register.physical-kka.print-kka-observasi');
         Route::get('/physical-kka/{id}/print-all', [PhysicalKkaController::class, 'printAll'])->name('daily-register.physical-kka.print-all');
 
@@ -458,6 +459,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/physical-kka/{id}/export-excel-kas', [PhysicalKkaController::class, 'exportExcelKas'])->name('daily-register.physical-kka.export-excel-kas');
         Route::get('/physical-kka/{id}/export-excel-atm', [PhysicalKkaController::class, 'exportExcelAtm'])->name('daily-register.physical-kka.export-excel-atm');
         Route::get('/physical-kka/{id}/export-excel-kartu', [PhysicalKkaController::class, 'exportExcelKartu'])->name('daily-register.physical-kka.export-excel-kartu');
+        Route::get('/physical-kka/{id}/export-excel-stok', [PhysicalKkaController::class, 'exportExcelStok'])->name('daily-register.physical-kka.export-excel-stok');
         Route::get('/physical-kka/{id}/export-excel-cetakan', [PhysicalKkaController::class, 'exportExcelCetakan'])->name('daily-register.physical-kka.export-excel-cetakan');
         Route::get('/physical-kka/{id}/export-excel-observasi', [PhysicalKkaController::class, 'exportExcelObservasi'])->name('daily-register.physical-kka.export-excel-observasi');
         Route::get('/physical-kka/{id}/export-excel-all', [PhysicalKkaController::class, 'exportExcelAll'])->name('daily-register.physical-kka.export-excel-all');
@@ -465,6 +467,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/physical-kka/{id}/download-pdf-kas', [PhysicalKkaController::class, 'downloadPdfKas'])->name('daily-register.physical-kka.download-pdf-kas');
         Route::get('/physical-kka/{id}/download-pdf-atm', [PhysicalKkaController::class, 'downloadPdfAtm'])->name('daily-register.physical-kka.download-pdf-atm');
         Route::get('/physical-kka/{id}/download-pdf-kartu', [PhysicalKkaController::class, 'downloadPdfKartu'])->name('daily-register.physical-kka.download-pdf-kartu');
+        Route::get('/physical-kka/{id}/download-pdf-stok', [PhysicalKkaController::class, 'downloadPdfStok'])->name('daily-register.physical-kka.download-pdf-stok');
         Route::get('/physical-kka/{id}/download-pdf-cetakan', [PhysicalKkaController::class, 'downloadPdfCetakan'])->name('daily-register.physical-kka.download-pdf-cetakan');
         Route::get('/physical-kka/{id}/download-pdf-observasi', [PhysicalKkaController::class, 'downloadPdfObservasi'])->name('daily-register.physical-kka.download-pdf-observasi');
         Route::get('/physical-kka/{id}/download-pdf-all', [PhysicalKkaController::class, 'downloadPdfAll'])->name('daily-register.physical-kka.download-pdf-all');

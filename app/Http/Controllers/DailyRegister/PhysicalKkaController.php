@@ -151,18 +151,7 @@ class PhysicalKkaController extends Controller
         // =========================================================================
         // 3. DATA STOK OPNAME DOKUMEN BERHARGA
         // =========================================================================
-        $stokItems = [
-            ['sub_area' => 'Cek', 'objek' => 'Buku cek kosong/belum digunakan', 'pecahan' => 'Seluruh buku dan nomor seri dalam listing'],
-            ['sub_area' => 'Cek', 'objek' => 'Cek rusak atau dibatalkan', 'pecahan' => 'Seluruh fisik dan nomor seri dalam register pembatalan'],
-            ['sub_area' => 'Cek', 'objek' => 'Cek tercetak/diserahkan tetapi belum diambil', 'pecahan' => 'Seluruh fisik berada dalam custody unit'],
-            ['sub_area' => 'Bilyet Giro', 'objek' => 'Bilyet giro kosong/belum digunakan', 'pecahan' => 'Seluruh buku dan nomor seri dalam listing'],
-            ['sub_area' => 'Bilyet Giro', 'objek' => 'Bilyet giro rusak atau dibatalkan', 'pecahan' => 'Seluruh fisik dan nomor seri dalam register pembatalan'],
-            ['sub_area' => 'Bilyet Giro', 'objek' => 'Bilyet giro tercetak/diserahkan tetapi belum diambil', 'pecahan' => 'Seluruh fisik berada dalam custody unit'],
-            ['sub_area' => 'Deposito', 'objek' => 'Bilyet deposito kosong', 'pecahan' => 'Seluruh fisik dan nomor seri dalam listing, bila berada dalam ruang lingkup'],
-            ['sub_area' => 'Kontrol', 'objek' => 'Kartu kontrol harian', 'pecahan' => 'Dibuat, diperbarui, dan direkonsiliasi setiap hari'],
-            ['sub_area' => 'Kontrol', 'objek' => 'Register penerimaan dan pengeluaran', 'pecahan' => 'Urutan seri, penerimaan, pengeluaran, dan serah terima lengkap'],
-            ['sub_area' => 'Kontrol', 'objek' => 'Penyimpanan dokumen berharga', 'pecahan' => 'Terkunci, dual control, akses terbatas, dan penanggung jawab jelas'],
-        ];
+        $stokItems = self::getDefaultStokItems();
 
         // =========================================================================
         // 4. DATA REKONSILIASI KARTU ATM (SECTION A & SECTION B — ACUAN E.4.3)
@@ -541,12 +530,17 @@ class PhysicalKkaController extends Controller
             }
         }
 
+        $evalObs = $kka ? $kka->getEvaluationSummary('observasi') : (new PhysicalKka())->getEvaluationSummary('observasi');
+        $evalStok = $kka ? $kka->getEvaluationSummary('stok') : (new PhysicalKka())->getEvaluationSummary('stok');
+        $evalCetakan = $kka ? $kka->getEvaluationSummary('cetakan') : (new PhysicalKka())->getEvaluationSummary('cetakan');
+
         return view('daily_register.physical_kka', compact(
             'cashItems', 'khasanahUleItems', 'khasanahLogamItems', 'khasanahUtleItems',
             'atmMachines', 'obsItems', 'stokItems', 'kartuAtmStockRows', 'kartuAtmControlRows', 'kartuAtmItems',
             'barangCetakanItems', 'barangCetakanControls', 'noArsip', 'posisiTanggalRekon',
             'saldoKasOlibs', 'saldoFisikKhasanah', 'selisihKasKhasanah', 'penjelasanSelisihKas', 'rekonKartuPenyebabSelisih',
-            'isAdmin', 'id', 'kka', 'suratIzin', 'statusSurat', 'catatanSurat', 'kodeUnit', 'kontrolMingguan'
+            'isAdmin', 'id', 'kka', 'suratIzin', 'statusSurat', 'catatanSurat', 'kodeUnit', 'kontrolMingguan',
+            'evalObs', 'evalStok', 'evalCetakan'
         ));
     }
 
@@ -587,6 +581,39 @@ class PhysicalKkaController extends Controller
             'barang_cetakan_details' => 'nullable|array',
             'barang_cetakan_controls' => 'nullable|array',
             'sub_tab' => 'nullable|string',
+
+            // Unified evaluation block attributes
+            'tgl_uji' => 'nullable|date',
+            'penyebab_keterangan' => 'nullable|string',
+            'impact' => 'nullable|integer',
+            'likelihood' => 'nullable|integer',
+            'is_critical' => 'nullable',
+            'risk_score' => 'nullable|integer',
+            'risk_level' => 'nullable|string',
+
+            'obs_tgl_uji' => 'nullable|date',
+            'obs_penyebab_keterangan' => 'nullable|string',
+            'obs_impact' => 'nullable|integer',
+            'obs_likelihood' => 'nullable|integer',
+            'obs_is_critical' => 'nullable',
+            'obs_risk_score' => 'nullable|integer',
+            'obs_risk_level' => 'nullable|string',
+
+            'stok_tgl_uji' => 'nullable|date',
+            'stok_penyebab_keterangan' => 'nullable|string',
+            'stok_impact' => 'nullable|integer',
+            'stok_likelihood' => 'nullable|integer',
+            'stok_is_critical' => 'nullable',
+            'stok_risk_score' => 'nullable|integer',
+            'stok_risk_level' => 'nullable|string',
+
+            'cetakan_tgl_uji' => 'nullable|date',
+            'cetakan_penyebab_keterangan' => 'nullable|string',
+            'cetakan_impact' => 'nullable|integer',
+            'cetakan_likelihood' => 'nullable|integer',
+            'cetakan_is_critical' => 'nullable',
+            'cetakan_risk_score' => 'nullable|integer',
+            'cetakan_risk_level' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
@@ -884,24 +911,79 @@ class PhysicalKkaController extends Controller
 
             // 3. PROCESS OBSERVASI DETAILS
             if ($subTab === 'observasi' || $subTab === 'obs' || $subTab === 'all' || $request->has('obs_details')) {
+                $hasObsException = false;
+                if ($request->has('obs_details') && is_array($request->obs_details)) {
+                    foreach ($request->obs_details as $item) {
+                        if (empty($item['hasil_observasi'])) continue;
+                        if (in_array($item['hasil_observasi'], ['Tidak Sesuai', 'Tidak', 'Kurang Baik'], true)) {
+                            $hasObsException = true;
+                            $hasException = true;
+                            break;
+                        }
+                    }
+                }
+
+                $obsTglUji = $request->input('obs_tgl_uji') ?? $request->input('tgl_uji') ?? Carbon::now()->toDateString();
+                $obsPenyebab = trim($request->input('obs_penyebab_keterangan') ?? $request->input('penyebab_keterangan') ?? '');
+
+                // Fallback: check if any item had per-row 'penyebab' in legacy payloads
+                if (empty($obsPenyebab) && $request->has('obs_details') && is_array($request->obs_details)) {
+                    foreach ($request->obs_details as $item) {
+                        if (!empty($item['penyebab'])) {
+                            $obsPenyebab = trim($item['penyebab']);
+                            break;
+                        }
+                    }
+                }
+
+                if ($hasObsException && empty($obsPenyebab)) {
+                    throw ValidationException::withMessages([
+                        'penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat temuan atau item yang dijawab Tidak Sesuai pada Observasi Lingkungan.',
+                        'obs_penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat temuan atau item yang dijawab Tidak Sesuai pada Observasi Lingkungan.',
+                    ]);
+                }
+
+                $obsImpact = (int)($request->input('obs_impact') ?? $request->input('impact') ?? ($hasObsException ? 3 : 1));
+                $obsLikelihood = (int)($request->input('obs_likelihood') ?? $request->input('likelihood') ?? ($hasObsException ? 2 : 1));
+                $rawCrit = $request->input('obs_is_critical') ?? $request->input('is_critical') ?? $request->input('critical_trigger');
+                $obsIsCritical = in_array($rawCrit, ['Ya', '1', 1, true, 'true'], true);
+
+                $calcRisk = PhysicalKka::determineRiskLevel($obsImpact, $obsLikelihood, $obsIsCritical, $hasObsException);
+                $obsRiskScore = (int)($request->input('obs_risk_score') ?? $request->input('risk_score') ?? $calcRisk['score']);
+                $obsRiskLevel = $request->input('obs_risk_level') ?? $request->input('risk_level') ?? $calcRisk['level'];
+
+                $physicalKka->update([
+                    'obs_tgl_uji' => $obsTglUji,
+                    'obs_penyebab_keterangan' => $obsPenyebab,
+                    'obs_impact' => $obsImpact,
+                    'obs_likelihood' => $obsLikelihood,
+                    'obs_is_critical' => $obsIsCritical,
+                    'obs_risk_score' => $obsRiskScore,
+                    'obs_risk_level' => $obsRiskLevel,
+                ]);
+
                 if ($request->has('obs_details') && is_array($request->obs_details)) {
                     foreach ($request->obs_details as $item) {
                         if (empty($item['hasil_observasi'])) continue;
 
-                        $isException = ($item['hasil_observasi'] === 'Tidak Sesuai');
+                        $isException = in_array($item['hasil_observasi'], ['Tidak Sesuai', 'Tidak', 'Kurang Baik'], true);
                         $item['status_uji'] = $isException ? 'Exception' : 'Sesuai';
+                        $item['is_exception'] = $isException;
+                        $item['physical_kka_id'] = $physicalKka->id;
 
                         if ($isException) {
-                            $hasException = true;
-                            $severity = $this->calculateSeverity($item['impact'] ?? 1, $item['likelihood'] ?? 1, !empty($item['critical_trigger']) && $item['critical_trigger'] == 'Ya');
-                            $item['risk_score'] = $severity['score'];
-                            $item['severity_level'] = $severity['level'];
+                            $itemImp = isset($item['impact']) ? (int)$item['impact'] : $obsImpact;
+                            $itemLik = isset($item['likelihood']) ? (int)$item['likelihood'] : $obsLikelihood;
+                            $itemCrit = isset($item['critical_trigger']) ? (in_array($item['critical_trigger'], ['Ya', '1', 1, true, 'true'], true)) : $obsIsCritical;
+                            $itemSeverity = $this->calculateSeverity($itemImp, $itemLik, $itemCrit);
+                            $item['risk_score'] = $item['risk_score'] ?? $itemSeverity['score'];
+                            $item['severity_level'] = $item['severity_level'] ?? $itemSeverity['level'];
+                            $item['penyebab'] = $item['penyebab'] ?? $obsPenyebab;
                         } else {
                             $item['risk_score'] = 0;
                             $item['severity_level'] = 'Rendah';
                         }
-                        $item['is_exception'] = $isException;
-                        $item['physical_kka_id'] = $physicalKka->id;
+                        $item['tanggal_uji'] = $item['tanggal_uji'] ?? $obsTglUji;
 
                         $detail = PhysicalKkaObsDetail::create($item);
                         if ($isException) $this->createKlarifikasi($detail, $kodeUnit);
@@ -911,27 +993,103 @@ class PhysicalKkaController extends Controller
 
             // 4. PROCESS STOK OPNAME DETAILS
             if ($subTab === 'stok' || $subTab === 'all' || $request->has('stok_details')) {
+                $hasStokException = false;
                 if ($request->has('stok_details') && is_array($request->stok_details)) {
                     foreach ($request->stok_details as $item) {
-                        if (empty($item['hasil_fisik'])) continue;
+                        $isCtrl = (($item['sub_area'] ?? '') === 'Kontrol');
+                        if ($isCtrl) {
+                            if (($item['status_uji'] ?? '') === 'Tidak') {
+                                $hasStokException = true;
+                                $hasException = true;
+                                break;
+                            }
+                        } else {
+                            if (!isset($item['hasil_fisik']) || $item['hasil_fisik'] === '') continue;
+                            $saldoSistem = isset($item['saldo_sistem']) ? (float)$item['saldo_sistem'] : 0;
+                            $hasilFisik = (float)$item['hasil_fisik'];
+                            if (abs($saldoSistem - $hasilFisik) >= 0.01) {
+                                $hasStokException = true;
+                                $hasException = true;
+                                break;
+                            }
+                        }
+                    }
+                }
 
-                        $selisih = (float)$item['saldo_sistem'] - (float)$item['hasil_fisik'];
-                        $isException = ($selisih != 0);
+                $stokTglUji = $request->input('stok_tgl_uji') ?? $request->input('tgl_uji') ?? Carbon::now()->toDateString();
+                $stokPenyebab = trim($request->input('stok_penyebab_keterangan') ?? $request->input('penyebab_keterangan') ?? '');
+
+                if (empty($stokPenyebab) && $request->has('stok_details') && is_array($request->stok_details)) {
+                    foreach ($request->stok_details as $item) {
+                        if (!empty($item['penyebab'])) {
+                            $stokPenyebab = trim($item['penyebab']);
+                            break;
+                        }
+                    }
+                }
+
+                if ($hasStokException && empty($stokPenyebab)) {
+                    throw ValidationException::withMessages([
+                        'penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik vs saldo sistem atau butir kontrol dijawab Tidak pada Rekonsiliasi Stok Cek / BG.',
+                        'stok_penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik vs saldo sistem atau butir kontrol dijawab Tidak pada Rekonsiliasi Stok Cek / BG.',
+                    ]);
+                }
+
+                $stokImpact = (int)($request->input('stok_impact') ?? $request->input('impact') ?? ($hasStokException ? 3 : 1));
+                $stokLikelihood = (int)($request->input('stok_likelihood') ?? $request->input('likelihood') ?? ($hasStokException ? 2 : 1));
+                $rawCrit = $request->input('stok_is_critical') ?? $request->input('is_critical') ?? $request->input('critical_trigger');
+                $stokIsCritical = in_array($rawCrit, ['Ya', '1', 1, true, 'true'], true);
+
+                $calcRisk = PhysicalKka::determineRiskLevel($stokImpact, $stokLikelihood, $stokIsCritical, $hasStokException);
+                $stokRiskScore = (int)($request->input('stok_risk_score') ?? $request->input('risk_score') ?? $calcRisk['score']);
+                $stokRiskLevel = $request->input('stok_risk_level') ?? $request->input('risk_level') ?? $calcRisk['level'];
+
+                $physicalKka->update([
+                    'stok_tgl_uji' => $stokTglUji,
+                    'stok_penyebab_keterangan' => $stokPenyebab,
+                    'stok_impact' => $stokImpact,
+                    'stok_likelihood' => $stokLikelihood,
+                    'stok_is_critical' => $stokIsCritical,
+                    'stok_risk_score' => $stokRiskScore,
+                    'stok_risk_level' => $stokRiskLevel,
+                ]);
+
+                if ($request->has('stok_details') && is_array($request->stok_details)) {
+                    foreach ($request->stok_details as $item) {
+                        $isCtrl = (($item['sub_area'] ?? '') === 'Kontrol');
+                        if (!$isCtrl && (!isset($item['hasil_fisik']) || $item['hasil_fisik'] === '')) continue;
+
+                        $saldoSistem = isset($item['saldo_sistem']) ? (float)$item['saldo_sistem'] : 0;
+                        $hasilFisik = (float)($item['hasil_fisik'] ?? 0);
+                        $selisih = $isCtrl ? 0 : ($saldoSistem - $hasilFisik);
+
+                        if ($isCtrl) {
+                            $isException = (($item['status_uji'] ?? '') === 'Tidak');
+                            $item['status_uji'] = $isException ? 'Tidak' : 'Ya';
+                        } else {
+                            $isException = (abs($selisih) >= 0.01);
+                            $item['status_uji'] = $isException ? 'Exception' : 'Sesuai';
+                        }
                         
+                        $item['saldo_sistem'] = $saldoSistem;
+                        $item['hasil_fisik'] = $hasilFisik;
                         $item['selisih'] = $selisih;
-                        $item['status_uji'] = $isException ? 'Exception' : 'Sesuai';
-                        
+                        $item['is_exception'] = $isException;
+                        $item['physical_kka_id'] = $physicalKka->id;
+
                         if ($isException) {
-                            $hasException = true;
-                            $severity = $this->calculateSeverity($item['impact'] ?? 1, $item['likelihood'] ?? 1, !empty($item['critical_trigger']) && $item['critical_trigger'] == 'Ya');
-                            $item['risk_score'] = $severity['score'];
-                            $item['severity_level'] = $severity['level'];
+                            $itemImp = isset($item['impact']) ? (int)$item['impact'] : $stokImpact;
+                            $itemLik = isset($item['likelihood']) ? (int)$item['likelihood'] : $stokLikelihood;
+                            $itemCrit = isset($item['critical_trigger']) ? (in_array($item['critical_trigger'], ['Ya', '1', 1, true, 'true'], true)) : $stokIsCritical;
+                            $itemSeverity = $this->calculateSeverity($itemImp, $itemLik, $itemCrit);
+                            $item['risk_score'] = $item['risk_score'] ?? $itemSeverity['score'];
+                            $item['severity_level'] = $item['severity_level'] ?? $itemSeverity['level'];
+                            $item['penyebab'] = $item['penyebab'] ?? $stokPenyebab;
                         } else {
                             $item['risk_score'] = 0;
                             $item['severity_level'] = 'Rendah';
                         }
-                        $item['is_exception'] = $isException;
-                        $item['physical_kka_id'] = $physicalKka->id;
+                        $item['tanggal_uji'] = $item['tanggal_uji'] ?? $stokTglUji;
 
                         $detail = PhysicalKkaStokDetail::create($item);
                         if ($isException) $this->createKlarifikasi($detail, $kodeUnit);
@@ -1029,6 +1187,69 @@ class PhysicalKkaController extends Controller
 
             // 6. PROCESS REKONSILIASI BARANG CETAKAN
             if ($subTab === 'cetakan' || $subTab === 'all' || $request->has('barang_cetakan_details') || $request->has('barang_cetakan_controls')) {
+                $hasBctException = false;
+                if ($request->has('barang_cetakan_details') && is_array($request->barang_cetakan_details)) {
+                    foreach ($request->barang_cetakan_details as $bRow) {
+                        if (empty($bRow['nama_barang']) && empty($bRow['kriteria'])) continue;
+                        $stokSistem = isset($bRow['stok_sistem']) ? (float)$bRow['stok_sistem'] : 0;
+                        $hasilFisik = isset($bRow['hasil_fisik']) && $bRow['hasil_fisik'] !== '' ? (float)$bRow['hasil_fisik'] : 0;
+                        if (abs($hasilFisik - $stokSistem) >= 0.01) {
+                            $hasBctException = true;
+                            $hasException = true;
+                            break;
+                        }
+                    }
+                }
+                if (!$hasBctException && $request->has('barang_cetakan_controls') && is_array($request->barang_cetakan_controls)) {
+                    foreach ($request->barang_cetakan_controls as $bcRow) {
+                        if (empty($bcRow['butir'])) continue;
+                        if (($bcRow['jawaban'] ?? 'Ya') === 'Tidak') {
+                            $hasBctException = true;
+                            $hasException = true;
+                            break;
+                        }
+                    }
+                }
+
+                $cetakanTglUji = $request->input('cetakan_tgl_uji') ?? $request->input('tgl_uji') ?? Carbon::now()->toDateString();
+                $cetakanPenyebab = trim($request->input('cetakan_penyebab_keterangan') ?? $request->input('penyebab_keterangan') ?? '');
+
+                // Fallback: check if any item had per-row 'penyebab' in legacy payloads
+                if (empty($cetakanPenyebab) && $request->has('barang_cetakan_details') && is_array($request->barang_cetakan_details)) {
+                    foreach ($request->barang_cetakan_details as $bRow) {
+                        if (!empty($bRow['penyebab'])) {
+                            $cetakanPenyebab = trim($bRow['penyebab']);
+                            break;
+                        }
+                    }
+                }
+
+                if ($hasBctException && empty($cetakanPenyebab)) {
+                    throw ValidationException::withMessages([
+                        'penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik atau butir kontrol bernilai Tidak pada Rekonsiliasi Barang Cetakan.',
+                        'cetakan_penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik atau butir kontrol bernilai Tidak pada Rekonsiliasi Barang Cetakan.',
+                    ]);
+                }
+
+                $cetakanImpact = (int)($request->input('cetakan_impact') ?? $request->input('impact') ?? ($hasBctException ? 3 : 1));
+                $cetakanLikelihood = (int)($request->input('cetakan_likelihood') ?? $request->input('likelihood') ?? ($hasBctException ? 2 : 1));
+                $rawCrit = $request->input('cetakan_is_critical') ?? $request->input('is_critical') ?? $request->input('critical_trigger');
+                $cetakanIsCritical = in_array($rawCrit, ['Ya', '1', 1, true, 'true'], true);
+
+                $calcRisk = PhysicalKka::determineRiskLevel($cetakanImpact, $cetakanLikelihood, $cetakanIsCritical, $hasBctException);
+                $cetakanRiskScore = (int)($request->input('cetakan_risk_score') ?? $request->input('risk_score') ?? $calcRisk['score']);
+                $cetakanRiskLevel = $request->input('cetakan_risk_level') ?? $request->input('risk_level') ?? $calcRisk['level'];
+
+                $physicalKka->update([
+                    'cetakan_tgl_uji' => $cetakanTglUji,
+                    'cetakan_penyebab_keterangan' => $cetakanPenyebab,
+                    'cetakan_impact' => $cetakanImpact,
+                    'cetakan_likelihood' => $cetakanLikelihood,
+                    'cetakan_is_critical' => $cetakanIsCritical,
+                    'cetakan_risk_score' => $cetakanRiskScore,
+                    'cetakan_risk_level' => $cetakanRiskLevel,
+                ]);
+
                 $noUrutBct = 1;
                 if ($request->has('barang_cetakan_details') && is_array($request->barang_cetakan_details)) {
                     foreach ($request->barang_cetakan_details as $bRow) {
@@ -1038,7 +1259,6 @@ class PhysicalKkaController extends Controller
                         $hasilFisik = isset($bRow['hasil_fisik']) && $bRow['hasil_fisik'] !== '' ? (float)$bRow['hasil_fisik'] : 0;
                         $selisih = $hasilFisik - $stokSistem;
                         $isException = (abs($selisih) >= 0.01);
-                        if ($isException) $hasException = true;
 
                         $detail = PhysicalKkaBarangCetakanDetail::create([
                             'physical_kka_id' => $physicalKka->id,
@@ -1052,9 +1272,14 @@ class PhysicalKkaController extends Controller
                             'selisih' => $selisih,
                             'status_uji' => $isException ? 'EXCEPTION' : 'SESUAI',
                             'kondisi' => 'Baik',
-                            'penyebab' => $bRow['penyebab'] ?? null,
+                            'penyebab' => $bRow['penyebab'] ?? ($isException ? $cetakanPenyebab : null),
+                            'impact' => $bRow['impact'] ?? $cetakanImpact,
+                            'likelihood' => $bRow['likelihood'] ?? $cetakanLikelihood,
+                            'critical_trigger' => !empty($bRow['critical_trigger']) && $bRow['critical_trigger'] == 'Ya' ? 'Ya' : ($cetakanIsCritical ? 'Ya' : 'Tidak'),
+                            'risk_score' => $isException ? ($bRow['risk_score'] ?? $cetakanRiskScore) : 0,
+                            'severity_level' => $isException ? ($bRow['severity_level'] ?? $cetakanRiskLevel) : 'Rendah',
                             'is_exception' => $isException,
-                            'tanggal_uji' => Carbon::now()->toDateString(),
+                            'tanggal_uji' => $bRow['tanggal_uji'] ?? $cetakanTglUji,
                             'ra_pelaksana' => $user ? $user->name : 'Resident Auditor',
                         ]);
 
@@ -1069,7 +1294,6 @@ class PhysicalKkaController extends Controller
 
                         $jawaban = $bcRow['jawaban'] ?? 'Ya';
                         $isException = ($jawaban === 'Tidak');
-                        if ($isException) $hasException = true;
 
                         $detail = PhysicalKkaBarangCetakanDetail::create([
                             'physical_kka_id' => $physicalKka->id,
@@ -1085,8 +1309,14 @@ class PhysicalKkaController extends Controller
                             'kondisi' => $jawaban === 'Ya' ? 'Sesuai' : 'Tidak Sesuai',
                             'jawaban_kontrol' => $jawaban,
                             'catatan_kontrol' => $bcRow['catatan'] ?? null,
+                            'penyebab' => $isException ? $cetakanPenyebab : null,
+                            'impact' => $cetakanImpact,
+                            'likelihood' => $cetakanLikelihood,
+                            'critical_trigger' => $cetakanIsCritical ? 'Ya' : 'Tidak',
+                            'risk_score' => $isException ? $cetakanRiskScore : 0,
+                            'severity_level' => $isException ? $cetakanRiskLevel : 'Rendah',
                             'is_exception' => $isException,
-                            'tanggal_uji' => Carbon::now()->toDateString(),
+                            'tanggal_uji' => $cetakanTglUji,
                             'ra_pelaksana' => $user ? $user->name : 'Resident Auditor',
                         ]);
 
@@ -1318,6 +1548,9 @@ class PhysicalKkaController extends Controller
     public function printKkaCetakan($id)
     {
         $kka = PhysicalKka::with(['user', 'barangCetakanDetails'])->findOrFail($id);
+        $cabang = Cabang::where('kode_cabang', 'like', '%' . $kka->kode_unit . '%')->first();
+        $namaCabang = $cabang ? $cabang->nama_cabang : ('Cabang ' . $kka->kode_unit);
+
         $bctItems = $kka->barangCetakanDetails->where('kategori', '!=', 'Kontrol');
         $bctControls = $kka->barangCetakanDetails->where('kategori', 'Kontrol')->map(function($c) {
             return [
@@ -1327,7 +1560,33 @@ class PhysicalKkaController extends Controller
             ];
         })->toArray();
 
-        return view('daily_register.print.kka_barang_cetakan', compact('kka', 'bctItems', 'bctControls'));
+        $eval = $kka->getEvaluationSummary('cetakan');
+
+        return view('daily_register.print.kka_barang_cetakan', compact('kka', 'namaCabang', 'bctItems', 'bctControls', 'eval'));
+    }
+
+    public function printKkaStok($id)
+    {
+        $kka = PhysicalKka::with(['user', 'stokDetails'])->findOrFail($id);
+        $cabang = Cabang::where('kode_cabang', 'like', '%' . $kka->kode_unit . '%')->first();
+        $namaCabang = $cabang ? $cabang->nama_cabang : ('Cabang ' . $kka->kode_unit);
+
+        $stokItems = $kka->stokDetails->isNotEmpty() ? $kka->stokDetails : collect(self::getDefaultStokItems())->map(function($s) {
+            $isCtrl = ($s['sub_area'] === 'Kontrol');
+            return (object)[
+                'sub_area' => $s['sub_area'],
+                'kondisi_objek' => $s['objek'] . ' | ' . $s['pecahan'],
+                'saldo_sistem' => $isCtrl ? 0 : ($s['saldo_sistem'] ?? 100),
+                'hasil_fisik' => $isCtrl ? 0 : ($s['saldo_sistem'] ?? 100),
+                'selisih' => 0,
+                'status_uji' => $isCtrl ? 'Ya' : 'Sesuai',
+                'is_exception' => false,
+            ];
+        });
+
+        $eval = $kka->getEvaluationSummary('stok');
+
+        return view('daily_register.print.kka_stok_cek_bg', compact('kka', 'namaCabang', 'stokItems', 'eval'));
     }
 
     public function printAll($id)
@@ -1413,9 +1672,27 @@ class PhysicalKkaController extends Controller
             ]);
         }
 
+        $stokItems = $kka->stokDetails->isNotEmpty() ? $kka->stokDetails : collect(self::getDefaultStokItems())->map(function($s) {
+            $isCtrl = ($s['sub_area'] === 'Kontrol');
+            return (object)[
+                'sub_area' => $s['sub_area'],
+                'kondisi_objek' => $s['objek'] . ' | ' . $s['pecahan'],
+                'saldo_sistem' => $isCtrl ? 0 : ($s['saldo_sistem'] ?? 100),
+                'hasil_fisik' => $isCtrl ? 0 : ($s['saldo_sistem'] ?? 100),
+                'selisih' => 0,
+                'status_uji' => $isCtrl ? 'Ya' : 'Sesuai',
+                'is_exception' => false,
+            ];
+        });
+
+        $evalObs = $kka->getEvaluationSummary('observasi');
+        $evalStok = $kka->getEvaluationSummary('stok');
+        $evalCetakan = $kka->getEvaluationSummary('cetakan');
+
         return view('daily_register.print.kka_fisik_all', compact(
             'kka', 'namaCabang', 'uleDetails', 'logamDetails', 'utleDetails',
-            'atmMachines', 'stockRows', 'controlRows', 'bctItems', 'bctControls', 'obsDetails'
+            'atmMachines', 'stockRows', 'controlRows', 'bctItems', 'bctControls', 'obsDetails', 'stokItems',
+            'evalObs', 'evalStok', 'evalCetakan'
         ));
     }
 
@@ -1478,7 +1755,9 @@ class PhysicalKkaController extends Controller
             ]);
         }
 
-        return view('daily_register.print.kka_observasi', compact('kka', 'namaCabang', 'obsItems'));
+        $eval = $kka->getEvaluationSummary('observasi');
+
+        return view('daily_register.print.kka_observasi', compact('kka', 'namaCabang', 'obsItems', 'eval'));
     }
 
     // =========================================================================
@@ -1494,7 +1773,7 @@ class PhysicalKkaController extends Controller
         $namaCabang = $cabang ? $cabang->nama_cabang : ('Cabang ' . $kka->kode_unit);
 
         $spreadsheet = new Spreadsheet();
-        $typesToExport = ($type === 'all') ? ['kas', 'atm', 'kartu', 'cetakan', 'observasi'] : [$type];
+        $typesToExport = ($type === 'all') ? ['kas', 'atm', 'stok', 'kartu', 'cetakan', 'observasi'] : [$type];
         $sheetIndex = 0;
 
         foreach ($typesToExport as $t) {
@@ -1509,6 +1788,10 @@ class PhysicalKkaController extends Controller
                 case 'atm':
                     $sheet->setTitle('Cash Opname ATM');
                     $this->buildExcelAtmSheet($sheet, $kka, $namaCabang);
+                    break;
+                case 'stok':
+                    $sheet->setTitle('Rekon Stok Cek BG');
+                    $this->buildExcelStokSheet($sheet, $kka, $namaCabang);
                     break;
                 case 'kartu':
                     $sheet->setTitle('Rekon Kartu ATM');
@@ -1554,7 +1837,7 @@ class PhysicalKkaController extends Controller
             ->addMetadata('Tanggal Rekon', $kka->posisi_tanggal_rekon ?? ($kka->tanggal_pemeriksaan ?? date('Y-m-d')))
             ->addMetadata('Pelaksana', $kka->user ? $kka->user->name : 'Resident Auditor');
 
-        $typesToExport = ($type === 'all') ? ['kas', 'atm', 'kartu', 'cetakan', 'observasi'] : [$type];
+        $typesToExport = ($type === 'all') ? ['kas', 'atm', 'stok', 'kartu', 'cetakan', 'observasi'] : [$type];
 
         foreach ($typesToExport as $t) {
             switch ($t) {
@@ -1563,6 +1846,9 @@ class PhysicalKkaController extends Controller
                     break;
                 case 'atm':
                     $this->buildPdfAtmSection($builder, $kka);
+                    break;
+                case 'stok':
+                    $this->buildPdfStokSection($builder, $kka);
                     break;
                 case 'kartu':
                     $this->buildPdfKartuSection($builder, $kka);
@@ -1589,6 +1875,7 @@ class PhysicalKkaController extends Controller
     public function exportExcelKas($id, Request $request) { return $this->exportExcel($request, $id, 'kas'); }
     public function exportExcelAtm($id, Request $request) { return $this->exportExcel($request, $id, 'atm'); }
     public function exportExcelKartu($id, Request $request) { return $this->exportExcel($request, $id, 'kartu'); }
+    public function exportExcelStok($id, Request $request) { return $this->exportExcel($request, $id, 'stok'); }
     public function exportExcelCetakan($id, Request $request) { return $this->exportExcel($request, $id, 'cetakan'); }
     public function exportExcelObservasi($id, Request $request) { return $this->exportExcel($request, $id, 'observasi'); }
     public function exportExcelAll($id, Request $request) { return $this->exportExcel($request, $id, 'all'); }
@@ -1596,6 +1883,7 @@ class PhysicalKkaController extends Controller
     public function downloadPdfKas($id, Request $request) { return $this->downloadPdf($request, $id, 'kas'); }
     public function downloadPdfAtm($id, Request $request) { return $this->downloadPdf($request, $id, 'atm'); }
     public function downloadPdfKartu($id, Request $request) { return $this->downloadPdf($request, $id, 'kartu'); }
+    public function downloadPdfStok($id, Request $request) { return $this->downloadPdf($request, $id, 'stok'); }
     public function downloadPdfCetakan($id, Request $request) { return $this->downloadPdf($request, $id, 'cetakan'); }
     public function downloadPdfObservasi($id, Request $request) { return $this->downloadPdf($request, $id, 'observasi'); }
     public function downloadPdfAll($id, Request $request) { return $this->downloadPdf($request, $id, 'all'); }
@@ -1749,18 +2037,17 @@ class PhysicalKkaController extends Controller
 
     private function buildExcelCetakanSheet($sheet, $kka, $namaCabang)
     {
-        $sheet->setCellValue('A1', 'PT BANK SULTENG - REKONSILIASI BARANG CETAKAN');
+        $sheet->setCellValue('A1', 'PT BANK SULTENG - REKONSILIASI PERSEDIAAN BARANG CETAKAN BERHARGA');
         $sheet->setCellValue('A2', 'Cabang: ' . $namaCabang . ' | Unit: ' . ($kka->kode_unit ?? '000') . ' | No. Arsip: ' . ($kka->no_arsip ?? '-') . ' | Tanggal: ' . ($kka->posisi_tanggal_rekon ?? date('Y-m-d')));
 
         $sheet->setCellValue('A4', 'No');
         $sheet->setCellValue('B4', 'Kategori');
         $sheet->setCellValue('C4', 'Nama Barang Cetakan');
         $sheet->setCellValue('D4', 'Satuan');
-        $sheet->setCellValue('E4', 'Stok Sistem');
-        $sheet->setCellValue('F4', 'Hasil Fisik');
+        $sheet->setCellValue('E4', 'Saldo Buku (Sistem)');
+        $sheet->setCellValue('F4', 'Jumlah Fisik');
         $sheet->setCellValue('G4', 'Selisih');
         $sheet->setCellValue('H4', 'Status Uji');
-        $sheet->setCellValue('I4', 'Penyebab / Keterangan');
 
         $row = 5;
         $no = 1;
@@ -1774,7 +2061,6 @@ class PhysicalKkaController extends Controller
             $sheet->setCellValue('F' . $row, (float)($bct->hasil_fisik ?? 0));
             $sheet->setCellValue('G' . $row, (float)($bct->selisih ?? 0));
             $sheet->setCellValue('H' . $row, $bct->status_uji ?? 'SESUAI');
-            $sheet->setCellValue('I' . $row, $bct->penyebab ?? '-');
             $row++;
         }
 
@@ -1796,11 +2082,98 @@ class PhysicalKkaController extends Controller
             $sheet->setCellValue('D' . $row, $ctrl->catatan_kontrol ?? '-');
             $row++;
         }
+
+        $row += 2;
+        $eval = $kka->getEvaluationSummary('cetakan');
+        $sheet->setCellValue('A' . $row, 'RINGKASAN EVALUASI & PENILAIAN RISIKO');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Tanggal Uji:');
+        $sheet->setCellValue('B' . $row, $eval['tgl_uji']);
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Penyebab & Keterangan:');
+        $sheet->setCellValue('B' . $row, $eval['penyebab_keterangan'] ?: 'Nihil / Sesuai');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Impact:');
+        $sheet->setCellValue('B' . $row, $eval['impact']);
+        $sheet->setCellValue('C' . $row, 'Likelihood:');
+        $sheet->setCellValue('D' . $row, $eval['likelihood']);
+        $sheet->setCellValue('E' . $row, 'Critical:');
+        $sheet->setCellValue('F' . $row, $eval['is_critical'] ? 'Ya' : 'Tidak');
+        $sheet->setCellValue('G' . $row, 'Risk Score:');
+        $sheet->setCellValue('H' . $row, $eval['risk_score']);
+        $sheet->setCellValue('I' . $row, 'Risk Level:');
+        $sheet->setCellValue('J' . $row, $eval['risk_level']);
+    }
+
+    private function buildExcelStokSheet($sheet, $kka, $namaCabang)
+    {
+        $sheet->setCellValue('A1', 'PT BANK SULTENG - REKONSILIASI STOK CEK & BILYET GIRO');
+        $sheet->setCellValue('A2', 'Cabang: ' . $namaCabang . ' | Unit: ' . ($kka->kode_unit ?? '000') . ' | No. Arsip: ' . ($kka->no_arsip ?? '-') . ' | Tanggal: ' . ($kka->posisi_tanggal_rekon ?? date('Y-m-d')));
+
+        $sheet->setCellValue('A4', 'No');
+        $sheet->setCellValue('B4', 'Kategori / Sub Area');
+        $sheet->setCellValue('C4', 'Kriteria / Jenis Warkat');
+        $sheet->setCellValue('D4', 'Saldo Buku');
+        $sheet->setCellValue('E4', 'Jumlah Fisik');
+        $sheet->setCellValue('F4', 'Selisih');
+        $sheet->setCellValue('G4', 'Status Cek');
+
+        $row = 5;
+        $no = 1;
+        $stokItems = $kka->stokDetails ?? collect();
+        if ($stokItems->isEmpty()) {
+            $defaultStok = self::getDefaultStokItems();
+            foreach ($defaultStok as $def) {
+                $sheet->setCellValue('A' . $row, $no++);
+                $sheet->setCellValue('B' . $row, $def['sub_area']);
+                $sheet->setCellValue('C' . $row, $def['objek'] . ' (' . $def['pecahan'] . ')');
+                $isCtrl = ($def['sub_area'] === 'Kontrol');
+                $sheet->setCellValue('D' . $row, $isCtrl ? '-' : 0);
+                $sheet->setCellValue('E' . $row, $isCtrl ? 'Ya' : 0);
+                $sheet->setCellValue('F' . $row, $isCtrl ? '-' : 0);
+                $sheet->setCellValue('G' . $row, $isCtrl ? 'Ya' : 'Sesuai');
+                $row++;
+            }
+        } else {
+            foreach ($stokItems as $item) {
+                $isCtrl = ($item->sub_area === 'Kontrol');
+                $sheet->setCellValue('A' . $row, $no++);
+                $sheet->setCellValue('B' . $row, $item->sub_area ?? '-');
+                $sheet->setCellValue('C' . $row, $item->kondisi_objek ?? '-');
+                $sheet->setCellValue('D' . $row, $isCtrl ? '-' : (float)($item->saldo_sistem ?? 0));
+                $sheet->setCellValue('E' . $row, $isCtrl ? ($item->status_uji ?: 'Ya') : (float)($item->hasil_fisik ?? 0));
+                $selisih = $isCtrl ? 0 : ((float)($item->saldo_sistem ?? 0) - (float)($item->hasil_fisik ?? 0));
+                $sheet->setCellValue('F' . $row, $isCtrl ? '-' : $selisih);
+                $sheet->setCellValue('G' . $row, $item->status_uji ?: ($isCtrl ? 'Ya' : 'Sesuai'));
+                $row++;
+            }
+        }
+
+        $row += 2;
+        $eval = $kka->getEvaluationSummary('stok');
+        $sheet->setCellValue('A' . $row, 'RINGKASAN EVALUASI & PENILAIAN RISIKO');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Tanggal Uji:');
+        $sheet->setCellValue('B' . $row, $eval['tgl_uji']);
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Penyebab & Keterangan:');
+        $sheet->setCellValue('B' . $row, $eval['penyebab_keterangan'] ?: 'Nihil / Sesuai');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Impact:');
+        $sheet->setCellValue('B' . $row, $eval['impact']);
+        $sheet->setCellValue('C' . $row, 'Likelihood:');
+        $sheet->setCellValue('D' . $row, $eval['likelihood']);
+        $sheet->setCellValue('E' . $row, 'Critical:');
+        $sheet->setCellValue('F' . $row, $eval['is_critical'] ? 'Ya' : 'Tidak');
+        $sheet->setCellValue('G' . $row, 'Risk Score:');
+        $sheet->setCellValue('H' . $row, $eval['risk_score']);
+        $sheet->setCellValue('I' . $row, 'Risk Level:');
+        $sheet->setCellValue('J' . $row, $eval['risk_level']);
     }
 
     private function buildExcelObservasiSheet($sheet, $kka, $namaCabang)
     {
-        $sheet->setCellValue('A1', 'PT BANK SULTENG - OBSERVASI LINGKUNGAN & FASILITAS ATM');
+        $sheet->setCellValue('A1', 'PT BANK SULTENG - OBSERVASI LINGKUNGAN & FISIK');
         $sheet->setCellValue('A2', 'Cabang: ' . $namaCabang . ' | Unit: ' . ($kka->kode_unit ?? '000') . ' | No. Arsip: ' . ($kka->no_arsip ?? '-') . ' | Tanggal: ' . ($kka->posisi_tanggal_rekon ?? date('Y-m-d')));
 
         $sheet->setCellValue('A4', 'No');
@@ -1808,9 +2181,6 @@ class PhysicalKkaController extends Controller
         $sheet->setCellValue('C4', 'Kriteria Diharapkan');
         $sheet->setCellValue('D4', 'Kondisi Aktual');
         $sheet->setCellValue('E4', 'Hasil Observasi');
-        $sheet->setCellValue('F4', 'Severity Level');
-        $sheet->setCellValue('G4', 'Risk Score');
-        $sheet->setCellValue('H4', 'Penyebab / Tindak Lanjut');
 
         $row = 5;
         $no = 1;
@@ -1823,9 +2193,6 @@ class PhysicalKkaController extends Controller
                 $sheet->setCellValue('C' . $row, $def['kriteria']);
                 $sheet->setCellValue('D' . $row, 'Sesuai ketentuan');
                 $sheet->setCellValue('E' . $row, 'Sesuai');
-                $sheet->setCellValue('F' . $row, 'Rendah');
-                $sheet->setCellValue('G' . $row, 0);
-                $sheet->setCellValue('H' . $row, '-');
                 $row++;
             }
         } else {
@@ -1835,12 +2202,30 @@ class PhysicalKkaController extends Controller
                 $sheet->setCellValue('C' . $row, $obs->kriteria_diharapkan ?? '-');
                 $sheet->setCellValue('D' . $row, $obs->kondisi_aktual ?? 'Sesuai');
                 $sheet->setCellValue('E' . $row, $obs->hasil_observasi ?? 'Sesuai');
-                $sheet->setCellValue('F' . $row, $obs->severity_level ?? 'Rendah');
-                $sheet->setCellValue('G' . $row, (int)($obs->risk_score ?? 0));
-                $sheet->setCellValue('H' . $row, $obs->penyebab ?? '-');
                 $row++;
             }
         }
+
+        $row += 2;
+        $eval = $kka->getEvaluationSummary('observasi');
+        $sheet->setCellValue('A' . $row, 'RINGKASAN EVALUASI & PENILAIAN RISIKO');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Tanggal Uji:');
+        $sheet->setCellValue('B' . $row, $eval['tgl_uji']);
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Penyebab & Keterangan:');
+        $sheet->setCellValue('B' . $row, $eval['penyebab_keterangan'] ?: 'Nihil / Sesuai');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Impact:');
+        $sheet->setCellValue('B' . $row, $eval['impact']);
+        $sheet->setCellValue('C' . $row, 'Likelihood:');
+        $sheet->setCellValue('D' . $row, $eval['likelihood']);
+        $sheet->setCellValue('E' . $row, 'Critical:');
+        $sheet->setCellValue('F' . $row, $eval['is_critical'] ? 'Ya' : 'Tidak');
+        $sheet->setCellValue('G' . $row, 'Risk Score:');
+        $sheet->setCellValue('H' . $row, $eval['risk_score']);
+        $sheet->setCellValue('I' . $row, 'Risk Level:');
+        $sheet->setCellValue('J' . $row, $eval['risk_level']);
     }
 
     private function buildPdfKasSection($builder, $kka)
@@ -1936,13 +2321,90 @@ class PhysicalKkaController extends Controller
             $rows[] = [
                 (string)$no++,
                 substr($b->nama_barang ?? ($b->kriteria ?? '-'), 0, 30),
+                (string)($b->satuan ?? 'Bh'),
                 (string)($b->stok_sistem ?? 0),
                 (string)($b->hasil_fisik ?? 0),
                 (string)($b->selisih ?? 0),
                 $b->status_uji ?? 'SESUAI',
             ];
         }
-        $builder->addSection('REKONSILIASI BARANG CETAKAN', ['No', 'Nama Barang', 'Sistem', 'Fisik', 'Selisih', 'Status'], $rows);
+        $builder->addSection('REKONSILIASI PERSEDIAAN BARANG CETAKAN BERHARGA', ['No', 'Nama Barang', 'Satuan', 'Sistem', 'Fisik', 'Selisih', 'Status'], $rows);
+
+        $ctrlItems = ($kka->barangCetakanDetails ?? collect())->where('kategori', 'Kontrol');
+        $cRows = [];
+        $cNo = 1;
+        foreach ($ctrlItems as $ctrl) {
+            $cRows[] = [
+                (string)$cNo++,
+                substr($ctrl->nama_barang ?? '-', 0, 45),
+                $ctrl->jawaban_kontrol ?? ($ctrl->kondisi === 'Sesuai' ? 'Ya' : 'Tidak'),
+                $ctrl->catatan_kontrol ?? '-',
+            ];
+        }
+        if (!empty($cRows)) {
+            $builder->addSection('CHECKLIST KONTROL FISIK BARANG CETAKAN', ['No', 'Butir Pengujian', 'Jawaban', 'Catatan'], $cRows);
+        }
+
+        $eval = $kka->getEvaluationSummary('cetakan');
+        $evalRows = [
+            ['Tanggal Uji', (string)$eval['tgl_uji']],
+            ['Penyebab & Keterangan', (string)($eval['penyebab_keterangan'] ?: 'Nihil / Sesuai')],
+            ['Impact', (string)$eval['impact']],
+            ['Likelihood', (string)$eval['likelihood']],
+            ['Critical', $eval['is_critical'] ? 'Ya' : 'Tidak'],
+            ['Risk Score', (string)$eval['risk_score']],
+            ['Risk Level', (string)$eval['risk_level']],
+        ];
+        $builder->addSection('RINGKASAN EVALUASI & PENILAIAN RISIKO BARANG CETAKAN', ['Parameter', 'Keterangan / Nilai'], $evalRows);
+    }
+
+    private function buildPdfStokSection($builder, $kka)
+    {
+        $stokItems = $kka->stokDetails ?? collect();
+        $rows = [];
+        $no = 1;
+        if ($stokItems->isEmpty()) {
+            $defaultStok = self::getDefaultStokItems();
+            foreach ($defaultStok as $def) {
+                $isCtrl = ($def['sub_area'] === 'Kontrol');
+                $rows[] = [
+                    (string)$no++,
+                    $def['sub_area'],
+                    substr($def['objek'], 0, 30),
+                    $isCtrl ? '-' : '0',
+                    $isCtrl ? '-' : '0',
+                    $isCtrl ? '-' : '0',
+                    $isCtrl ? 'Ya' : 'Sesuai',
+                ];
+            }
+        } else {
+            foreach ($stokItems as $s) {
+                $isCtrl = ($s->sub_area === 'Kontrol');
+                $selisih = $isCtrl ? '-' : (string)((float)($s->saldo_sistem ?? 0) - (float)($s->hasil_fisik ?? 0));
+                $rows[] = [
+                    (string)$no++,
+                    $s->sub_area ?? '-',
+                    substr($s->kondisi_objek ?? '-', 0, 30),
+                    $isCtrl ? '-' : (string)($s->saldo_sistem ?? 0),
+                    $isCtrl ? '-' : (string)($s->hasil_fisik ?? 0),
+                    $selisih,
+                    $s->status_uji ?: ($isCtrl ? 'Ya' : 'Sesuai'),
+                ];
+            }
+        }
+        $builder->addSection('REKONSILIASI STOK CEK & BILYET GIRO', ['No', 'Sub Area', 'Kriteria / Warkat', 'Saldo Buku', 'Fisik', 'Selisih', 'Status'], $rows);
+
+        $eval = $kka->getEvaluationSummary('stok');
+        $evalRows = [
+            ['Tanggal Uji', (string)$eval['tgl_uji']],
+            ['Penyebab & Keterangan', (string)($eval['penyebab_keterangan'] ?: 'Nihil / Sesuai')],
+            ['Impact', (string)$eval['impact']],
+            ['Likelihood', (string)$eval['likelihood']],
+            ['Critical', $eval['is_critical'] ? 'Ya' : 'Tidak'],
+            ['Risk Score', (string)$eval['risk_score']],
+            ['Risk Level', (string)$eval['risk_level']],
+        ];
+        $builder->addSection('RINGKASAN EVALUASI & PENILAIAN RISIKO STOK CEK / BG', ['Parameter', 'Keterangan / Nilai'], $evalRows);
     }
 
     private function buildPdfObservasiSection($builder, $kka)
@@ -1955,22 +2417,32 @@ class PhysicalKkaController extends Controller
             foreach ($defaultObs as $def) {
                 $rows[] = [
                     (string)$no++,
-                    substr($def['area'], 0, 35),
+                    substr($def['area'], 0, 45),
                     'Sesuai',
-                    'Rendah',
                 ];
             }
         } else {
             foreach ($obsItems as $o) {
                 $rows[] = [
                     (string)$no++,
-                    substr($o->area_observasi ?? '-', 0, 35),
+                    substr($o->area_observasi ?? '-', 0, 45),
                     $o->hasil_observasi ?? 'Sesuai',
-                    $o->severity_level ?? 'Rendah',
                 ];
             }
         }
-        $builder->addSection('OBSERVASI LINGKUNGAN & FASILITAS ATM', ['No', 'Area Observasi', 'Hasil', 'Severity'], $rows);
+        $builder->addSection('OBSERVASI LINGKUNGAN & FISIK', ['No', 'Area Observasi', 'Hasil Observasi'], $rows);
+
+        $eval = $kka->getEvaluationSummary('observasi');
+        $evalRows = [
+            ['Tanggal Uji', (string)$eval['tgl_uji']],
+            ['Penyebab & Keterangan', (string)($eval['penyebab_keterangan'] ?: 'Nihil / Sesuai')],
+            ['Impact', (string)$eval['impact']],
+            ['Likelihood', (string)$eval['likelihood']],
+            ['Critical', $eval['is_critical'] ? 'Ya' : 'Tidak'],
+            ['Risk Score', (string)$eval['risk_score']],
+            ['Risk Level', (string)$eval['risk_level']],
+        ];
+        $builder->addSection('RINGKASAN EVALUASI & PENILAIAN RISIKO OBSERVASI', ['Parameter', 'Keterangan / Nilai'], $evalRows);
     }
 
     /**
@@ -2196,6 +2668,25 @@ class PhysicalKkaController extends Controller
                 'kriteria' => 'Genset cadangan beroperasi normal, bahan bakar solar terisi mencukupi, dan dilakukan pemanasan berkala (warm-up)',
                 'backup_90_hari' => '—',
             ],
+        ];
+    }
+
+    /**
+     * Master Items Rekonsiliasi Stok Cek & Bilyet Giro Standar Bank Sulteng
+     */
+    public static function getDefaultStokItems(): array
+    {
+        return [
+            ['sub_area' => 'Cek', 'objek' => 'Buku cek kosong/belum digunakan', 'pecahan' => 'Seluruh buku dan nomor seri dalam listing'],
+            ['sub_area' => 'Cek', 'objek' => 'Cek rusak atau dibatalkan', 'pecahan' => 'Seluruh fisik dan nomor seri dalam register pembatalan'],
+            ['sub_area' => 'Cek', 'objek' => 'Cek tercetak/diserahkan tetapi belum diambil', 'pecahan' => 'Seluruh fisik berada dalam custody unit'],
+            ['sub_area' => 'Bilyet Giro', 'objek' => 'Bilyet giro kosong/belum digunakan', 'pecahan' => 'Seluruh buku dan nomor seri dalam listing'],
+            ['sub_area' => 'Bilyet Giro', 'objek' => 'Bilyet giro rusak atau dibatalkan', 'pecahan' => 'Seluruh fisik dan nomor seri dalam register pembatalan'],
+            ['sub_area' => 'Bilyet Giro', 'objek' => 'Bilyet giro tercetak/diserahkan tetapi belum diambil', 'pecahan' => 'Seluruh fisik berada dalam custody unit'],
+            ['sub_area' => 'Deposito', 'objek' => 'Bilyet deposito kosong', 'pecahan' => 'Seluruh fisik dan nomor seri dalam listing, bila berada dalam ruang lingkup'],
+            ['sub_area' => 'Kontrol', 'objek' => 'Kartu kontrol harian', 'pecahan' => 'Dibuat, diperbarui, dan direkonsiliasi setiap hari'],
+            ['sub_area' => 'Kontrol', 'objek' => 'Register penerimaan dan pengeluaran', 'pecahan' => 'Urutan seri, penerimaan, pengeluaran, dan serah terima lengkap'],
+            ['sub_area' => 'Kontrol', 'objek' => 'Penyimpanan dokumen berharga', 'pecahan' => 'Terkunci, dual control, akses terbatas, dan penanggung jawab jelas'],
         ];
     }
 }
