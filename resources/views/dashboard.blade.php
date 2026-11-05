@@ -145,17 +145,6 @@
         </a>
     </div>
     @endif
-            </div>
-            <div>
-                <h6 class="fw-bold mb-0 text-danger">PERINGATAN KHUSUS: Terdapat {{ $activeFraudCases }} Kasus Indikasi Fraud Aktif (SOP 09)</h6>
-                <small class="text-dark">Pemeriksaan awal indikasi kecurangan/penyimpangan operasional sedang ditangani SKAI.</small>
-            </div>
-        </div>
-        <a href="{{ route('pemeriksaan_awal.index') }}" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm">
-            Lihat Kasus Fraud <i class="bi bi-arrow-right ms-1"></i>
-        </a>
-    </div>
-    @endif
 
     <!-- 5 KARTU STATISTIK EKSEKUTIF LINTAS MODUL (KLIK UNTUK MENUJU MODUL TERKAIT) -->
     <div class="row g-3 mb-4">
