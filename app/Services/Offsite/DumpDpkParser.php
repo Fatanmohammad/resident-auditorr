@@ -96,7 +96,7 @@ class DumpDpkParser
                         'source_sheet'         => 'KKA_DPK_Layanan',
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
-                        'risk_final'           => null,
+                        'risk_final'           => $riskLevel ?? 'Moderate',
                         'review_status'        => \App\Models\DailyRegister\DailyRegisterFinding::STATUS_BELUM_DIUJI,
                         'jenis_exception_awal' => $jenisTemuan,
                         'deskripsi'            => $deskripsiUtama,

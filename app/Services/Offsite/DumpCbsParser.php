@@ -132,7 +132,7 @@ class DumpCbsParser
                         'source_sheet'         => $sourceSheet,
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
-                        'risk_final'           => null,
+                        'risk_final'           => $riskLevel ?? 'Low',
                         'review_status'        => \App\Models\DailyRegister\DailyRegisterFinding::STATUS_BELUM_DIUJI,
                         'jenis_exception_awal' => $jenisException,
                         'deskripsi'            => $deskripsiUtama,
