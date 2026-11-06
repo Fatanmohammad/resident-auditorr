@@ -20,7 +20,13 @@
                 Matriks Pengawasan 18 Indikator Potensi Fraud per Kantor Cabang / KCP / KCPLK Berdasarkan SOP Anti Fraud &amp; BPP SK 60/2022
             </p>
         </div>
-        <div class="d-flex gap-2 align-items-center">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <form action="{{ route('pemeriksaan_awal.indikasi_mencurigakan.sync') }}" method="POST" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn-outline-primary rounded-pill px-3 shadow-sm fw-semibold" style="font-size: 0.88rem;" title="Kalkulasi otomatis dari data transaksi CBS, Daily Register & Temuan KKA">
+                    <i class="bi bi-arrow-repeat me-1"></i> ⚡ Tarik Otomatis dari CBS &amp; KKA
+                </button>
+            </form>
             <button type="button" class="btn btn-primary rounded-pill px-3 shadow-sm fw-bold" style="font-size: 0.88rem; background: #1e3a8a; border-color: #1e3a8a;" onclick="openModalTambah()">
                 <i class="bi bi-plus-circle me-1"></i> Input Data Cabang Baru
             </button>
@@ -521,3 +527,4 @@
 @endpush
 
 @endsection
+

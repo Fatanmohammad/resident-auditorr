@@ -201,6 +201,7 @@ Route::middleware('auth')->group(function () {
         // Fitur Utama: Matriks Rekap 18 Indikator Temuan Mencurigakan Cabang
         Route::get('/indikasi-mencurigakan', [PemeriksaanAwalController::class, 'indikasiMencurigakan'])->name('indikasi_mencurigakan');
         Route::post('/indikasi-mencurigakan/store', [PemeriksaanAwalController::class, 'storeIndikasiMencurigakan'])->name('indikasi_mencurigakan.store');
+        Route::post('/indikasi-mencurigakan/sync', [PemeriksaanAwalController::class, 'syncFromSystemData'])->name('indikasi_mencurigakan.sync');
         Route::delete('/indikasi-mencurigakan/{id}', [PemeriksaanAwalController::class, 'destroyIndikasiMencurigakan'])->name('indikasi_mencurigakan.destroy');
 
         // Submenu 1: Pelaporan Awal

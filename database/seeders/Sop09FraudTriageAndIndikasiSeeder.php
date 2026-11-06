@@ -410,3 +410,4 @@ class Sop09FraudTriageAndIndikasiSeeder extends Seeder
         ];
     }
 }
+

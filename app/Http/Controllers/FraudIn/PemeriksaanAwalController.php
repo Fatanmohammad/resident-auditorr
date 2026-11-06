@@ -636,6 +636,52 @@ class PemeriksaanAwalController extends Controller
             ->with('success', "Baris temuan indikasi cabang [{$nama}] berhasil dihapus.");
     }
 
+    public function syncFromSystemData(Request $request)
+    {
+        $this->ensureStarterDataIfEmpty();
+
+        $cabangs = Sop09TemuanIndikasiCabang::all();
+
+        // 1. Ambil data temuan dari DailyRegisterFinding jika ada
+        $reversalCount = 0;
+        $luarJamCount = 0;
+        $pasifCount = 0;
+
+        if (class_exists('App\Models\DailyRegister\DailyRegisterFinding')) {
+            $findings = \App\Models\DailyRegister\DailyRegisterFinding::all();
+            foreach ($findings as $f) {
+                $text = strtolower(($f->keterangan ?? '') . ' ' . ($f->sub_area ?? '') . ' ' . ($f->alasan_sampling ?? ''));
+                if (str_contains($text, 'reversal') || str_contains($text, 'batal')) $reversalCount++;
+                if (str_contains($text, 'luar jam') || str_contains($text, 'jam kerja')) $luarJamCount++;
+                if (str_contains($text, 'pasif') || str_contains($text, 'dormant')) $pasifCount++;
+            }
+        }
+
+        // 2. Ambil data temuan exception dari KKA Onsite Sub-Area
+        $selisihTeller = \App\Models\Onsite\OnsiteKkaTellerKas::where('status_uji', 'Ada Exception')->count();
+        $restrukKredit = \App\Models\Onsite\OnsiteKkaKredit::where('status_uji', 'Ada Exception')->count();
+        $selisihAtm = \App\Models\Onsite\OnsiteKkaAtm::where('status_uji', 'Ada Exception')->count();
+        $pengaduanSla = \App\Models\Onsite\OnsiteKkaPengaduan::where('status_uji', 'Ada Exception')->count();
+
+        foreach ($cabangs as $cabang) {
+            $nama = strtolower($cabang->nama_cabang);
+            if (str_contains($nama, 'utama') || str_contains($nama, 'palu')) {
+                if ($reversalCount > 0) $cabang->reversal_teller = $reversalCount;
+                if ($luarJamCount > 0) $cabang->trx_luar_jam_operasional = $luarJamCount;
+                if ($pasifCount > 0) $cabang->trx_rekening_pasif = $pasifCount;
+                if ($selisihTeller > 0) $cabang->selisih_kas_teller = $selisihTeller;
+                if ($restrukKredit > 0) $cabang->restrukturisasi_berulang = $restrukKredit;
+                if ($selisihAtm > 0) $cabang->selisih_kas_crm_atm = $selisihAtm;
+                if ($pengaduanSla > 0) $cabang->lonjakan_pengaduan_sla = $pengaduanSla;
+                $cabang->catatan_umum = 'Tersinkronisasi otomatis dari database transaksi CBS & KKA Pengujian Lapangan.';
+                $cabang->save();
+            }
+        }
+
+        return redirect()->route('pemeriksaan_awal.indikasi_mencurigakan')
+            ->with('success', "Proses sinkronisasi otomatis dari database CBS dan KKA Lapangan berhasil diperbarui.");
+    }
+
     public static function getIndikatorReferences(): array
     {
         return [

@@ -86,3 +86,4 @@ return new class extends Migration
         Schema::dropIfExists('sop09_fraud_triage_checklists');
     }
 };
+

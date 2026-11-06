@@ -40,3 +40,4 @@ class Sop09TemuanIndikasiCabang extends Model
         );
     }
 }
+
