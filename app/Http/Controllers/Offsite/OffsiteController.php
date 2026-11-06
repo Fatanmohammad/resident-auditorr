@@ -174,6 +174,8 @@ class OffsiteController extends Controller
         $file = $request->file('file_csv');
         $jenisFile = $request->jenis_file;
         $kodeUnitDipilih = $request->kode_unit;
+        $tanggalMulai = $request->input('tanggal_mulai');
+        $tanggalSelesai = $request->input('tanggal_selesai');
 
         // Normalisasi format Periode ke format tanggal awal bulan (YYYY-MM-01)
         $rawPeriode = $request->input('periode', date('Y-m'));
@@ -274,7 +276,7 @@ class OffsiteController extends Controller
             $parseResult = null;
 
             switch ($jenisFile) {
-                case 'DUMP_01': $parseResult = $cbsParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
+                case 'DUMP_01': $parseResult = $cbsParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode, $tanggalMulai, $tanggalSelesai); break;
                 case 'DUMP_02': $parseResult = $dpkParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
                 case 'DUMP_03': $parseResult = $kreditParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
                 case 'DUMP_04': $parseResult = $biayaParser->parse($fullPath, $kodeUnitDipilih, false, null, $periode); break;
