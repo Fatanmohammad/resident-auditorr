@@ -1807,7 +1807,11 @@
                 }
             }
 
-            let riskVal = item.risk_final || item.risk_awal || 'Moderate';
+            // Penentuan Risiko Tampilan:
+            // Jika data belum diuji (BELUM_DIUJI / belum ada hasil uji), tampilkan risiko awal hasil deteksi engine (risk_awal: High/Moderate).
+            // Jika sudah diuji/diselesaikan oleh RA, gunakan risk_final hasil penilaian audit.
+            let isItemTested = (status && status !== 'BELUM_DIUJI') || (item.hasil_uji !== null && item.hasil_uji !== undefined && item.hasil_uji !== '');
+            let riskVal = (isItemTested && item.risk_final) ? item.risk_final : (item.risk_awal || item.risk_final || 'Moderate');
             let riskLower = riskVal.toLowerCase();
             let riskBadgeStyle = 'background-color:#fffbeb; color:#b45309; border:1px solid #fde68a;';
             if (riskLower === 'critical') {
@@ -1907,7 +1911,9 @@
         document.getElementById('sum_nominal').innerText = item.nominal_terkait > 0 ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(item.nominal_terkait) : 'Rp 0';
         
         // Custom Badge Generator
-        let riskValue = (item.risk_final || item.risk_awal || 'Moderate').toLowerCase();
+        let isDetailTested = (itemStatus && itemStatus !== 'BELUM_DIUJI') || (item.hasil_uji !== null && item.hasil_uji !== undefined && item.hasil_uji !== '');
+        let effectiveRisk = (isDetailTested && item.risk_final) ? item.risk_final : (item.risk_awal || item.risk_final || 'Moderate');
+        let riskValue = effectiveRisk.toLowerCase();
         let badgeBgColor = '#fffbeb';
         let badgeBorderColor = '#fde68a';
         let badgeTextColor = '#b45309';
@@ -1924,7 +1930,7 @@
             badgeBgColor = '#dcfce7'; badgeBorderColor = '#bbf7d0'; badgeTextColor = '#16a34a';
         }
 
-        document.getElementById('sum_risk_badge').innerHTML = `<span style="background-color:${badgeBgColor}; color:${badgeTextColor}; border:1px solid ${badgeBorderColor}; border-radius:12px; padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;">${item.risk_final || item.risk_awal || 'Moderate'}</span>`;
+        document.getElementById('sum_risk_badge').innerHTML = `<span style="background-color:${badgeBgColor}; color:${badgeTextColor}; border:1px solid ${badgeBorderColor}; border-radius:12px; padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;">${effectiveRisk}</span>`;
         let detailDeskripsi = (item.deskripsi && item.deskripsi !== '-') 
             ? item.deskripsi 
             : ((item.ket_tx && item.ket_tx !== '-') 
@@ -1967,7 +1973,23 @@
         document.getElementById('sys_unit_kerja').innerText = item.kode_unit || '-';
         document.getElementById('sys_nominal_terkait').innerText = document.getElementById('sum_nominal').innerText;
         document.getElementById('sys_source_sheet').innerText = item.source_sheet || currentActiveSheet;
-        document.getElementById('sys_risk_awal').innerHTML = document.getElementById('sum_risk_badge').innerHTML;
+        
+        // RISK AWAL ENGINE: Selalu tampilkan risk_awal hasil deteksi sistem
+        let sysRiskVal = item.risk_awal || 'Moderate';
+        let sysRiskLower = sysRiskVal.toLowerCase();
+        let sysBadgeBg = '#fffbeb', sysBadgeBorder = '#fde68a', sysBadgeText = '#b45309';
+        if (sysRiskLower === 'critical') {
+            sysBadgeBg = '#7f1d1d'; sysBadgeBorder = '#991b1b'; sysBadgeText = '#ffffff';
+        } else if (sysRiskLower === 'high') {
+            sysBadgeBg = '#fee2e2'; sysBadgeBorder = '#fca5a5'; sysBadgeText = '#dc2626';
+        } else if (sysRiskLower === 'moderate to high') {
+            sysBadgeBg = '#ffedd5'; sysBadgeBorder = '#fed7aa'; sysBadgeText = '#c2410c';
+        } else if (sysRiskLower === 'moderate') {
+            sysBadgeBg = '#fffbeb'; sysBadgeBorder = '#fde68a'; sysBadgeText = '#b45309';
+        } else if (sysRiskLower === 'low') {
+            sysBadgeBg = '#dcfce7'; sysBadgeBorder = '#bbf7d0'; sysBadgeText = '#16a34a';
+        }
+        document.getElementById('sys_risk_awal').innerHTML = `<span style="background-color:${sysBadgeBg}; color:${sysBadgeText}; border:1px solid ${sysBadgeBorder}; border-radius:12px; padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;">${sysRiskVal}</span>`;
         document.getElementById('sys_exception_awal').innerText = item.jenis_exception_awal || item.deskripsi || '-';
         
         document.getElementById('sys_catatan_rule').innerText = detailDeskripsi;

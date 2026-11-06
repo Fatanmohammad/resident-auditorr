@@ -49,6 +49,16 @@ class DailyRegisterFinding extends Model
         return $value ?: $this->catatan_reviewer;
     }
 
+    public function getRiskFinalAttribute($value): ?string
+    {
+        // Jika temuan belum diuji dan belum ada pengujian/hasil uji, risk_final belum berlaku (harus null agar fallback ke risk_awal)
+        if ($this->review_status === self::STATUS_BELUM_DIUJI && empty($this->hasil_uji)) {
+            return null;
+        }
+
+        return $value;
+    }
+
     public function getKetTxAttribute(): ?string
     {
         foreach (['ket_tx', 'deskripsi', 'rincian', 'jenis_exception_awal'] as $col) {

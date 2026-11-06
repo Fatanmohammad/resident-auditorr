@@ -16,7 +16,7 @@ return new class extends Migration
                 $table->integer('skor_final')->default(1)->after('critical_trigger');
             }
             if (!Schema::hasColumn('daily_register_findings', 'risk_final')) {
-                $table->string('risk_final', 50)->default('Low')->after('skor_final');
+                $table->string('risk_final', 50)->nullable()->after('skor_final');
             }
             if (!Schema::hasColumn('daily_register_findings', 'klarifikasi_unit')) {
                 $table->text('klarifikasi_unit')->nullable()->after('hasil_uji');

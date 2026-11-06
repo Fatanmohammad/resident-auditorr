@@ -33,6 +33,14 @@ class KkaDailyRegisterController extends Controller
                 $q->whereNull('deskripsi')->orWhere('deskripsi', '')->orWhere('deskripsi', '-');
             })->whereNotNull('rincian')->where('rincian', '!=', '')->where('rincian', '!=', '-')
             ->update(['deskripsi' => DB::raw('rincian')]);
+
+            // Normalisasi data temuan yang belum diuji agar tidak menyimpan default risk_final 'Low'
+            DailyRegisterFinding::where(function($q) {
+                $q->where('review_status', DailyRegisterFinding::STATUS_BELUM_DIUJI)
+                  ->orWhereNull('review_status');
+            })->whereNull('hasil_uji')
+            ->where('risk_final', 'Low')
+            ->update(['risk_final' => null]);
         } catch (\Throwable $e) {}
 
         $path = $request->path();
@@ -316,6 +324,14 @@ class KkaDailyRegisterController extends Controller
                 $q->whereNull('deskripsi')->orWhere('deskripsi', '')->orWhere('deskripsi', '-');
             })->whereNotNull('rincian')->where('rincian', '!=', '')->where('rincian', '!=', '-')
             ->update(['deskripsi' => DB::raw('rincian')]);
+
+            // Normalisasi data temuan yang belum diuji agar tidak menyimpan default risk_final 'Low'
+            DailyRegisterFinding::where(function($q) {
+                $q->where('review_status', DailyRegisterFinding::STATUS_BELUM_DIUJI)
+                  ->orWhereNull('review_status');
+            })->whereNull('hasil_uji')
+            ->where('risk_final', 'Low')
+            ->update(['risk_final' => null]);
         } catch (\Throwable $e) {}
 
         $user = auth()->user();

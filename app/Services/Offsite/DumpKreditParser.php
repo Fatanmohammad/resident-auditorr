@@ -124,6 +124,8 @@ class DumpKreditParser
                 if ($isDailyRegister) {
                     $itemException['no_arsip'] = $noArsip;
                     $itemException['rincian'] = $deskripsiUtama;
+                    $itemException['risk_final'] = null;
+                    $itemException['review_status'] = \App\Models\DailyRegister\DailyRegisterFinding::STATUS_BELUM_DIUJI;
                     $dailyRegisterData[] = $itemException;
                 } else {
                     $moderateHighRiskData[] = $itemException;
