@@ -228,7 +228,8 @@ class KkaController extends Controller
         $tidakCount = 0;
         if (is_array($rawChecklist)) {
             foreach ($rawChecklist as $ans) {
-                if (($ans['jawaban'] ?? 'Ya') === 'Tidak') {
+                $jwb = $ans['jawaban'] ?? '';
+                if ($jwb === 'Tidak' || $jwb === '✗') {
                     $tidakCount++;
                 }
             }
@@ -378,7 +379,7 @@ class KkaController extends Controller
                             'checklist_id'   => $chkId,
                         ],
                         [
-                            'jawaban'    => ($ans['jawaban'] ?? 'Ya') === 'Tidak' ? 'Tidak' : 'Ya',
+                            'jawaban'    => $ans['jawaban'] ?? '✓',
                             'keterangan' => $ans['keterangan'] ?? null,
                         ]
                     );

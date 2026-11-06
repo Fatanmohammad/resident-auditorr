@@ -406,7 +406,7 @@
                 <span class="fw-bold text-dark me-2">Daftar Sampel Uji Kredit</span>
                 <span class="text-muted small">(Menampilkan {{ $findings->count() }} dari {{ $findings->total() }} sampel)</span>
             </div>
-            <span class="badge bg-light text-secondary border">SOP 04.1 — Standar 10 Atribut Kredit</span>
+            <span class="badge bg-light text-secondary border">BPP RA Bank Sulteng — SOP-RA-03, 04, 05, 10 (134 Item Checklist)</span>
         </div>
 
         <div class="table-responsive">

@@ -767,7 +767,8 @@ class KkaDailyRegisterController extends Controller
                     continue;
                 }
 
-                if (($ans['jawaban'] ?? 'Ya') === 'Tidak') {
+                $jwb = $ans['jawaban'] ?? '';
+                if ($jwb === 'Tidak' || $jwb === '✗') {
                     $tidakCount++;
                 }
             }

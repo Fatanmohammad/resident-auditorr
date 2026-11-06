@@ -2110,6 +2110,70 @@
         document.getElementById('dashboardView').style.display = 'block';
     }
 
+    // HELPER STYLING SELECT CEK KKA KREDIT (✓, ✗, N/A)
+    function getKreditSelectStyle(val) {
+        if (val === '✓' || val === 'Ya') {
+            return 'background-color:#dcfce7; color:#15803d; border-color:#86efac;';
+        } else if (val === '✗' || val === 'Tidak') {
+            return 'background-color:#fee2e2; color:#b91c1c; border-color:#fca5a5;';
+        } else if (val === 'N/A') {
+            return 'background-color:#f1f5f9; color:#475569; border-color:#cbd5e1;';
+        }
+        return 'background-color:#fef9c3; color:#854d0e; border-color:#fde047;';
+    }
+
+    function setKreditAllSesuai() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.subarea-checkbox:checked'));
+        const checkedSubAreas = checkedBoxes.map(cb => cb.value);
+        document.querySelectorAll('.chk-kredit-select').forEach(sel => {
+            const sub = sel.getAttribute('data-subarea');
+            if (checkedSubAreas.length === 0 || checkedSubAreas.includes(sub)) {
+                sel.value = '✓';
+            }
+        });
+        onChecklistChange();
+    }
+
+    function setKreditAllNA() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.subarea-checkbox:checked'));
+        const checkedSubAreas = checkedBoxes.map(cb => cb.value);
+        document.querySelectorAll('.chk-kredit-select').forEach(sel => {
+            const sub = sel.getAttribute('data-subarea');
+            if (checkedSubAreas.length === 0 || checkedSubAreas.includes(sub)) {
+                sel.value = 'N/A';
+            }
+        });
+        onChecklistChange();
+    }
+
+    function setSubAreaKreditVal(code, val, event) {
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        document.querySelectorAll(`.chk-kredit-select[data-subarea="${code}"]`).forEach(sel => {
+            sel.value = val;
+        });
+        onChecklistChange();
+    }
+
+    function toggleAllSubAreas(expand) {
+        document.querySelectorAll('#accordionChecklistKka .accordion-collapse').forEach(el => {
+            el.style.display = expand ? 'block' : 'none';
+            const collapseId = el.id;
+            const icon = document.querySelector(`.toggle-icon-${collapseId}`);
+            if (icon) {
+                if (expand) {
+                    icon.classList.remove('bi-chevron-right');
+                    icon.classList.add('bi-chevron-down');
+                } else {
+                    icon.classList.remove('bi-chevron-down');
+                    icon.classList.add('bi-chevron-right');
+                }
+            }
+        });
+    }
+
     // RENDER ACCORDION CHECKLIST KKA DENGAN KELOMPOK PER SUB-AREA
     function renderChecklistAccordion(checklists, existingAnswers, item) {
         const container = document.getElementById('checklistAccordionContainer');
@@ -2119,6 +2183,9 @@
             container.innerHTML = `<div class="p-3 text-muted text-center" style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px;">Tidak ada master checklist untuk tab KKA ini.</div>`;
             return;
         }
+
+        const activeSh = (item && item.source_sheet) ? item.source_sheet : currentActiveSheetCode;
+        const isKredit = (activeSh === 'KKA_Kredit');
 
         const answerMap = {};
         if (Array.isArray(existingAnswers)) {
@@ -2164,9 +2231,7 @@
         }
 
         // Jika belum ada tersimpan sama sekali (pemeriksaan baru):
-        // "untuk centang dropdown checklist sesuaikan saja dengan yg ada di KKA teller dan kas sekarang"
         if (savedSubAreas.length === 0 && item) {
-            const activeSh = item.source_sheet || currentActiveSheetCode;
             const desc = ((item.kategori || '') + ' ' + (item.rincian || '') + ' ' + (item.deskripsi || '') + ' ' + (item.jenis_exception_awal || '')).toLowerCase();
             if (activeSh === 'KKA_Teller_Kas' || activeSh === 'KKA_Teller') {
                 if (desc.includes('kas kecil')) {
@@ -2197,13 +2262,8 @@
                     savedSubAreas = ['B1'];
                 }
             } else if (activeSh === 'KKA_Kredit') {
-                if (desc.includes('flpp') || desc.includes('agunan') || desc.includes('jaminan') || desc.includes('kpr')) {
-                    savedSubAreas = ['C2'];
-                } else if (desc.includes('konstruksi') || desc.includes('monitoring') || desc.includes('restruktur')) {
-                    savedSubAreas = ['C3'];
-                } else {
-                    savedSubAreas = ['C1'];
-                }
+                // Standar 134 item KKA Kredit: aktifkan seluruh 13 sub-area by default
+                savedSubAreas = Object.keys(groups);
             } else if (activeSh === 'KKA_Kartu_ATM') {
                 if (desc.includes('retur') || desc.includes('tertelan') || desc.includes('rusak')) {
                     savedSubAreas = ['E2'];
@@ -2213,10 +2273,13 @@
                     savedSubAreas = ['E1'];
                 }
             } else {
-                // Untuk sheet lain, default ke grup sub-area pertama
                 const firstCode = Object.keys(groups)[0];
                 if (firstCode) savedSubAreas = [firstCode];
             }
+        }
+
+        if (isKredit && savedSubAreas.length === 0) {
+            savedSubAreas = Object.keys(groups);
         }
 
         const isRa = (userRole === 'ra');
@@ -2224,14 +2287,104 @@
         const isSelesai = (itemStatus === 'SELESAI');
         const canEditChecklist = (userRole === 'ra' || userRole === 'admin') && !isSelesai;
 
-        let html = `
+        let html = '';
+
+        // TAMPILKAN HEADER & PETUNJUK PENGISIAN & REKAP KHUSUS KKA KREDIT (134 ITEM)
+        if (isKredit) {
+            html += `
+                <div class="card mb-3 border-0 shadow-sm" style="border-radius:10px; border:1px solid #cbd5e1; overflow:hidden;">
+                    <div style="background:#1e3a8a; color:#fff; padding:10px 16px; font-weight:700; font-size:0.88rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                        <div>
+                            <i class="bi bi-journal-bookmark-fill me-1.5"></i> KKA KREDIT — PETUNJUK PENGISIAN &amp; REKAP
+                        </div>
+                        <div class="small opacity-75">BPP Resident Auditor Bank Sulteng — SOP-RA-03, 04, 05, 10</div>
+                    </div>
+                    <div class="card-body p-3 bg-white">
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.79rem;">
+                                <tbody>
+                                    <tr>
+                                        <th style="width:160px; background:#f8fafc; color:#334155; font-weight:600;">Dasar</th>
+                                        <td style="color:#1e293b; font-weight:500;">BPP RA Bank Sulteng, SK Direksi No. 78/SK-DIR/BPD-ST/2026 (SOP-RA-03, 04, 05, 10)</td>
+                                    </tr>
+                                    <tr>
+                                        <th style="background:#f8fafc; color:#334155; font-weight:600;">Kolom Cek</th>
+                                        <td>Pilih dari dropdown: <strong>✓ (sesuai)</strong>, <strong>✗ (tidak sesuai)</strong>, atau <strong>N/A</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <th style="background:#f8fafc; color:#334155; font-weight:600;">Kolom Sumber</th>
+                                        <td><span class="badge bg-primary-subtle text-primary border me-1">BPP</span> = bersumber dari dokumen BPP; <span class="badge bg-warning-subtle text-warning-emphasis border me-1">Saran RA</span> = usulan, perlu dikonfirmasi dengan Bank</td>
+                                    </tr>
+                                    <tr>
+                                        <th style="background:#f8fafc; color:#334155; font-weight:600;">Sel kuning</th>
+                                        <td><span class="px-2 py-0.5 rounded border" style="background:#fef9c3; border-color:#fde047; font-weight:600; color:#854d0e;">Sel yang harus diisi oleh auditor</span> (Kolom Cek &amp; Keterangan/Catatan)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px;">
+                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                <div class="fw-bold text-primary" style="font-size:0.83rem;">
+                                    <i class="bi bi-bar-chart-fill me-1"></i> REKAP (otomatis dari sheet KKA Kredit)
+                                </div>
+                                ${canEditChecklist ? `
+                                <div class="d-flex gap-1.5 flex-wrap">
+                                    <button type="button" class="btn btn-sm btn-success fw-bold py-1 px-2.5" style="font-size:0.75rem;" onclick="setKreditAllSesuai()">
+                                        <i class="bi bi-check2-all me-1"></i> Set Semua [✓] Sesuai
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" style="font-size:0.75rem;" onclick="setKreditAllNA()">
+                                        Set Semua N/A
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size:0.75rem;" onclick="toggleAllSubAreas(true)">
+                                        <i class="bi bi-arrows-expand me-1"></i> Buka Semua
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" style="font-size:0.75rem;" onclick="toggleAllSubAreas(false)">
+                                        <i class="bi bi-arrows-collapse me-1"></i> Tutup Semua
+                                    </button>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="d-flex flex-wrap gap-2.5 align-items-center" style="font-size:0.8rem;">
+                                <div class="d-flex align-items-center gap-1.5 bg-white px-2.5 py-1 rounded border">
+                                    <span class="text-muted">Total item checklist:</span>
+                                    <span class="badge bg-secondary fw-bold" id="kredit_rekap_total" style="font-size:0.82rem;">${checklists.length}</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1.5 bg-white px-2.5 py-1 rounded border">
+                                    <span class="text-muted">Item sudah dicek (Cek terisi):</span>
+                                    <span class="badge bg-primary fw-bold" id="kredit_rekap_dicek" style="font-size:0.82rem;">0</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1.5 bg-white px-2.5 py-1 rounded border">
+                                    <span class="text-muted">Item sesuai (✓):</span>
+                                    <span class="badge bg-success fw-bold" id="kredit_rekap_sesuai" style="font-size:0.82rem;">0</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1.5 bg-white px-2.5 py-1 rounded border">
+                                    <span class="text-muted">Item tidak sesuai (✗):</span>
+                                    <span class="badge bg-danger fw-bold" id="kredit_rekap_tidak_sesuai" style="font-size:0.82rem;">0</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1.5 bg-white px-2.5 py-1 rounded border">
+                                    <span class="text-muted">Item N/A:</span>
+                                    <span class="badge bg-warning text-dark fw-bold" id="kredit_rekap_na" style="font-size:0.82rem;">0</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1.5 bg-white px-2.5 py-1 rounded border border-primary">
+                                    <span class="text-muted fw-bold">Persentase item sudah dicek:</span>
+                                    <span class="badge bg-info text-dark fw-bold" id="kredit_rekap_persen" style="font-size:0.85rem;">0.0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        html += `
             <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background:#f1f5f9; border:1px solid var(--border-color);">
                 <div style="font-size:0.83rem; font-weight:700; color:var(--primary-blue, #1e3a8a);">
-                    <i class="bi bi-ui-checks me-1"></i> CHECKLIST PENGUJIAN AUDIT (<span id="checklistTotalItemsCount">0</span> ITEM)
+                    <i class="bi bi-ui-checks me-1"></i> ${isKredit ? 'KKA KREDIT (termasuk Flagging Kredit)' : 'CHECKLIST PENGUJIAN AUDIT'} (<span id="checklistTotalItemsCount">0</span> ITEM)
                 </div>
                 <div class="d-flex gap-2 align-items-center">
-                    <span class="badge bg-success" id="badgeTotalYa" style="font-size:0.75rem;">0 Ya</span>
-                    <span class="badge bg-danger" id="badgeTotalTidak" style="font-size:0.75rem;">0 Tidak</span>
+                    <span class="badge bg-success" id="badgeTotalYa" style="font-size:0.75rem;">0 ${isKredit ? 'Sesuai (✓)' : 'Ya'}</span>
+                    <span class="badge bg-danger" id="badgeTotalTidak" style="font-size:0.75rem;">0 ${isKredit ? 'Tidak Sesuai (✗)' : 'Tidak'}</span>
                 </div>
             </div>
             <div class="accordion" id="accordionChecklistKka">
@@ -2261,7 +2414,13 @@
                                 <span class="badge bg-danger text-white subarea-tidak-badge" id="subTidakBadge_${code}" style="display:none; font-size:0.7rem;">0 Temuan Tidak</span>
                             </div>
                         </div>
-                        <div>
+                        <div class="d-flex align-items-center gap-2">
+                            ${isKredit && canEditChecklist ? `
+                            <div class="d-flex gap-1" onclick="event.stopPropagation();">
+                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-1.5" style="font-size:0.68rem;" onclick="setSubAreaKreditVal('${code}', '✓', event)" title="Set sub-area ini ke [✓] Sesuai">[✓] Sesuai</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="setSubAreaKreditVal('${code}', 'N/A', event)" title="Set sub-area ini ke N/A">N/A</button>
+                            </div>
+                            ` : ''}
                             <span class="badge ${isChecked ? 'bg-primary-subtle text-primary border' : 'bg-light text-muted border'} subarea-status-badge" id="subStatusBadge_${code}" style="font-size: 0.72rem;">${isChecked ? 'Aktif Digunakan' : 'Nonaktif / Diabaikan'}</span>
                         </div>
                     </div>
@@ -2273,10 +2432,11 @@
                                 <thead class="table-light" style="font-size:0.72rem; text-transform:uppercase;">
                                     <tr>
                                         <th style="width: 5%; text-align:center;">No</th>
-                                        <th style="width: 25%;">Sub-Area / Objek</th>
-                                        <th style="width: 40%;">Item Checklist</th>
-                                        <th style="width: 14%; text-align:center;">Jawaban</th>
-                                        <th style="width: 16%;">Keterangan / Catatan</th>
+                                        <th style="width: ${isKredit ? '20%' : '25%'};">Sub-Area / Objek</th>
+                                        <th style="width: ${isKredit ? '34%' : '40%'};">Item Checklist</th>
+                                        ${isKredit ? '<th style="width: 13%; text-align:center;">Sumber</th>' : ''}
+                                        <th style="width: 14%; text-align:center; ${isKredit ? 'background:#fef9c3; color:#854d0e; border-bottom:2px solid #fde047;' : ''}">${isKredit ? 'Cek *' : 'Jawaban'}</th>
+                                        <th style="width: ${isKredit ? '14%' : '16%'}; ${isKredit ? 'background:#fef9c3; color:#854d0e; border-bottom:2px solid #fde047;' : ''}">Keterangan / Catatan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -2284,17 +2444,44 @@
 
             grp.items.forEach(chk => {
                 const saved = answerMap[chk.id];
-                const jawaban = saved ? saved.jawaban : '';
+                const rawJawaban = saved ? saved.jawaban : '';
                 const ket = saved ? saved.keterangan : '';
-                const isYa = (jawaban === 'Ya');
-                const isTidak = (jawaban === 'Tidak');
+                
+                // Standarisasi nilai jawaban: 'Ya'/'✓', 'Tidak'/'✗', 'N/A'
+                let jawaban = rawJawaban;
+                if (isKredit) {
+                    if (rawJawaban === 'Ya') jawaban = '✓';
+                    if (rawJawaban === 'Tidak') jawaban = '✗';
+                }
+                const isTidak = (jawaban === 'Tidak' || jawaban === '✗');
+                const isYa = (jawaban === 'Ya' || jawaban === '✓');
 
                 html += `
                     <tr id="row_chk_${chk.id}" class="${isTidak ? 'table-danger' : ''}">
-                        <td style="text-align:center; color:var(--text-muted);">${chk.item_no}</td>
+                        <td style="text-align:center; color:var(--text-muted); font-weight:600;">${chk.item_no}</td>
                         <td style="color:var(--text-dark); font-weight:500;">${chk.sub_area_name}</td>
                         <td style="color:var(--text-dark);">${chk.item_checklist}</td>
+                        ${isKredit ? `
                         <td style="text-align:center;">
+                            <span class="badge ${chk.sumber && chk.sumber.includes('Saran') ? 'bg-warning-subtle text-warning-emphasis border' : 'bg-primary-subtle text-primary border'}" style="font-size:0.71rem;">${chk.sumber || 'BPP'}</span>
+                        </td>
+                        ` : ''}
+                        <td style="text-align:center; ${isKredit ? 'background:#fffbeb;' : ''}">
+                            ${isKredit ? `
+                            <select class="form-select form-select-sm chk-answer chk-kredit-select" 
+                                    name="chk_answer_${chk.id}" 
+                                    id="chk_answer_${chk.id}" 
+                                    data-subarea="${code}" 
+                                    data-chk-id="${chk.id}"
+                                    onchange="onChecklistChange()" 
+                                    ${!canEditChecklist ? 'disabled' : ''} 
+                                    style="font-size:0.75rem; font-weight:600; min-width:115px; ${getKreditSelectStyle(jawaban)}">
+                                <option value="" ${jawaban === '' ? 'selected' : ''}>-- Pilih Cek --</option>
+                                <option value="✓" ${jawaban === '✓' ? 'selected' : ''} style="color:#15803d; font-weight:600;">✓ (Sesuai)</option>
+                                <option value="✗" ${jawaban === '✗' ? 'selected' : ''} style="color:#b91c1c; font-weight:600;">✗ (Tidak Sesuai)</option>
+                                <option value="N/A" ${jawaban === 'N/A' ? 'selected' : ''} style="color:#475569; font-weight:600;">N/A</option>
+                            </select>
+                            ` : `
                             <div class="btn-group btn-group-sm" role="group">
                                 <input type="radio" class="btn-check chk-answer" name="chk_answer_${chk.id}" id="chk_ya_${chk.id}" value="Ya" data-subarea="${code}" autocomplete="off" onchange="onChecklistChange()" ${isYa ? 'checked' : ''} ${!canEditChecklist ? 'disabled' : ''}>
                                 <label class="btn btn-outline-success py-0 px-2" for="chk_ya_${chk.id}" style="font-size:0.72rem;">[✓] Ya</label>
@@ -2302,9 +2489,10 @@
                                 <input type="radio" class="btn-check chk-answer" name="chk_answer_${chk.id}" id="chk_tidak_${chk.id}" value="Tidak" data-subarea="${code}" autocomplete="off" onchange="onChecklistChange()" ${isTidak ? 'checked' : ''} ${!canEditChecklist ? 'disabled' : ''}>
                                 <label class="btn btn-outline-danger py-0 px-2" for="chk_tidak_${chk.id}" style="font-size:0.72rem;">[✗] Tidak</label>
                             </div>
+                            `}
                         </td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm chk-keterangan" id="chk_ket_${chk.id}" data-checklist-id="${chk.id}" data-subarea="${code}" placeholder="Catatan opsional..." value="${ket.replace(/"/g, '&quot;')}" ${!canEditChecklist ? 'disabled' : ''} style="font-size:0.75rem;">
+                        <td style="${isKredit ? 'background:#fffbeb;' : ''}">
+                            <input type="text" class="form-control form-control-sm chk-keterangan" id="chk_ket_${chk.id}" data-checklist-id="${chk.id}" data-subarea="${code}" placeholder="Catatan opsional..." value="${ket.replace(/"/g, '&quot;')}" ${!canEditChecklist ? 'disabled' : ''} style="font-size:0.75rem; ${isKredit ? 'background-color:#fefce8; border-color:#fef08a;' : ''}">
                         </td>
                     </tr>
                 `;
@@ -2428,6 +2616,9 @@
         const checkedBoxes = Array.from(document.querySelectorAll('.subarea-checkbox:checked'));
         const checkedSubAreas = checkedBoxes.map(cb => cb.value);
 
+        const activeSh = (currentItem && currentItem.source_sheet) ? currentItem.source_sheet : currentActiveSheetCode;
+        const isKredit = (activeSh === 'KKA_Kredit');
+
         // 1. Total item di header HANYA menghitung item dari grup dropdown yang dicentang
         let totalActiveItems = 0;
         if (currentChecklists && Array.isArray(currentChecklists)) {
@@ -2438,38 +2629,92 @@
             totalItemsHeaderEl.innerText = totalActiveItems;
         }
 
-        // 2. Penghitung Ya dan Tidak HANYA menghitung item dari grup dropdown yang dicentang
+        // 2. Penghitung jawaban checklist
         let yaCount = 0;
         let tidakCount = 0;
+        let naCount = 0;
+        let dicekCount = 0;
         const subAreaTidakMap = {};
 
-        document.querySelectorAll('.chk-answer:checked').forEach(r => {
-            const sub = r.getAttribute('data-subarea');
-            if (!checkedSubAreas.includes(sub)) {
-                return; // Diabaikan jika grup sub-area tidak dicentang!
-            }
-            const chkId = r.name.replace('chk_answer_', '');
-            const row = document.getElementById(`row_chk_${chkId}`);
+        if (isKredit) {
+            document.querySelectorAll('.chk-kredit-select').forEach(sel => {
+                const sub = sel.getAttribute('data-subarea');
+                if (!checkedSubAreas.includes(sub)) return;
 
-            if (r.value === 'Tidak') {
-                tidakCount++;
-                subAreaTidakMap[sub] = (subAreaTidakMap[sub] || 0) + 1;
-                if (row) {
-                    row.classList.add('table-danger');
-                }
-            } else {
-                yaCount++;
-                if (row) {
-                    row.classList.remove('table-danger', 'table-danger-subtle');
-                }
-            }
-        });
+                const val = sel.value;
+                const chkId = sel.getAttribute('data-chk-id');
+                const row = document.getElementById(`row_chk_${chkId}`);
 
-        // Update Badges
-        const badgeYa = document.getElementById('badgeTotalYa');
-        const badgeTidak = document.getElementById('badgeTotalTidak');
-        if (badgeYa) badgeYa.innerText = `${yaCount} Ya`;
-        if (badgeTidak) badgeTidak.innerText = `${tidakCount} Tidak`;
+                sel.style.cssText = 'font-size:0.75rem; font-weight:600; min-width:115px; ' + getKreditSelectStyle(val);
+
+                if (val === '✓' || val === 'Ya') {
+                    yaCount++;
+                    dicekCount++;
+                    if (row) row.classList.remove('table-danger', 'table-danger-subtle');
+                } else if (val === '✗' || val === 'Tidak') {
+                    tidakCount++;
+                    dicekCount++;
+                    subAreaTidakMap[sub] = (subAreaTidakMap[sub] || 0) + 1;
+                    if (row) row.classList.add('table-danger');
+                } else if (val === 'N/A') {
+                    naCount++;
+                    dicekCount++;
+                    if (row) row.classList.remove('table-danger', 'table-danger-subtle');
+                } else {
+                    if (row) row.classList.remove('table-danger', 'table-danger-subtle');
+                }
+            });
+
+            // Update Rekap Card KKA Kredit (Otomatis dari sheet KKA Kredit)
+            const rekapTotalEl = document.getElementById('kredit_rekap_total');
+            const rekapDicekEl = document.getElementById('kredit_rekap_dicek');
+            const rekapSesuaiEl = document.getElementById('kredit_rekap_sesuai');
+            const rekapTidakEl = document.getElementById('kredit_rekap_tidak_sesuai');
+            const rekapNaEl = document.getElementById('kredit_rekap_na');
+            const rekapPersenEl = document.getElementById('kredit_rekap_persen');
+
+            if (rekapTotalEl) rekapTotalEl.innerText = totalActiveItems;
+            if (rekapDicekEl) rekapDicekEl.innerText = dicekCount;
+            if (rekapSesuaiEl) rekapSesuaiEl.innerText = yaCount;
+            if (rekapTidakEl) rekapTidakEl.innerText = tidakCount;
+            if (rekapNaEl) rekapNaEl.innerText = naCount;
+            if (rekapPersenEl) {
+                const pct = totalActiveItems > 0 ? ((dicekCount / totalActiveItems) * 100).toFixed(1) : '0.0';
+                rekapPersenEl.innerText = `${pct}%`;
+            }
+
+            const badgeYa = document.getElementById('badgeTotalYa');
+            const badgeTidak = document.getElementById('badgeTotalTidak');
+            if (badgeYa) badgeYa.innerText = `${yaCount} Sesuai (✓)`;
+            if (badgeTidak) badgeTidak.innerText = `${tidakCount} Tidak Sesuai (✗)`;
+        } else {
+            document.querySelectorAll('.chk-answer:checked').forEach(r => {
+                const sub = r.getAttribute('data-subarea');
+                if (!checkedSubAreas.includes(sub)) {
+                    return; // Diabaikan jika grup sub-area tidak dicentang!
+                }
+                const chkId = r.name.replace('chk_answer_', '');
+                const row = document.getElementById(`row_chk_${chkId}`);
+
+                if (r.value === 'Tidak' || r.value === '✗') {
+                    tidakCount++;
+                    subAreaTidakMap[sub] = (subAreaTidakMap[sub] || 0) + 1;
+                    if (row) {
+                        row.classList.add('table-danger');
+                    }
+                } else {
+                    yaCount++;
+                    if (row) {
+                        row.classList.remove('table-danger', 'table-danger-subtle');
+                    }
+                }
+            });
+
+            const badgeYa = document.getElementById('badgeTotalYa');
+            const badgeTidak = document.getElementById('badgeTotalTidak');
+            if (badgeYa) badgeYa.innerText = `${yaCount} Ya`;
+            if (badgeTidak) badgeTidak.innerText = `${tidakCount} Tidak`;
+        }
 
         // Update SubArea Badges (hanya untuk grup yang dicentang)
         document.querySelectorAll('.subarea-tidak-badge').forEach(b => {
@@ -2678,29 +2923,35 @@
                 return; // Diabaikan jika grup sub-area tidak dicentang!
             }
 
+            const selectEl = document.getElementById(`chk_answer_${chk.id}`);
             const yaRadio = document.getElementById(`chk_ya_${chk.id}`);
             const tidakRadio = document.getElementById(`chk_tidak_${chk.id}`);
             const ketInput = document.getElementById(`chk_ket_${chk.id}`);
 
-            const isYa = yaRadio && yaRadio.checked;
-            const isTidak = tidakRadio && tidakRadio.checked;
+            let jawaban = '';
+            if (selectEl) {
+                jawaban = selectEl.value;
+            } else if (yaRadio && yaRadio.checked) {
+                jawaban = 'Ya';
+            } else if (tidakRadio && tidakRadio.checked) {
+                jawaban = 'Tidak';
+            }
 
-            if (!isYa && !isTidak) {
+            if (!jawaban) {
                 unansweredCount++;
             }
 
-            const jawaban = isTidak ? 'Tidak' : (isYa ? 'Ya' : 'Ya');
-            if (jawaban === 'Tidak') tidakCount++;
+            if (jawaban === 'Tidak' || jawaban === '✗') tidakCount++;
             const keterangan = ketInput ? ketInput.value.trim() : '';
             checklistAnswers.push({
                 checklist_id: chk.id,
-                jawaban: jawaban,
+                jawaban: jawaban || '✓',
                 keterangan: keterangan
             });
         });
 
         if (unansweredCount > 0) {
-            alert(`Terdapat ${unansweredCount} item checklist pada grup terpilih yang belum dicentang. Sesuai instruksi, RA wajib mencentang seluruh kotak checklist pada grup yang dipilih ([✓] Ya atau [✗] Tidak).`);
+            alert(`Terdapat ${unansweredCount} item checklist pada grup terpilih yang belum dicek. Sesuai instruksi, RA wajib mengisi seluruh kolom Cek ([✓] Sesuai, [✗] Tidak Sesuai, atau N/A).`);
             return;
         }
 
