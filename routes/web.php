@@ -300,28 +300,33 @@ Route::middleware('auth')->group(function () {
 
         // KKA Sampling CBS: 1. Teller & Kas
         Route::get('/{visit}/kka/teller-kas', [TellerKasController::class, 'index'])->name('kka.teller_kas.index');
-        Route::patch('/kka/teller-kas/{item}', [TellerKasController::class, 'update'])->name('kka.teller_kas.update');
-        Route::patch('/kka/teller-kas/{item}/review', [TellerKasController::class, 'review'])->name('kka.teller_kas.review')->middleware('role:admin,kabag_ra,kadiv_skai');
+        Route::match(['post', 'patch'], '/kka/teller-kas/{item}', [TellerKasController::class, 'update'])->name('kka.teller_kas.update');
+        Route::match(['post', 'patch'], '/kka/teller-kas/{item}/review', [TellerKasController::class, 'review'])->name('kka.teller_kas.review')->middleware('role:admin,kabag_ra,kadiv_skai');
 
         // KKA Sampling CBS: 2. DPK & Layanan
         Route::get('/{visit}/kka/dpk', [DpkController::class, 'index'])->name('kka.dpk.index');
-        Route::patch('/kka/dpk/{item}', [DpkController::class, 'update'])->name('kka.dpk.update');
+        Route::match(['post', 'patch'], '/kka/dpk/{item}', [DpkController::class, 'update'])->name('kka.dpk.update');
+        Route::match(['post', 'patch'], '/kka/dpk/{item}/review', [DpkController::class, 'review'])->name('kka.dpk.review')->middleware('role:admin,kabag_ra,kadiv_skai');
 
         // KKA Sampling CBS: 3. Kredit
         Route::get('/{visit}/kka/kredit', [KreditController::class, 'index'])->name('kka.kredit.index');
-        Route::patch('/kka/kredit/{item}', [KreditController::class, 'update'])->name('kka.kredit.update');
+        Route::match(['post', 'patch'], '/kka/kredit/{item}', [KreditController::class, 'update'])->name('kka.kredit.update');
+        Route::match(['post', 'patch'], '/kka/kredit/{item}/review', [KreditController::class, 'review'])->name('kka.kredit.review')->middleware('role:admin,kabag_ra,kadiv_skai');
 
         // KKA Sampling CBS: 4. Biaya & Beban
         Route::get('/{visit}/kka/biaya', [BiayaController::class, 'index'])->name('kka.biaya.index');
-        Route::patch('/kka/biaya/{item}', [BiayaController::class, 'update'])->name('kka.biaya.update');
+        Route::match(['post', 'patch'], '/kka/biaya/{item}', [BiayaController::class, 'update'])->name('kka.biaya.update');
+        Route::match(['post', 'patch'], '/kka/biaya/{item}/review', [BiayaController::class, 'review'])->name('kka.biaya.review')->middleware('role:admin,kabag_ra,kadiv_skai');
 
         // KKA Sampling CBS: 5. Kartu ATM
         Route::get('/{visit}/kka/atm', [AtmController::class, 'index'])->name('kka.atm.index');
-        Route::patch('/kka/atm/{item}', [AtmController::class, 'update'])->name('kka.atm.update');
+        Route::match(['post', 'patch'], '/kka/atm/{item}', [AtmController::class, 'update'])->name('kka.atm.update');
+        Route::match(['post', 'patch'], '/kka/atm/{item}/review', [AtmController::class, 'review'])->name('kka.atm.review')->middleware('role:admin,kabag_ra,kadiv_skai');
 
         // KKA Sampling CBS: 6. Pengaduan Nasabah
         Route::get('/{visit}/kka/pengaduan', [PengaduanController::class, 'index'])->name('kka.pengaduan.index');
-        Route::patch('/kka/pengaduan/{item}', [PengaduanController::class, 'update'])->name('kka.pengaduan.update');
+        Route::match(['post', 'patch'], '/kka/pengaduan/{item}', [PengaduanController::class, 'update'])->name('kka.pengaduan.update');
+        Route::match(['post', 'patch'], '/kka/pengaduan/{item}/review', [PengaduanController::class, 'review'])->name('kka.pengaduan.review')->middleware('role:admin,kabag_ra,kadiv_skai');
 
         // Rekon Kartu ATM
         Route::get('/{visit}/rekon/katm', [RekonKartuAtmController::class, 'create'])->name('rekon.katm.create');

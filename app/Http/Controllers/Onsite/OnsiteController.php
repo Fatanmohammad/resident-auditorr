@@ -184,7 +184,24 @@ class OnsiteController extends Controller
             ]);
         }
 
-        $sheet = 'KKA_Teller_Kas';
+        $sheet = request('source_sheet');
+        if (!$sheet) {
+            $ket = strtoupper($finding->ket_tx ?? '');
+            if (preg_match('/(KREDIT|PENCAIRAN|ANGSURAN|PINJAMAN|AKAD|DEBITUR|KUR)/i', $ket)) {
+                $sheet = 'KKA_Kredit';
+            } elseif (preg_match('/(TABUNGAN|GIRO|DEPOSITO|DPK|DORMANT)/i', $ket)) {
+                $sheet = 'KKA_DPK_Layanan';
+            } elseif (preg_match('/(BIAYA|BEBAN|SEWA|PROMOSI|LISTRIK|ATK|HONOR)/i', $ket)) {
+                $sheet = 'KKA_Biaya_Beban';
+            } elseif (preg_match('/(ATM|KARTU|PIN)/i', $ket)) {
+                $sheet = 'KKA_Kartu_ATM';
+            } elseif (preg_match('/(PENGADUAN|KLAIM|SENGKETA|KOMPLAIN)/i', $ket)) {
+                $sheet = 'KKA_Pengaduan';
+            } else {
+                $sheet = 'KKA_Teller_Kas';
+            }
+        }
+
         $checklists = DailyRegisterChecklist::where('source_sheet', $sheet)
             ->orderBy('sort_order')
             ->get();
