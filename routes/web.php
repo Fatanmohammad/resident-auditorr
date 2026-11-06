@@ -460,6 +460,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/{id}/review-decision', [KkaDailyRegisterController::class, 'reviewDecision'])->name('daily-register.review-decision')->middleware('role:admin,kabag_ra,kadiv_skai,pimsie,korwas');
         Route::post('/{id}/konfirmasi', [KkaDailyRegisterController::class, 'konfirmasiCabang'])->name('daily-register.konfirmasi')->middleware('role:ra,admin,kabag_ra');
 
+        Route::post('/auto-risk/preview', [KkaDailyRegisterController::class, 'previewRisk'])->name('daily-register.auto-risk.preview');
+
         Route::get('/physical-kka/{id?}', [PhysicalKkaController::class, 'index'])->name('daily-register.physical-kka.index');
         Route::post('/physical-kka/submit', [PhysicalKkaController::class, 'submitAll'])->name('daily-register.physical-kka.submit');
         Route::post('/physical-kka/review', [PhysicalKkaController::class, 'submitReview'])->name('daily-register.physical-kka.review');

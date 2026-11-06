@@ -8,8 +8,15 @@ use App\Models\DailyRegister\DailyRegisterFinding;
 
 class DumpCbsParser
 {
-    public function parse($filePath, $kodeUnit, $isDailyRegister = false, $namaUnit = null, $periode = null): array
-    {
+    public function parse(
+        $filePath,
+        $kodeUnit,
+        $isDailyRegister = false,
+        $namaUnit = null,
+        $periode = null,
+        ?string $tanggalMulai = null,
+        ?string $tanggalSelesai = null
+    ): array {
         if (!file_exists($filePath)) {
             throw new \Exception("File CSV tidak ditemukan di folder staging.");
         }
@@ -29,7 +36,10 @@ class DumpCbsParser
             }
         }
 
-        $idxDate = $headerMap['TGL_TX'] ?? ($headerMap['TANGGAL'] ?? 0);
+        // Prioritaskan TIME_STAMP, lalu fallback ke variasi tanggal lainnya
+        $idxDate = DumpParserHelper::findDateColumnIndex($header ?? []) 
+            ?? ($headerMap['TGL_TX'] ?? ($headerMap['TANGGAL'] ?? 0));
+        
         $idxArsip = DumpParserHelper::findNoArsipIndex($header ?? []);
         $idxKetTx = DumpParserHelper::findKetTxIndex($header ?? []);
         $idxKeterangan = $headerMap['KETERANGAN'] ?? ($headerMap['KET'] ?? null);
@@ -41,16 +51,17 @@ class DumpCbsParser
         $dailyRegisterData = [];
         $countHigh = 0;
         $countModerate = 0;
+        $countLow = 0;
 
         while (($row = fgetcsv($file)) !== false) {
             
-            // Auto-detect Date
+            // Auto-detect Date & TIME_STAMP (DD/MM/YYYY HH:MM:SS:UUUUUU)
             $rawDate = trim($row[$idxDate] ?? '');
-            if (empty($rawDate) || preg_match('/^[0-9]+$/', $rawDate)) {
-                $tanggal = now()->toDateString();
-            } else {
-                $parsedDate = strtotime(str_replace('/', '-', $rawDate));
-                $tanggal = $parsedDate ? date('Y-m-d', $parsedDate) : now()->toDateString();
+            $tanggal = DumpParserHelper::parseTimestampToDate($rawDate);
+
+            // Filter rentang periode tanggal (Tanggal Mulai s.d. Tanggal Selesai)
+            if (!DumpParserHelper::isWithinDateRange($tanggal, $tanggalMulai, $tanggalSelesai)) {
+                continue;
             }
 
             $rawKetTx = $idxKetTx !== null ? DumpParserHelper::cleanKetTx($row[$idxKetTx] ?? null) : null;
@@ -71,6 +82,8 @@ class DumpCbsParser
                 $countHigh++;
             } elseif ($riskLevel === 'Moderate') {
                 $countModerate++;
+            } else {
+                $countLow++;
             }
 
             if ($isReversal || $isHighNominal || $isTpp) {
@@ -87,24 +100,18 @@ class DumpCbsParser
                     $sourceSheet = 'KKA_Teller_Kas';
                 }
             } else {
-                $sourceSheet = 'DUMP_01_CBS';
+                $sourceSheet = $isDailyRegister ? 'KKA_Teller_Kas' : 'DUMP_01_CBS';
             }
 
-            $jenisException = $isReversal ? 'Indikasi Reversal' : ($isTpp ? 'Transaksi TPP' : 'Nominal Melewati Limit');
+            $jenisException = $isReversal ? 'Indikasi Reversal' : ($isTpp ? 'Transaksi TPP' : ($isHighNominal ? 'Nominal Melewati Limit' : 'Transaksi Harian'));
+            $noArsip = $idxArsip !== null ? DumpParserHelper::cleanNoArsip($row[$idxArsip] ?? null) : null;
+            $deskripsiUtama = $rawKetTx ?: ($keterangan ?: $jenisException);
 
             if ($isDailyRegister) {
-                if ($riskLevel === 'Low') {
-                    $lowRiskData[] = [
-                        'tanggal_data'    => $tanggal,
-                        'kode_unit'       => $kodeUnit,
-                        'nama_unit'       => $namaUnit,
-                        'source_sheet'    => 'DUMP_01_CBS',
-                        'kategori'        => 'Transaksi Wajar / Low Risk',
-                        'nominal_terkait' => $nominal,
-                        'risk_awal'       => 'Low',
-                        'rincian'         => $rawKetTx ?: $keterangan,
-                    ];
-                } else {
+                // Seluruh baris yang lolos filter tanggal dan memiliki nomor arsip atau tergolong temuan dimasukkan ke daily_register_findings
+                $isTargetFinding = ($riskLevel !== 'Low') || !empty($noArsip);
+
+                if ($isTargetFinding) {
                     $subArea = null;
                     if ($sourceSheet === 'KKA_Teller_Kas') {
                         if (preg_match('/KAS\s*KECIL/i', $evalText)) {
@@ -115,9 +122,6 @@ class DumpCbsParser
                             $subArea = ['A1'];
                         }
                     }
-
-                    $noArsip = $idxArsip !== null ? DumpParserHelper::cleanNoArsip($row[$idxArsip] ?? null) : null;
-                    $deskripsiUtama = $rawKetTx ?: ($keterangan ?: $jenisException);
 
                     $dailyRegisterData[] = [
                         'no_arsip'             => $noArsip,
@@ -135,10 +139,19 @@ class DumpCbsParser
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];
+                } else {
+                    $lowRiskData[] = [
+                        'tanggal_data'    => $tanggal,
+                        'kode_unit'       => $kodeUnit,
+                        'nama_unit'       => $namaUnit,
+                        'source_sheet'    => 'DUMP_01_CBS',
+                        'kategori'        => 'Transaksi Wajar / Low Risk',
+                        'nominal_terkait' => $nominal,
+                        'risk_awal'       => 'Low',
+                        'rincian'         => $deskripsiUtama,
+                    ];
                 }
             } else {
-                $jenisException = $isReversal ? 'Indikasi Reversal' : ($isTpp ? 'Transaksi TPP' : 'Nominal Melewati Limit');
-
                 if ($riskLevel === 'High' || $riskLevel === 'Moderate') {
                     $moderateHighRiskData[] = [
                         'tanggal_data'         => $tanggal,
@@ -149,7 +162,7 @@ class DumpCbsParser
                         'nominal_terkait'      => $nominal,
                         'risk_awal'            => $riskLevel,
                         'jenis_exception_awal' => $jenisException,
-                        'deskripsi'            => $rawKetTx ?: $keterangan,
+                        'deskripsi'            => $deskripsiUtama,
                         'created_at'           => now(),
                         'updated_at'           => now(),
                     ];

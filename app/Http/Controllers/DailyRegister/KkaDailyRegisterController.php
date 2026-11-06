@@ -14,6 +14,7 @@ use App\Services\Offsite\DumpBiayaParser;
 use App\Services\Offsite\DumpPengaduanParser;
 use App\Services\Offsite\DumpKartuAtmParser;
 use App\Services\DailyRegister\DailyRegisterSamplingService;
+use App\Services\DailyRegister\AutoRiskScoringService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -213,6 +214,8 @@ class KkaDailyRegisterController extends Controller
         $jenisFile = $request->jenis_file;
         $kodeUnitDipilih = $request->kode_unit;
         $periode = $request->input('periode', date('Y-m-01')); 
+        $tanggalMulai = $request->input('tanggal_mulai');
+        $tanggalSelesai = $request->input('tanggal_selesai');
 
         // VALIDASI HAK AKSES
         if (!in_array(strtolower($user->role), ['admin', 'kabag_ra', 'kadiv_skai', 'ra'])) {
@@ -240,7 +243,7 @@ class KkaDailyRegisterController extends Controller
             $parseResult = null;
             // PARAMETER KETIGA ADALAH $isDailyRegister = true, PARAMETER KEEMPAT ADALAH $namaUnit
             switch ($jenisFile) {
-                case 'DUMP_01': $parseResult = $cbsParser->parse($fullPath, $kodeUnitDipilih, true, $namaUnitDipilih); break;
+                case 'DUMP_01': $parseResult = $cbsParser->parse($fullPath, $kodeUnitDipilih, true, $namaUnitDipilih, $periode, $tanggalMulai, $tanggalSelesai); break;
                 case 'DUMP_02': $parseResult = $dpkParser->parse($fullPath, $kodeUnitDipilih, true, $namaUnitDipilih); break;
                 case 'DUMP_03': $parseResult = $kreditParser->parse($fullPath, $kodeUnitDipilih, true, $namaUnitDipilih); break;
                 case 'DUMP_04': $parseResult = $biayaParser->parse($fullPath, $kodeUnitDipilih, true, $namaUnitDipilih); break;
@@ -805,8 +808,30 @@ class KkaDailyRegisterController extends Controller
         // Otomasi Penuh & Penguncian Skor Risiko (Matriks 5x5)
         $criticalTrigger = $request->input('critical_trigger', 'Tidak') === 'Ya' ? 'Ya' : 'Tidak';
         $nominal = (float)($finding->nominal_terkait ?? 0);
+        $isAutoRisk = $request->boolean('use_auto_risk', false) || $request->has('use_auto_risk');
 
-        if ($tidakCount === 0 && $criticalTrigger === 'Tidak') {
+        if ($isAutoRisk) {
+            $riskService = app(AutoRiskScoringService::class);
+            $evalResult = $riskService->evaluateDailyRegister(
+                $finding->kode_unit,
+                $finding->source_sheet,
+                $nominal,
+                $tidakCount,
+                $criticalTrigger === 'Ya',
+                $finding->id,
+                [
+                    'has_critical_security' => ($criticalTrigger === 'Ya'),
+                    'has_warkat_diff'       => in_array($finding->source_sheet, ['KKA_Kartu_ATM']),
+                    'has_cash_diff'         => in_array($finding->source_sheet, ['KKA_Teller', 'KKA_Teller_Kas', 'KKA_Kas_Khasanah']) && ($criticalTrigger === 'Ya' || stripos(($finding->deskripsi ?? '') . ($finding->rincian ?? ''), 'selisih') !== false),
+                ]
+            );
+
+            $skorDampak = $evalResult['impact'];
+            $skorKemungkinan = $evalResult['likelihood'];
+            $skorFinal = $evalResult['risk_score'];
+            $riskFinal = $evalResult['risk_level'];
+            $perluOnsite = $evalResult['perlu_onsite'];
+        } elseif ($tidakCount === 0 && $criticalTrigger === 'Tidak') {
             $skorDampak = 1;
             $skorKemungkinan = 1;
             $skorFinal = 1;
@@ -1631,6 +1656,54 @@ class KkaDailyRegisterController extends Controller
             'status'  => 'success',
             'message' => 'Pemeriksaan mandiri ' . $labelSub . ' berhasil ditambahkan.',
             'finding' => $finding,
+        ]);
+    }
+
+    /**
+     * Endpoint AJAX real-time preview kalkulasi risiko otomatis.
+     */
+    public function previewRisk(Request $request, AutoRiskScoringService $riskService)
+    {
+        $context = $request->input('context', 'physical');
+        $unitCode = $request->input('kode_unit') ?? $request->input('unit_code') ?? (auth()->user()->unit_code ?? 'KC-001');
+
+        if ($context === 'daily_register') {
+            $sourceSheet = $request->input('source_sheet', 'KKA_Teller_Kas');
+            $nominal = (float) $request->input('nominal', 0);
+            $failedCount = (int) $request->input('failed_count', 0);
+            $isCritical = filter_var($request->input('is_critical', false), FILTER_VALIDATE_BOOLEAN);
+            $findingId = $request->input('finding_id') ? (int) $request->input('finding_id') : null;
+            $extraContext = [
+                'has_critical_security' => filter_var($request->input('has_critical_security', false), FILTER_VALIDATE_BOOLEAN),
+                'has_warkat_diff'       => filter_var($request->input('has_warkat_diff', false), FILTER_VALIDATE_BOOLEAN),
+            ];
+
+            $result = $riskService->evaluateDailyRegister(
+                $unitCode,
+                $sourceSheet,
+                $nominal,
+                $failedCount,
+                $isCritical,
+                $findingId,
+                $extraContext
+            );
+
+            return response()->json([
+                'success' => true,
+                'data'    => $result,
+            ]);
+        }
+
+        // Context: Physical KKA
+        $tab = $request->input('tab', 'kas');
+        $payload = $request->input('payload', $request->all());
+        $currentKkaId = $request->input('kka_id') ? (int) $request->input('kka_id') : null;
+
+        $result = $riskService->evaluatePhysicalKka($tab, $unitCode, $payload, $currentKkaId);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $result,
         ]);
     }
 }

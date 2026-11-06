@@ -165,17 +165,17 @@
     </div>
 
     <!-- 1. BA KAS KHASANAH -->
-    @include('daily_register.print.ba_cash_khasanah', ['isDossier' => true])
+    @include('daily_register.print.ba_cash_khasanah', ['isDossier' => true, 'eval' => $evalKas])
 
     <div class="page-break"></div>
 
     <!-- 2. BA CASH OPNAME ATM -->
-    @include('daily_register.print.ba_cash_atm', ['isDossier' => true])
+    @include('daily_register.print.ba_cash_atm', ['isDossier' => true, 'eval' => $evalAtm])
 
     <div class="page-break"></div>
 
     <!-- 3. KKA KARTU ATM E.4.3 -->
-    @include('daily_register.print.kka_kartu_atm', ['isDossier' => true])
+    @include('daily_register.print.kka_kartu_atm', ['isDossier' => true, 'eval' => $evalKartu])
 
     <div class="page-break"></div>
 

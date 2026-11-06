@@ -73,7 +73,7 @@ class DailyRegisterChecklistTest extends TestCase
         $this->artisan('db:seed', ['--class' => 'DailyRegisterChecklistSeeder', '--force' => true]);
 
         $totalCount = DailyRegisterChecklist::count();
-        $this->assertEquals(189, $totalCount, "Total checklist items must be exactly 189");
+        $this->assertEquals(240, $totalCount, "Total checklist items must be exactly 240");
 
         // TAB 1: KKA Teller & Kas (13 Item: A1 Transaksi Teller (6 item), A2 Kas Kecil (5 item), A3 Kas / Khasanah (2 item))
         $tabTellerKas = DailyRegisterChecklist::where('source_sheet', 'KKA_Teller_Kas')->get();
@@ -87,12 +87,12 @@ class DailyRegisterChecklistTest extends TestCase
         $tabDpk = DailyRegisterChecklist::where('source_sheet', 'KKA_DPK_Layanan')->get();
         $this->assertCount(29, $tabDpk);
 
-        // TAB 3: KKA Kredit (83 Item: PNS/ASN 20 + FLPP 41 + Konstruksi 22)
+        // TAB 3: KKA Kredit (134 Item Standar Master Checklist)
         $tabKredit = DailyRegisterChecklist::where('source_sheet', 'KKA_Kredit')->get();
-        $this->assertCount(83, $tabKredit);
-        $this->assertCount(20, $tabKredit->where('sub_area_code', 'C1'));
-        $this->assertCount(41, $tabKredit->where('sub_area_code', 'C2'));
-        $this->assertCount(22, $tabKredit->where('sub_area_code', 'C3'));
+        $this->assertCount(134, $tabKredit);
+        $this->assertCount(18, $tabKredit->where('sub_area_code', 'C1'));
+        $this->assertCount(16, $tabKredit->where('sub_area_code', 'C2'));
+        $this->assertCount(16, $tabKredit->where('sub_area_code', 'C3'));
 
         // TAB 4: KKA Biaya & Beban (25 Item)
         $tabBiaya = DailyRegisterChecklist::where('source_sheet', 'KKA_Biaya_Beban')->get();

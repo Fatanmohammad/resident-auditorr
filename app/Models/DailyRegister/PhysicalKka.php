@@ -49,36 +49,15 @@ class PhysicalKka extends Model
 
     public static function determineRiskLevel(int $impact, int $likelihood, bool $isCritical, bool $hasException = false): array
     {
-        $impact = max(1, min(5, $impact));
-        $likelihood = max(1, min(5, $likelihood));
-        $score = $impact * $likelihood;
-
-        if ($isCritical) {
-            return ['score' => max($score, 20), 'level' => 'High'];
-        }
-
-        if (!$hasException) {
-            return ['score' => $score, 'level' => 'Low'];
-        }
-
-        if ($score >= 20) {
-            $level = 'High';
-        } elseif ($score >= 15) {
-            $level = 'Moderate to High';
-        } elseif ($score >= 10) {
-            $level = 'Moderate';
-        } elseif ($score >= 5) {
-            $level = 'Low to Moderate';
-        } else {
-            $level = 'Low to Moderate';
-        }
-
-        return ['score' => $score, 'level' => $level];
+        return app(\App\Services\DailyRegister\AutoRiskScoringService::class)->determineRisk($impact, $likelihood, $isCritical, $hasException);
     }
 
     public function getEvaluationSummary(string $tab): array
     {
         $prefix = match(strtolower($tab)) {
+            'kas', 'cash', 'khasanah' => 'kas_',
+            'atm', 'cash_atm', 'mesin_atm' => 'atm_',
+            'kartu', 'kartu_atm' => 'kartu_',
             'observasi', 'obs' => 'obs_',
             'stok', 'cekbg', 'stok_cek_bg' => 'stok_',
             'cetakan', 'bct', 'barang_cetakan' => 'cetakan_',
@@ -97,17 +76,68 @@ class PhysicalKka extends Model
             ];
         }
 
-        $tglUji = $this->{$prefix . 'tgl_uji'} ?? $this->posisi_tanggal_rekon ?? $this->tanggal_pemeriksaan ?? date('Y-m-d');
-        $penyebab = $this->{$prefix . 'penyebab_keterangan'};
-        $impact = $this->{$prefix . 'impact'};
-        $likelihood = $this->{$prefix . 'likelihood'};
-        $isCritical = (bool)($this->{$prefix . 'is_critical'} ?? false);
-        $riskScore = $this->{$prefix . 'risk_score'};
-        $riskLevel = $this->{$prefix . 'risk_level'};
+        $tglUji = $this->{$prefix . 'tgl_uji'} ?? $this->tgl_uji ?? $this->posisi_tanggal_rekon ?? $this->tanggal_pemeriksaan ?? date('Y-m-d');
+        $penyebab = $this->{$prefix . 'penyebab_keterangan'} ?? ($prefix === '' ? $this->penyebab_keterangan : null);
+        $impact = $this->{$prefix . 'impact'} ?? ($prefix === '' ? $this->impact : null);
+        $likelihood = $this->{$prefix . 'likelihood'} ?? ($prefix === '' ? $this->likelihood : null);
+        $isCritical = (bool)($this->{$prefix . 'is_critical'} ?? ($prefix === '' ? $this->is_critical : false));
+        $riskScore = $this->{$prefix . 'risk_score'} ?? ($prefix === '' ? $this->risk_score : null);
+        $riskLevel = $this->{$prefix . 'risk_level'} ?? ($prefix === '' ? $this->risk_level : null);
 
         // Fallbacks for backwards compatibility when reading older records
         if ($penyebab === null || $riskScore === null || $riskLevel === null || $impact === null || $likelihood === null) {
-            if ($prefix === 'obs_') {
+            if ($prefix === 'kas_') {
+                $hasExc = abs((float)($this->selisih_kas_khasanah ?? 0)) >= 0.01
+                    || $this->cashDetails->contains('is_exception', true);
+                if ($penyebab === null) {
+                    $penyebab = $this->penjelasan_selisih_kas ?? '';
+                }
+                if ($impact === null) {
+                    $nom = abs((float)($this->selisih_kas_khasanah ?? 0));
+                    $impact = $nom >= 100000000 ? 5 : ($nom >= 25000000 ? 4 : ($nom >= 5000000 ? 3 : ($hasExc ? 2 : 1)));
+                }
+                if ($likelihood === null) {
+                    $likelihood = $hasExc ? 2 : 1;
+                }
+                $isCritical = $isCritical || abs((float)($this->selisih_kas_khasanah ?? 0)) >= 0.01;
+                $calc = self::determineRiskLevel((int)$impact, (int)$likelihood, $isCritical, $hasExc);
+                $riskScore = $riskScore ?? $calc['score'];
+                $riskLevel = $riskLevel ?? $calc['level'];
+            } elseif ($prefix === 'atm_') {
+                $hasExc = $this->atmMachines->contains('is_exception', true)
+                    || $this->atmMachines->contains(fn($m) => abs((float)($m->selisih ?? 0)) >= 0.01);
+                if ($penyebab === null) {
+                    $firstExc = $this->atmMachines->first(fn($m) => !empty($m->keterangan_selisih));
+                    $penyebab = $firstExc ? $firstExc->keterangan_selisih : '';
+                }
+                if ($impact === null) {
+                    $totalSelisih = $this->atmMachines->sum(fn($m) => abs((float)($m->selisih ?? 0)));
+                    $impact = $totalSelisih >= 100000000 ? 5 : ($totalSelisih >= 25000000 ? 4 : ($totalSelisih >= 5000000 ? 3 : ($hasExc ? 2 : 1)));
+                }
+                if ($likelihood === null) {
+                    $likelihood = $hasExc ? 2 : 1;
+                }
+                $isCritical = $isCritical || $hasExc;
+                $calc = self::determineRiskLevel((int)$impact, (int)$likelihood, $isCritical, $hasExc);
+                $riskScore = $riskScore ?? $calc['score'];
+                $riskLevel = $riskLevel ?? $calc['level'];
+            } elseif ($prefix === 'kartu_') {
+                $hasExc = $this->kartuAtmDetails->contains('is_exception', true)
+                    || $this->kartuAtmDetails->contains(fn($d) => abs((float)($d->selisih_persediaan ?? $d->selisih ?? 0)) >= 0.01 || (int)($d->selisih_pin_mailer ?? 0) !== 0 || ($d->jawaban_kontrol ?? '') === 'Tidak');
+                if ($penyebab === null) {
+                    $penyebab = $this->rekon_kartu_penyebab_selisih ?? '';
+                }
+                if ($impact === null) {
+                    $impact = $hasExc ? 4 : 1; // Kartu ATM is warkat/card diff scale 4
+                }
+                if ($likelihood === null) {
+                    $likelihood = $hasExc ? 2 : 1;
+                }
+                $isCritical = $isCritical || $hasExc;
+                $calc = self::determineRiskLevel((int)$impact, (int)$likelihood, $isCritical, $hasExc);
+                $riskScore = $riskScore ?? $calc['score'];
+                $riskLevel = $riskLevel ?? $calc['level'];
+            } elseif ($prefix === 'obs_') {
                 $hasExc = $this->obsDetails->contains('is_exception', true)
                     || $this->obsDetails->contains(fn($d) => in_array($d->hasil_observasi, ['Tidak Sesuai', 'Tidak', 'Kurang Baik']));
                 if ($penyebab === null) {

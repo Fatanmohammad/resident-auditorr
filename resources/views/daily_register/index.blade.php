@@ -1175,12 +1175,16 @@
                     <div>
                         <label class="custom-form-label">Skor Dampak (1–5) <i class="bi bi-lock-fill text-muted" title="Terkunci otomatis matriks 5x5"></i></label>
                         <input type="hidden" id="skor_dampak" value="1">
-                        <div class="custom-form-control" style="background:#f8fafc; font-weight:600; color:var(--text-dark);" id="display_skor_dampak">1 — Sangat Rendah</div>
+                        <div class="custom-form-control" style="background:#f8fafc; font-weight:600; color:var(--text-dark);" id="display_skor_dampak">1 — Sangat Rendah (Nihil Temuan)</div>
                     </div>
                     <div>
-                        <label class="custom-form-label">Skor Kemungkinan (1–5) <i class="bi bi-lock-fill text-muted" title="Terkunci otomatis berbasis kejadian berulang"></i></label>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="custom-form-label mb-0">Skor Kemungkinan (1–5) <i class="bi bi-lock-fill text-muted" title="Terkunci otomatis berbasis kejadian berulang"></i></label>
+                            <span id="badge_kemungkinan_recurrence" class="badge bg-light text-secondary border" style="font-size:0.68rem;">Temuan Baru</span>
+                        </div>
                         <input type="hidden" id="skor_kemungkinan" value="1">
-                        <div class="custom-form-control" style="background:#f8fafc; font-weight:600; color:var(--text-dark);" id="display_skor_kemungkinan">1 — Sangat Jarang</div>
+                        <div class="custom-form-control mt-1" style="background:#f8fafc; font-weight:600; color:var(--text-dark);" id="display_skor_kemungkinan">1 — Temuan Baru</div>
+                        <div id="note_kemungkinan_recurrence" style="font-size:0.72rem; color:var(--text-muted); margin-top:0.25rem;">Temuan pertama kali</div>
                     </div>
                     <div>
                         <label class="custom-form-label">Skor &amp; Risk Final <i class="bi bi-lock-fill text-muted" title="Terkunci otomatis (Dampak x Kemungkinan)"></i></label>
@@ -2750,151 +2754,201 @@
         hitungOtomatisSkorRisiko(tidakCount);
     }
 
+    let dailyRiskPreviewTimer = null;
+
+    function applyRiskValuesToDom(d) {
+        if (!d) return;
+        if (d.impact !== undefined) {
+            document.getElementById('skor_dampak').value = d.impact;
+            document.getElementById('display_skor_dampak').innerText = d.impact_label || `${d.impact}`;
+        }
+        if (d.likelihood !== undefined) {
+            document.getElementById('skor_kemungkinan').value = d.likelihood;
+            document.getElementById('display_skor_kemungkinan').innerText = d.likelihood_label || `${d.likelihood}`;
+            const badgeEl = document.getElementById('badge_kemungkinan_recurrence');
+            if (badgeEl && d.likelihood_badge) {
+                badgeEl.innerText = d.likelihood_badge;
+                badgeEl.className = 'badge border ' + (d.likelihood > 1 ? 'bg-warning-subtle text-dark' : 'bg-info-subtle text-dark');
+            }
+            const noteEl = document.getElementById('note_kemungkinan_recurrence');
+            if (noteEl && d.likelihood_note) {
+                noteEl.innerText = d.likelihood_note;
+            }
+        }
+        if (d.risk_score !== undefined) {
+            document.getElementById('skor_final').value = d.risk_score;
+            document.getElementById('text_skor_final').innerText = d.risk_score;
+        }
+        if (d.risk_level !== undefined) {
+            document.getElementById('risk_final').value = d.risk_level;
+            const badgeRisk = document.getElementById('badge_risk_final');
+            badgeRisk.innerText = d.risk_level;
+            let badgeBg = '#dcfce7', badgeBorder = '#bbf7d0', badgeText = '#16a34a';
+            if (d.risk_level === 'High') {
+                badgeBg = '#fee2e2'; badgeBorder = '#fca5a5'; badgeText = '#dc2626';
+            } else if (d.risk_level === 'Moderate to High') {
+                badgeBg = '#ffedd5'; badgeBorder = '#fed7aa'; badgeText = '#c2410c';
+            } else if (d.risk_level === 'Moderate') {
+                badgeBg = '#fffbeb'; badgeBorder = '#fde68a'; badgeText = '#b45309';
+            } else if (d.risk_level === 'Low to Moderate') {
+                badgeBg = '#e0f2fe'; badgeBorder = '#bae6fd'; badgeText = '#0369a1';
+            }
+            badgeRisk.style.backgroundColor = badgeBg;
+            badgeRisk.style.borderColor = badgeBorder;
+            badgeRisk.style.color = badgeText;
+        }
+        if (d.perlu_onsite !== undefined) {
+            document.getElementById('perlu_onsite').value = d.perlu_onsite;
+            const onsiteEl = document.getElementById('display_perlu_onsite');
+            onsiteEl.innerText = (d.perlu_onsite === 'Perlu') ? 'Perlu Pemeriksaan Onsite' : 'Tidak Perlu';
+            if (d.perlu_onsite === 'Perlu') {
+                onsiteEl.style.color = '#dc2626';
+                onsiteEl.style.fontWeight = '700';
+            } else {
+                onsiteEl.style.color = 'var(--text-dark)';
+                onsiteEl.style.fontWeight = '600';
+            }
+        }
+    }
+
     function hitungOtomatisSkorRisiko(tidakCount) {
         const nominal = currentItem ? (parseFloat(currentItem.nominal_terkait) || 0) : 0;
+        const absNominal = Math.abs(nominal);
         const criticalTrigger = document.getElementById('critical_trigger').value;
         const recurringCount = currentRecurringCount || 1;
+        const priorHistory = Math.max(0, recurringCount - 1);
+        const sourceSheet = currentItem?.source_sheet || currentActiveSheetCode || 'KKA_Teller_Kas';
+        const isWarkatCard = (sourceSheet === 'KKA_Kartu_ATM');
+        const hasFinding = (tidakCount > 0 || criticalTrigger === 'Ya');
 
         let skorDampak = 1;
-        let labelDampak = '1 — Sangat Rendah';
+        let labelDampak = '1 — Sangat Rendah (Nihil Temuan)';
         let skorKemungkinan = 1;
-        let labelKemungkinan = '1 — Sangat Jarang';
+        let labelKemungkinan = '1 — Temuan Baru';
+        let badgeKemungkinan = 'Temuan Baru';
+        let noteKemungkinan = 'Temuan pertama kali';
         let skorFinal = 1;
         let riskFinal = 'Low';
         let perluOnsite = 'Tidak Perlu';
 
-        if (tidakCount === 0 && criticalTrigger === 'Tidak') {
+        if (!hasFinding) {
             skorDampak = 1;
-            labelDampak = '1 — Sangat Rendah';
+            labelDampak = '1 — Sangat Rendah (Nihil Temuan)';
             skorKemungkinan = 1;
-            labelKemungkinan = '1 — Sangat Jarang';
+            labelKemungkinan = '1 — Temuan Baru';
+            badgeKemungkinan = 'Temuan Baru';
+            noteKemungkinan = 'Nihil Temuan';
             skorFinal = 1;
             riskFinal = 'Low';
             perluOnsite = 'Tidak Perlu';
         } else {
-            // 1. Skor Dampak (1-5) Otomatis
-            if (criticalTrigger === 'Ya' || nominal >= 500000000) {
+            // 1. Skor Dampak (1-5)
+            if (criticalTrigger === 'Ya' || absNominal >= 100000000) {
                 skorDampak = 5;
-                labelDampak = '5 — Sangat Tinggi';
+                labelDampak = '5 — Sangat Material / Pelanggaran Keamanan Kritikal';
+            } else if (absNominal >= 25000000 || isWarkatCard || tidakCount > 3) {
+                skorDampak = 4;
+                labelDampak = '4 — Dampak Besar / Selisih Warkat & Kartu';
+            } else if (absNominal >= 5000000 || tidakCount >= 2) {
+                skorDampak = 3;
+                labelDampak = '3 — Dampak Sedang';
             } else {
-                const hasNominal = currentItem && currentItem.nominal_terkait !== null && nominal > 0;
-                let chkScore = 1;
-                if (tidakCount >= 5) chkScore = 4;
-                else if (tidakCount >= 3) chkScore = 3;
-                else if (tidakCount >= 2) chkScore = 2;
-                else if (tidakCount === 1) chkScore = hasNominal ? 1 : 2;
-
-                let nomScore = 0;
-                if (hasNominal) {
-                    if (nominal >= 100000000) nomScore = 4;
-                    else if (nominal >= 50000000) nomScore = 3;
-                    else if (nominal >= 10000000) nomScore = 2;
-                    else nomScore = 1;
-                }
-
-                skorDampak = Math.max(chkScore, nomScore);
-                if (!hasNominal && tidakCount >= 1 && skorDampak < 2) {
-                    skorDampak = 2;
-                }
-                skorDampak = Math.min(Math.max(skorDampak, 1), 5);
-
-                const dampakLabels = {
-                    1: '1 — Sangat Rendah',
-                    2: '2 — Rendah',
-                    3: '3 — Sedang',
-                    4: '4 — Tinggi',
-                    5: '5 — Sangat Tinggi'
-                };
-                labelDampak = dampakLabels[skorDampak] || `${skorDampak}`;
+                skorDampak = 2;
+                labelDampak = '2 — Dampak Administratif Ringan';
             }
 
-            // 2. Skor Kemungkinan (1-5) Otomatis Berdasarkan Kejadian Berulang di Database
-            const k = recurringCount;
-            if (k >= 7) {
-                skorKemungkinan = 5;
-                labelKemungkinan = '5 — Sangat Sering';
-            } else if (k >= 5) {
-                skorKemungkinan = 4;
-                labelKemungkinan = '4 — Sering';
-            } else if (k >= 3) {
-                skorKemungkinan = 3;
-                labelKemungkinan = '3 — Cukup Sering';
-            } else if (k === 2) {
+            // 2. Skor Kemungkinan (1-5)
+            if (priorHistory <= 0) {
+                skorKemungkinan = 1;
+                labelKemungkinan = '1 — Temuan Baru';
+                badgeKemungkinan = 'Temuan Baru';
+                noteKemungkinan = 'Temuan pertama kali';
+            } else if (priorHistory === 1) {
                 skorKemungkinan = 2;
-                labelKemungkinan = '2 — Jarang';
+                labelKemungkinan = '2 — Berulang 1x';
+                badgeKemungkinan = 'Berulang 1x';
+                noteKemungkinan = 'Terdeteksi 1 temuan serupa sebelumnya di cabang ini — Berulang 1x';
+            } else if (priorHistory <= 3) {
+                skorKemungkinan = 3;
+                labelKemungkinan = '3 — Temuan Berulang';
+                badgeKemungkinan = 'Temuan Berulang';
+                noteKemungkinan = `Terdeteksi ${priorHistory} temuan serupa sebelumnya di cabang ini — Temuan Berulang`;
+            } else if (priorHistory <= 5) {
+                skorKemungkinan = 4;
+                labelKemungkinan = '4 — Sering Berulang';
+                badgeKemungkinan = 'Sering Berulang';
+                noteKemungkinan = `Terdeteksi ${priorHistory} temuan serupa sebelumnya di cabang ini — Sering Berulang`;
             } else {
-                skorKemungkinan = (tidakCount >= 2) ? 2 : 1;
-                labelKemungkinan = (skorKemungkinan === 2) ? '2 — Jarang (Banyak Gagal)' : '1 — Sangat Jarang';
+                skorKemungkinan = 5;
+                labelKemungkinan = '5 — Sangat Sering Berulang';
+                badgeKemungkinan = 'Sangat Sering Berulang';
+                noteKemungkinan = `Terdeteksi ${priorHistory} temuan serupa sebelumnya di cabang ini — Sangat Sering Berulang`;
             }
 
-            // 3. Skor & Risk Final Otomatis (Dampak x Kemungkinan)
+            // 3. Critical & Risk Final
+            const isCritical = (criticalTrigger === 'Ya' || skorDampak === 5 || isWarkatCard);
             skorFinal = skorDampak * skorKemungkinan;
+            if (isCritical && skorFinal < 16) {
+                skorFinal = Math.max(skorFinal, 16);
+            }
 
-            if (criticalTrigger === 'Ya') {
-                riskFinal = 'Critical';
-                if (skorFinal < 16) skorFinal = 16;
-            } else if (skorFinal >= 16) {
-                riskFinal = 'Critical';
-            } else if (skorFinal >= 10) {
+            if (isCritical || skorFinal >= 16) {
                 riskFinal = 'High';
-            } else if (skorFinal >= 8) {
+            } else if (skorFinal >= 12) {
                 riskFinal = 'Moderate to High';
-            } else if (skorFinal >= 5) {
+            } else if (skorFinal >= 8) {
                 riskFinal = 'Moderate';
+            } else if (skorFinal >= 4) {
+                riskFinal = 'Low to Moderate';
             } else {
                 riskFinal = 'Low';
             }
 
-            // 4. Perlu Onsite Inspection?
-            if (['Moderate to High', 'High', 'Critical'].includes(riskFinal) || skorFinal >= 8 || criticalTrigger === 'Ya') {
-                perluOnsite = 'Perlu';
-            } else {
-                perluOnsite = 'Tidak Perlu';
-            }
+            perluOnsite = (skorFinal >= 8 || ['Moderate to High', 'High'].includes(riskFinal) || isCritical) ? 'Perlu' : 'Tidak Perlu';
         }
 
-        // Update Hidden Inputs & Display Elements
-        document.getElementById('skor_dampak').value = skorDampak;
-        document.getElementById('display_skor_dampak').innerText = labelDampak;
+        applyRiskValuesToDom({
+            impact: skorDampak,
+            impact_label: labelDampak,
+            likelihood: skorKemungkinan,
+            likelihood_label: labelKemungkinan,
+            likelihood_badge: badgeKemungkinan,
+            likelihood_note: noteKemungkinan,
+            risk_score: skorFinal,
+            risk_level: riskFinal,
+            perlu_onsite: perluOnsite
+        });
 
-        document.getElementById('skor_kemungkinan').value = skorKemungkinan;
-        document.getElementById('display_skor_kemungkinan').innerHTML = `${labelKemungkinan} <span class="badge bg-light text-secondary border ms-1" style="font-size:0.7rem;">Kejadian ke-${recurringCount}</span>`;
-
-        document.getElementById('skor_final').value = skorFinal;
-        document.getElementById('risk_final').value = riskFinal;
-        document.getElementById('text_skor_final').innerText = skorFinal;
-
-        const badgeEl = document.getElementById('badge_risk_final');
-        badgeEl.innerText = riskFinal;
-
-        let badgeBg = '#dcfce7';
-        let badgeBorder = '#bbf7d0';
-        let badgeText = '#16a34a';
-
-        if (riskFinal === 'Critical') {
-            badgeBg = '#7f1d1d'; badgeBorder = '#991b1b'; badgeText = '#ffffff';
-        } else if (riskFinal === 'High') {
-            badgeBg = '#fee2e2'; badgeBorder = '#fca5a5'; badgeText = '#dc2626';
-        } else if (riskFinal === 'Moderate to High') {
-            badgeBg = '#ffedd5'; badgeBorder = '#fed7aa'; badgeText = '#c2410c';
-        } else if (riskFinal === 'Moderate') {
-            badgeBg = '#fffbeb'; badgeBorder = '#fde68a'; badgeText = '#b45309';
-        }
-
-        badgeEl.style.backgroundColor = badgeBg;
-        badgeEl.style.borderColor = badgeBorder;
-        badgeEl.style.color = badgeText;
-
-        document.getElementById('perlu_onsite').value = perluOnsite;
-        const onsiteEl = document.getElementById('display_perlu_onsite');
-        onsiteEl.innerText = (perluOnsite === 'Perlu') ? 'Perlu Pemeriksaan Onsite' : 'Tidak Perlu';
-        if (perluOnsite === 'Perlu') {
-            onsiteEl.style.color = '#dc2626';
-            onsiteEl.style.fontWeight = '700';
-        } else {
-            onsiteEl.style.color = 'var(--text-dark)';
-            onsiteEl.style.fontWeight = '600';
-        }
+        // Trigger Real-time preview AJAX ke endpoint /daily-register/auto-risk/preview
+        clearTimeout(dailyRiskPreviewTimer);
+        dailyRiskPreviewTimer = setTimeout(() => {
+            fetch('{{ route("daily-register.auto-risk.preview") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    context: 'daily_register',
+                    source_sheet: sourceSheet,
+                    kode_unit: currentItem?.kode_unit || '{{ auth()->user()->unit_code ?? "001" }}',
+                    nominal: nominal,
+                    failed_count: tidakCount,
+                    is_critical: criticalTrigger === 'Ya',
+                    finding_id: currentItem?.id || null,
+                    has_critical_security: (criticalTrigger === 'Ya'),
+                    has_warkat_diff: isWarkatCard
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res && res.success && res.data) {
+                    applyRiskValuesToDom(res.data);
+                }
+            })
+            .catch(() => {});
+        }, 300);
     }
 
     function submitRaForm() {
@@ -2978,6 +3032,7 @@
         }
 
         let formData = new FormData();
+        formData.append('use_auto_risk', '1');
         formData.append('no_arsip', noArsip);
         formData.append('bukti_referensi', document.getElementById('bukti_referensi').value);
         formData.append('critical_trigger', document.getElementById('critical_trigger').value);

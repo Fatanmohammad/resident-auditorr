@@ -530,6 +530,9 @@ class PhysicalKkaController extends Controller
             }
         }
 
+        $evalKas = $kka ? $kka->getEvaluationSummary('kas') : (new PhysicalKka())->getEvaluationSummary('kas');
+        $evalAtm = $kka ? $kka->getEvaluationSummary('atm') : (new PhysicalKka())->getEvaluationSummary('atm');
+        $evalKartu = $kka ? $kka->getEvaluationSummary('kartu') : (new PhysicalKka())->getEvaluationSummary('kartu');
         $evalObs = $kka ? $kka->getEvaluationSummary('observasi') : (new PhysicalKka())->getEvaluationSummary('observasi');
         $evalStok = $kka ? $kka->getEvaluationSummary('stok') : (new PhysicalKka())->getEvaluationSummary('stok');
         $evalCetakan = $kka ? $kka->getEvaluationSummary('cetakan') : (new PhysicalKka())->getEvaluationSummary('cetakan');
@@ -540,7 +543,7 @@ class PhysicalKkaController extends Controller
             'barangCetakanItems', 'barangCetakanControls', 'noArsip', 'posisiTanggalRekon',
             'saldoKasOlibs', 'saldoFisikKhasanah', 'selisihKasKhasanah', 'penjelasanSelisihKas', 'rekonKartuPenyebabSelisih',
             'isAdmin', 'id', 'kka', 'suratIzin', 'statusSurat', 'catatanSurat', 'kodeUnit', 'kontrolMingguan',
-            'evalObs', 'evalStok', 'evalCetakan'
+            'evalKas', 'evalAtm', 'evalKartu', 'evalObs', 'evalStok', 'evalCetakan'
         ));
     }
 
@@ -590,6 +593,30 @@ class PhysicalKkaController extends Controller
             'is_critical' => 'nullable',
             'risk_score' => 'nullable|integer',
             'risk_level' => 'nullable|string',
+
+            'kas_tgl_uji' => 'nullable|date',
+            'kas_penyebab_keterangan' => 'nullable|string',
+            'kas_impact' => 'nullable|integer',
+            'kas_likelihood' => 'nullable|integer',
+            'kas_is_critical' => 'nullable',
+            'kas_risk_score' => 'nullable|integer',
+            'kas_risk_level' => 'nullable|string',
+
+            'atm_tgl_uji' => 'nullable|date',
+            'atm_penyebab_keterangan' => 'nullable|string',
+            'atm_impact' => 'nullable|integer',
+            'atm_likelihood' => 'nullable|integer',
+            'atm_is_critical' => 'nullable',
+            'atm_risk_score' => 'nullable|integer',
+            'atm_risk_level' => 'nullable|string',
+
+            'kartu_tgl_uji' => 'nullable|date',
+            'kartu_penyebab_keterangan' => 'nullable|string',
+            'kartu_impact' => 'nullable|integer',
+            'kartu_likelihood' => 'nullable|integer',
+            'kartu_is_critical' => 'nullable',
+            'kartu_risk_score' => 'nullable|integer',
+            'kartu_risk_level' => 'nullable|string',
 
             'obs_tgl_uji' => 'nullable|date',
             'obs_penyebab_keterangan' => 'nullable|string',
@@ -818,9 +845,14 @@ class PhysicalKkaController extends Controller
                     'selisih_kas_khasanah' => $selisihKasKhasanah,
                 ]);
 
+                $kasTglUji = $request->input('kas_tgl_uji') ?? $request->input('tgl_uji') ?? Carbon::now()->toDateString();
+                $kasPenyebab = trim($request->input('kas_penyebab_keterangan') ?? $request->input('penyebab_keterangan') ?? $request->input('penjelasan_selisih_kas') ?? '');
+
                 if (abs($selisihKasKhasanah) >= 0.01) {
-                    if (empty(trim($request->penjelasan_selisih_kas ?? ''))) {
+                    if (empty($kasPenyebab)) {
                         throw ValidationException::withMessages([
+                            'penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik Kas Khasanah vs saldo sistem Olibs.',
+                            'kas_penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik Kas Khasanah vs saldo sistem Olibs.',
                             'penjelasan_selisih_kas' => 'Uraian penjelasan selisih Kas Khasanah wajib diisi apabila terdapat selisih fisik vs saldo sistem Olibs.'
                         ]);
                     }
@@ -831,15 +863,44 @@ class PhysicalKkaController extends Controller
                             'is_exception' => true,
                             'status_uji' => 'Exception',
                             'selisih' => $selisihKasKhasanah,
-                            'penyebab' => $request->penjelasan_selisih_kas,
+                            'penyebab' => $kasPenyebab,
                         ]);
                         $this->createKlarifikasi($firstCash, $kodeUnit);
                     }
                 }
+
+                $evalKas = app(\App\Services\DailyRegister\AutoRiskScoringService::class)->evaluatePhysicalKka('kas', $kodeUnit, array_merge($request->all(), ['selisih_kas_khasanah' => $selisihKasKhasanah]), $physicalKka->id);
+                $kasImpact = (int)$evalKas['impact'];
+                $kasLikelihood = (int)$evalKas['likelihood'];
+                $kasIsCritical = (bool)$evalKas['is_critical'];
+                $kasRiskScore = (int)$evalKas['risk_score'];
+                $kasRiskLevel = $evalKas['risk_level'];
+
+                $physicalKka->update([
+                    'penjelasan_selisih_kas' => $kasPenyebab,
+                    'kas_tgl_uji' => $kasTglUji,
+                    'kas_penyebab_keterangan' => $kasPenyebab,
+                    'kas_impact' => $kasImpact,
+                    'kas_likelihood' => $kasLikelihood,
+                    'kas_is_critical' => $kasIsCritical,
+                    'kas_risk_score' => $kasRiskScore,
+                    'kas_risk_level' => $kasRiskLevel,
+                    'tgl_uji' => $kasTglUji,
+                    'penyebab_keterangan' => $kasPenyebab,
+                    'impact' => $kasImpact,
+                    'likelihood' => $kasLikelihood,
+                    'is_critical' => $kasIsCritical,
+                    'risk_score' => $kasRiskScore,
+                    'risk_level' => $kasRiskLevel,
+                ]);
             }
 
             // 2. PROCESS CASH OPNAME MESIN ATM
             if ($subTab === 'atm' || $subTab === 'all' || $request->has('atm_machines')) {
+                $hasAtmAnyException = false;
+                $atmPenyebab = trim($request->input('atm_penyebab_keterangan') ?? $request->input('penyebab_keterangan') ?? '');
+                $atmTglUji = $request->input('atm_tgl_uji') ?? $request->input('tgl_uji') ?? Carbon::now()->toDateString();
+
                 if ($request->has('atm_machines') && is_array($request->atm_machines)) {
                     foreach ($request->atm_machines as $mIdx => $atmData) {
                         if (empty($atmData['terminal_id']) && empty($atmData['lokasi'])) {
@@ -859,12 +920,11 @@ class PhysicalKkaController extends Controller
                         $selisihAtm = $saldoCbs - $totalFisikAtm;
                         $isAtmException = (abs($selisihAtm) >= 0.01);
                         if ($isAtmException) {
-                            if (empty(trim($atmData['keterangan_selisih'] ?? ''))) {
-                                throw ValidationException::withMessages([
-                                    "atm_machines.{$mIdx}.keterangan_selisih" => "Keterangan penyebab selisih kas ATM ({$atmData['terminal_id']}) wajib diisi apabila terdapat selisih fisik vs saldo CBS."
-                                ]);
-                            }
+                            $hasAtmAnyException = true;
                             $hasException = true;
+                            if (empty($atmPenyebab) && !empty($atmData['keterangan_selisih'])) {
+                                $atmPenyebab = trim($atmData['keterangan_selisih']);
+                            }
                         }
 
                         $hasFilledCassette = collect($cassettesData)->some(fn($c) => (!empty($c['total_nominal']) && (float)$c['total_nominal'] > 0) || (!empty($c['jumlah_lembar']) && (int)$c['jumlah_lembar'] > 0));
@@ -907,6 +967,43 @@ class PhysicalKkaController extends Controller
                         }
                     }
                 }
+
+                if ($hasAtmAnyException && empty($atmPenyebab)) {
+                    throw ValidationException::withMessages([
+                        'penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik vs saldo CBS pada Cash Opname Mesin ATM.',
+                        'atm_penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik vs saldo CBS pada Cash Opname Mesin ATM.',
+                        'atm_machines.0.keterangan_selisih' => 'Uraian penyebab selisih kas ATM wajib diisi apabila terdapat selisih.',
+                    ]);
+                }
+
+                $evalAtm = app(\App\Services\DailyRegister\AutoRiskScoringService::class)->evaluatePhysicalKka('atm', $kodeUnit, $request->all(), $physicalKka->id);
+                $atmImpact = (int)$evalAtm['impact'];
+                $atmLikelihood = (int)$evalAtm['likelihood'];
+                $atmIsCritical = (bool)$evalAtm['is_critical'];
+                $atmRiskScore = (int)$evalAtm['risk_score'];
+                $atmRiskLevel = $evalAtm['risk_level'];
+
+                $physicalKka->update([
+                    'atm_tgl_uji' => $atmTglUji,
+                    'atm_penyebab_keterangan' => $atmPenyebab,
+                    'atm_impact' => $atmImpact,
+                    'atm_likelihood' => $atmLikelihood,
+                    'atm_is_critical' => $atmIsCritical,
+                    'atm_risk_score' => $atmRiskScore,
+                    'atm_risk_level' => $atmRiskLevel,
+                ]);
+
+                if ($subTab === 'atm') {
+                    $physicalKka->update([
+                        'tgl_uji' => $atmTglUji,
+                        'penyebab_keterangan' => $atmPenyebab,
+                        'impact' => $atmImpact,
+                        'likelihood' => $atmLikelihood,
+                        'is_critical' => $atmIsCritical,
+                        'risk_score' => $atmRiskScore,
+                        'risk_level' => $atmRiskLevel,
+                    ]);
+                }
             }
 
             // 3. PROCESS OBSERVASI DETAILS
@@ -943,14 +1040,13 @@ class PhysicalKkaController extends Controller
                     ]);
                 }
 
-                $obsImpact = (int)($request->input('obs_impact') ?? $request->input('impact') ?? ($hasObsException ? 3 : 1));
-                $obsLikelihood = (int)($request->input('obs_likelihood') ?? $request->input('likelihood') ?? ($hasObsException ? 2 : 1));
-                $rawCrit = $request->input('obs_is_critical') ?? $request->input('is_critical') ?? $request->input('critical_trigger');
-                $obsIsCritical = in_array($rawCrit, ['Ya', '1', 1, true, 'true'], true);
-
-                $calcRisk = PhysicalKka::determineRiskLevel($obsImpact, $obsLikelihood, $obsIsCritical, $hasObsException);
-                $obsRiskScore = (int)($request->input('obs_risk_score') ?? $request->input('risk_score') ?? $calcRisk['score']);
-                $obsRiskLevel = $request->input('obs_risk_level') ?? $request->input('risk_level') ?? $calcRisk['level'];
+                $evalObs = app(\App\Services\DailyRegister\AutoRiskScoringService::class)->evaluatePhysicalKka('observasi', $kodeUnit, $request->all(), $physicalKka->id);
+                $isExplicitObsRisk = !$request->boolean('use_auto_risk') && ($request->filled('obs_risk_score') || $request->filled('obs_risk_level'));
+                $obsImpact = $isExplicitObsRisk && $request->filled('obs_impact') ? (int)$request->input('obs_impact') : (int)$evalObs['impact'];
+                $obsLikelihood = $isExplicitObsRisk && $request->filled('obs_likelihood') ? (int)$request->input('obs_likelihood') : (int)$evalObs['likelihood'];
+                $obsIsCritical = $isExplicitObsRisk && $request->has('obs_is_critical') ? in_array($request->input('obs_is_critical'), ['Ya', '1', 1, true, 'true'], true) : (bool)$evalObs['is_critical'];
+                $obsRiskScore = $isExplicitObsRisk && $request->filled('obs_risk_score') ? (int)$request->input('obs_risk_score') : (int)$evalObs['risk_score'];
+                $obsRiskLevel = $isExplicitObsRisk && $request->filled('obs_risk_level') ? $request->input('obs_risk_level') : $evalObs['risk_level'];
 
                 $physicalKka->update([
                     'obs_tgl_uji' => $obsTglUji,
@@ -961,6 +1057,18 @@ class PhysicalKkaController extends Controller
                     'obs_risk_score' => $obsRiskScore,
                     'obs_risk_level' => $obsRiskLevel,
                 ]);
+
+                if ($subTab === 'observasi' || $subTab === 'obs') {
+                    $physicalKka->update([
+                        'tgl_uji' => $obsTglUji,
+                        'penyebab_keterangan' => $obsPenyebab,
+                        'impact' => $obsImpact,
+                        'likelihood' => $obsLikelihood,
+                        'is_critical' => $obsIsCritical,
+                        'risk_score' => $obsRiskScore,
+                        'risk_level' => $obsRiskLevel,
+                    ]);
+                }
 
                 if ($request->has('obs_details') && is_array($request->obs_details)) {
                     foreach ($request->obs_details as $item) {
@@ -1035,14 +1143,13 @@ class PhysicalKkaController extends Controller
                     ]);
                 }
 
-                $stokImpact = (int)($request->input('stok_impact') ?? $request->input('impact') ?? ($hasStokException ? 3 : 1));
-                $stokLikelihood = (int)($request->input('stok_likelihood') ?? $request->input('likelihood') ?? ($hasStokException ? 2 : 1));
-                $rawCrit = $request->input('stok_is_critical') ?? $request->input('is_critical') ?? $request->input('critical_trigger');
-                $stokIsCritical = in_array($rawCrit, ['Ya', '1', 1, true, 'true'], true);
-
-                $calcRisk = PhysicalKka::determineRiskLevel($stokImpact, $stokLikelihood, $stokIsCritical, $hasStokException);
-                $stokRiskScore = (int)($request->input('stok_risk_score') ?? $request->input('risk_score') ?? $calcRisk['score']);
-                $stokRiskLevel = $request->input('stok_risk_level') ?? $request->input('risk_level') ?? $calcRisk['level'];
+                $evalStok = app(\App\Services\DailyRegister\AutoRiskScoringService::class)->evaluatePhysicalKka('stok', $kodeUnit, $request->all(), $physicalKka->id);
+                $isExplicitStokRisk = !$request->boolean('use_auto_risk') && ($request->filled('stok_risk_score') || $request->filled('stok_risk_level'));
+                $stokImpact = $isExplicitStokRisk && $request->filled('stok_impact') ? (int)$request->input('stok_impact') : (int)$evalStok['impact'];
+                $stokLikelihood = $isExplicitStokRisk && $request->filled('stok_likelihood') ? (int)$request->input('stok_likelihood') : (int)$evalStok['likelihood'];
+                $stokIsCritical = $isExplicitStokRisk && $request->has('stok_is_critical') ? in_array($request->input('stok_is_critical'), ['Ya', '1', 1, true, 'true'], true) : (bool)$evalStok['is_critical'];
+                $stokRiskScore = $isExplicitStokRisk && $request->filled('stok_risk_score') ? (int)$request->input('stok_risk_score') : (int)$evalStok['risk_score'];
+                $stokRiskLevel = $isExplicitStokRisk && $request->filled('stok_risk_level') ? $request->input('stok_risk_level') : $evalStok['risk_level'];
 
                 $physicalKka->update([
                     'stok_tgl_uji' => $stokTglUji,
@@ -1053,6 +1160,18 @@ class PhysicalKkaController extends Controller
                     'stok_risk_score' => $stokRiskScore,
                     'stok_risk_level' => $stokRiskLevel,
                 ]);
+
+                if ($subTab === 'stok') {
+                    $physicalKka->update([
+                        'tgl_uji' => $stokTglUji,
+                        'penyebab_keterangan' => $stokPenyebab,
+                        'impact' => $stokImpact,
+                        'likelihood' => $stokLikelihood,
+                        'is_critical' => $stokIsCritical,
+                        'risk_score' => $stokRiskScore,
+                        'risk_level' => $stokRiskLevel,
+                    ]);
+                }
 
                 if ($request->has('stok_details') && is_array($request->stok_details)) {
                     foreach ($request->stok_details as $item) {
@@ -1183,6 +1302,73 @@ class PhysicalKkaController extends Controller
                         if ($isException) $this->createKlarifikasi($detail, $kodeUnit);
                     }
                 }
+
+                $kartuTglUji = $request->input('kartu_tgl_uji') ?? $request->input('tgl_uji') ?? Carbon::now()->toDateString();
+                $kartuPenyebab = trim($request->input('kartu_penyebab_keterangan') ?? $request->input('penyebab_keterangan') ?? $request->input('rekon_kartu_penyebab_selisih') ?? '');
+
+                $hasKartuExc = false;
+                if ($request->has('kartu_atm_stock') && is_array($request->kartu_atm_stock)) {
+                    foreach ($request->kartu_atm_stock as $sRow) {
+                        $hargaModal = (float)($sRow['harga_modal'] ?? 0);
+                        $qtyKosong = (int)($sRow['qty_fisik_kosong'] ?? 0);
+                        $nomFisik = $hargaModal * $qtyKosong;
+                        $saldoBukuQty = (int)($sRow['saldo_buku_qty'] ?? 0);
+                        $saldoBukuNom = (float)($sRow['saldo_buku_nominal'] ?? ($saldoBukuQty * $hargaModal));
+                        $selPers = $nomFisik - $saldoBukuNom;
+                        $pinQty = (int)($sRow['pin_mailer_qty'] ?? 0);
+                        $selPin = $qtyKosong - $pinQty;
+                        if (abs($selPers) >= 0.01 || $selPin !== 0) {
+                            $hasKartuExc = true;
+                            break;
+                        }
+                    }
+                }
+                if (!$hasKartuExc && $request->has('kartu_atm_controls') && is_array($request->kartu_atm_controls)) {
+                    foreach ($request->kartu_atm_controls as $cRow) {
+                        if (($cRow['jawaban_kontrol'] ?? 'Ya') === 'Tidak') {
+                            $hasKartuExc = true;
+                            break;
+                        }
+                    }
+                }
+
+                if ($hasKartuExc && (empty($kartuPenyebab) || $kartuPenyebab === 'Tidak terdapat selisih antara fisik kartu ATM, saldo persediaan, dan PIN Mailer')) {
+                    throw ValidationException::withMessages([
+                        'penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik kartu, saldo persediaan, PIN Mailer, atau butir kontrol dijawab Tidak.',
+                        'kartu_penyebab_keterangan' => 'Penyebab & Keterangan wajib diisi apabila terdapat selisih fisik kartu, saldo persediaan, PIN Mailer, atau butir kontrol dijawab Tidak.',
+                        'rekon_kartu_penyebab_selisih' => 'Penyebab selisih / findings pada Rekonsiliasi Kartu ATM wajib diisi apabila terdapat selisih fisik, saldo persediaan, atau PIN Mailer.'
+                    ]);
+                }
+
+                $evalKartu = app(\App\Services\DailyRegister\AutoRiskScoringService::class)->evaluatePhysicalKka('kartu', $kodeUnit, $request->all(), $physicalKka->id);
+                $kartuImpact = (int)$evalKartu['impact'];
+                $kartuLikelihood = (int)$evalKartu['likelihood'];
+                $kartuIsCritical = (bool)$evalKartu['is_critical'];
+                $kartuRiskScore = (int)$evalKartu['risk_score'];
+                $kartuRiskLevel = $evalKartu['risk_level'];
+
+                $physicalKka->update([
+                    'rekon_kartu_penyebab_selisih' => $kartuPenyebab ?: $physicalKka->rekon_kartu_penyebab_selisih,
+                    'kartu_tgl_uji' => $kartuTglUji,
+                    'kartu_penyebab_keterangan' => $kartuPenyebab,
+                    'kartu_impact' => $kartuImpact,
+                    'kartu_likelihood' => $kartuLikelihood,
+                    'kartu_is_critical' => $kartuIsCritical,
+                    'kartu_risk_score' => $kartuRiskScore,
+                    'kartu_risk_level' => $kartuRiskLevel,
+                ]);
+
+                if ($subTab === 'kartu') {
+                    $physicalKka->update([
+                        'tgl_uji' => $kartuTglUji,
+                        'penyebab_keterangan' => $kartuPenyebab,
+                        'impact' => $kartuImpact,
+                        'likelihood' => $kartuLikelihood,
+                        'is_critical' => $kartuIsCritical,
+                        'risk_score' => $kartuRiskScore,
+                        'risk_level' => $kartuRiskLevel,
+                    ]);
+                }
             }
 
             // 6. PROCESS REKONSILIASI BARANG CETAKAN
@@ -1231,14 +1417,13 @@ class PhysicalKkaController extends Controller
                     ]);
                 }
 
-                $cetakanImpact = (int)($request->input('cetakan_impact') ?? $request->input('impact') ?? ($hasBctException ? 3 : 1));
-                $cetakanLikelihood = (int)($request->input('cetakan_likelihood') ?? $request->input('likelihood') ?? ($hasBctException ? 2 : 1));
-                $rawCrit = $request->input('cetakan_is_critical') ?? $request->input('is_critical') ?? $request->input('critical_trigger');
-                $cetakanIsCritical = in_array($rawCrit, ['Ya', '1', 1, true, 'true'], true);
-
-                $calcRisk = PhysicalKka::determineRiskLevel($cetakanImpact, $cetakanLikelihood, $cetakanIsCritical, $hasBctException);
-                $cetakanRiskScore = (int)($request->input('cetakan_risk_score') ?? $request->input('risk_score') ?? $calcRisk['score']);
-                $cetakanRiskLevel = $request->input('cetakan_risk_level') ?? $request->input('risk_level') ?? $calcRisk['level'];
+                $evalCetakan = app(\App\Services\DailyRegister\AutoRiskScoringService::class)->evaluatePhysicalKka('cetakan', $kodeUnit, $request->all(), $physicalKka->id);
+                $isExplicitCetakanRisk = !$request->boolean('use_auto_risk') && ($request->filled('cetakan_risk_score') || $request->filled('cetakan_risk_level'));
+                $cetakanImpact = $isExplicitCetakanRisk && $request->filled('cetakan_impact') ? (int)$request->input('cetakan_impact') : (int)$evalCetakan['impact'];
+                $cetakanLikelihood = $isExplicitCetakanRisk && $request->filled('cetakan_likelihood') ? (int)$request->input('cetakan_likelihood') : (int)$evalCetakan['likelihood'];
+                $cetakanIsCritical = $isExplicitCetakanRisk && $request->has('cetakan_is_critical') ? in_array($request->input('cetakan_is_critical'), ['Ya', '1', 1, true, 'true'], true) : (bool)$evalCetakan['is_critical'];
+                $cetakanRiskScore = $isExplicitCetakanRisk && $request->filled('cetakan_risk_score') ? (int)$request->input('cetakan_risk_score') : (int)$evalCetakan['risk_score'];
+                $cetakanRiskLevel = $isExplicitCetakanRisk && $request->filled('cetakan_risk_level') ? $request->input('cetakan_risk_level') : $evalCetakan['risk_level'];
 
                 $physicalKka->update([
                     'cetakan_tgl_uji' => $cetakanTglUji,
@@ -1249,6 +1434,18 @@ class PhysicalKkaController extends Controller
                     'cetakan_risk_score' => $cetakanRiskScore,
                     'cetakan_risk_level' => $cetakanRiskLevel,
                 ]);
+
+                if ($subTab === 'cetakan') {
+                    $physicalKka->update([
+                        'tgl_uji' => $cetakanTglUji,
+                        'penyebab_keterangan' => $cetakanPenyebab,
+                        'impact' => $cetakanImpact,
+                        'likelihood' => $cetakanLikelihood,
+                        'is_critical' => $cetakanIsCritical,
+                        'risk_score' => $cetakanRiskScore,
+                        'risk_level' => $cetakanRiskLevel,
+                    ]);
+                }
 
                 $noUrutBct = 1;
                 if ($request->has('barang_cetakan_details') && is_array($request->barang_cetakan_details)) {
@@ -1523,7 +1720,8 @@ class PhysicalKkaController extends Controller
             ];
         }
 
-        return view('daily_register.print.ba_cash_khasanah', compact('kka', 'namaCabang', 'uleDetails', 'logamDetails', 'utleDetails'));
+        $eval = $kka->getEvaluationSummary('kas');
+        return view('daily_register.print.ba_cash_khasanah', compact('kka', 'namaCabang', 'uleDetails', 'logamDetails', 'utleDetails', 'eval'));
     }
 
     public function printBaAtm($id)
@@ -1532,8 +1730,9 @@ class PhysicalKkaController extends Controller
         $cabang = Cabang::where('kode_cabang', 'like', '%' . $kka->kode_unit . '%')->first();
         $namaCabang = $cabang ? $cabang->nama_cabang : ('Cabang ' . $kka->kode_unit);
         $atmMachines = $kka->atmMachines;
+        $eval = $kka->getEvaluationSummary('atm');
 
-        return view('daily_register.print.ba_cash_atm', compact('kka', 'namaCabang', 'atmMachines'));
+        return view('daily_register.print.ba_cash_atm', compact('kka', 'namaCabang', 'atmMachines', 'eval'));
     }
 
     public function printKkaKartu($id)
@@ -1541,8 +1740,9 @@ class PhysicalKkaController extends Controller
         $kka = PhysicalKka::with(['user', 'kartuAtmDetails'])->findOrFail($id);
         $stockRows = $kka->kartuAtmDetails->where('sub_area', 'Persediaan Kartu ATM');
         $controlRows = $kka->kartuAtmDetails->where('sub_area', 'Kontrol');
+        $eval = $kka->getEvaluationSummary('kartu');
 
-        return view('daily_register.print.kka_kartu_atm', compact('kka', 'stockRows', 'controlRows'));
+        return view('daily_register.print.kka_kartu_atm', compact('kka', 'stockRows', 'controlRows', 'eval'));
     }
 
     public function printKkaCetakan($id)
@@ -1685,6 +1885,9 @@ class PhysicalKkaController extends Controller
             ];
         });
 
+        $evalKas = $kka->getEvaluationSummary('kas');
+        $evalAtm = $kka->getEvaluationSummary('atm');
+        $evalKartu = $kka->getEvaluationSummary('kartu');
         $evalObs = $kka->getEvaluationSummary('observasi');
         $evalStok = $kka->getEvaluationSummary('stok');
         $evalCetakan = $kka->getEvaluationSummary('cetakan');
@@ -1692,7 +1895,7 @@ class PhysicalKkaController extends Controller
         return view('daily_register.print.kka_fisik_all', compact(
             'kka', 'namaCabang', 'uleDetails', 'logamDetails', 'utleDetails',
             'atmMachines', 'stockRows', 'controlRows', 'bctItems', 'bctControls', 'obsDetails', 'stokItems',
-            'evalObs', 'evalStok', 'evalCetakan'
+            'evalKas', 'evalAtm', 'evalKartu', 'evalObs', 'evalStok', 'evalCetakan'
         ));
     }
 
@@ -1935,6 +2138,27 @@ class PhysicalKkaController extends Controller
         $row += 2;
         $sheet->setCellValue('B' . $row, 'RA Pelaksana: ' . ($kka->kas_pelaksana_nama ?? '-') . ' (' . ($kka->kas_pelaksana_jabatan ?? '-') . ')');
         $sheet->setCellValue('D' . $row, 'Saksi: ' . ($kka->kas_saksi_nama ?? '-') . ' (' . ($kka->kas_saksi_jabatan ?? '-') . ')');
+
+        $row += 2;
+        $eval = $kka->getEvaluationSummary('kas');
+        $sheet->setCellValue('A' . $row, 'RINGKASAN EVALUASI & PENILAIAN RISIKO KAS KHASANAH');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Tanggal Uji:');
+        $sheet->setCellValue('B' . $row, $eval['tgl_uji']);
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Penyebab & Keterangan:');
+        $sheet->setCellValue('B' . $row, $eval['penyebab_keterangan'] ?: 'Nihil / Sesuai');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Impact:');
+        $sheet->setCellValue('B' . $row, $eval['impact']);
+        $sheet->setCellValue('C' . $row, 'Likelihood:');
+        $sheet->setCellValue('D' . $row, $eval['likelihood']);
+        $sheet->setCellValue('E' . $row, 'Critical:');
+        $sheet->setCellValue('F' . $row, $eval['is_critical'] ? 'Ya' : 'Tidak');
+        $sheet->setCellValue('G' . $row, 'Risk Score:');
+        $sheet->setCellValue('H' . $row, $eval['risk_score']);
+        $sheet->setCellValue('I' . $row, 'Risk Level:');
+        $sheet->setCellValue('J' . $row, $eval['risk_level']);
     }
 
     private function buildExcelAtmSheet($sheet, $kka, $namaCabang)
@@ -1978,6 +2202,27 @@ class PhysicalKkaController extends Controller
             }
             $row++;
         }
+
+        $row += 2;
+        $eval = $kka->getEvaluationSummary('atm');
+        $sheet->setCellValue('A' . $row, 'RINGKASAN EVALUASI & PENILAIAN RISIKO MESIN ATM');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Tanggal Uji:');
+        $sheet->setCellValue('B' . $row, $eval['tgl_uji']);
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Penyebab & Keterangan:');
+        $sheet->setCellValue('B' . $row, $eval['penyebab_keterangan'] ?: 'Nihil / Sesuai');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Impact:');
+        $sheet->setCellValue('B' . $row, $eval['impact']);
+        $sheet->setCellValue('C' . $row, 'Likelihood:');
+        $sheet->setCellValue('D' . $row, $eval['likelihood']);
+        $sheet->setCellValue('E' . $row, 'Critical:');
+        $sheet->setCellValue('F' . $row, $eval['is_critical'] ? 'Ya' : 'Tidak');
+        $sheet->setCellValue('G' . $row, 'Risk Score:');
+        $sheet->setCellValue('H' . $row, $eval['risk_score']);
+        $sheet->setCellValue('I' . $row, 'Risk Level:');
+        $sheet->setCellValue('J' . $row, $eval['risk_level']);
     }
 
     private function buildExcelKartuSheet($sheet, $kka, $namaCabang)
@@ -2033,6 +2278,27 @@ class PhysicalKkaController extends Controller
             $sheet->setCellValue('D' . $row, $ctrl->catatan_kontrol ?? '-');
             $row++;
         }
+
+        $row += 2;
+        $eval = $kka->getEvaluationSummary('kartu');
+        $sheet->setCellValue('A' . $row, 'RINGKASAN EVALUASI & PENILAIAN RISIKO KARTU ATM');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Tanggal Uji:');
+        $sheet->setCellValue('B' . $row, $eval['tgl_uji']);
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Penyebab & Keterangan:');
+        $sheet->setCellValue('B' . $row, $eval['penyebab_keterangan'] ?: 'Nihil / Sesuai');
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Impact:');
+        $sheet->setCellValue('B' . $row, $eval['impact']);
+        $sheet->setCellValue('C' . $row, 'Likelihood:');
+        $sheet->setCellValue('D' . $row, $eval['likelihood']);
+        $sheet->setCellValue('E' . $row, 'Critical:');
+        $sheet->setCellValue('F' . $row, $eval['is_critical'] ? 'Ya' : 'Tidak');
+        $sheet->setCellValue('G' . $row, 'Risk Score:');
+        $sheet->setCellValue('H' . $row, $eval['risk_score']);
+        $sheet->setCellValue('I' . $row, 'Risk Level:');
+        $sheet->setCellValue('J' . $row, $eval['risk_level']);
     }
 
     private function buildExcelCetakanSheet($sheet, $kka, $namaCabang)
@@ -2256,6 +2522,18 @@ class PhysicalKkaController extends Controller
             ['Saksi Khasanah', ($kka->kas_saksi_nama ?: '-') . ' (' . ($kka->kas_saksi_jabatan ?: '-') . ')'],
         ];
         $builder->addSection('REKONSILIASI KAS KHASANAH', ['Parameter', 'Keterangan / Nilai'], $summaryRows);
+
+        $eval = $kka->getEvaluationSummary('kas');
+        $evalRows = [
+            ['Tanggal Uji', (string)$eval['tgl_uji']],
+            ['Penyebab & Keterangan', (string)($eval['penyebab_keterangan'] ?: 'Nihil / Sesuai')],
+            ['Impact', (string)$eval['impact']],
+            ['Likelihood', (string)$eval['likelihood']],
+            ['Critical', $eval['is_critical'] ? 'Ya' : 'Tidak'],
+            ['Risk Score', (string)$eval['risk_score']],
+            ['Risk Level', (string)$eval['risk_level']],
+        ];
+        $builder->addSection('RINGKASAN EVALUASI & PENILAIAN RISIKO KAS KHASANAH', ['Parameter', 'Keterangan / Nilai'], $evalRows);
     }
 
     private function buildPdfAtmSection($builder, $kka)
@@ -2282,6 +2560,18 @@ class PhysicalKkaController extends Controller
 
             $builder->addSection('ATM: ' . $m->terminal_id . ' (' . ($m->lokasi ?? 'Galeri') . ')', ['Nama Kaset', 'Denominasi', 'Lembar', 'Total'], $rows);
         }
+
+        $eval = $kka->getEvaluationSummary('atm');
+        $evalRows = [
+            ['Tanggal Uji', (string)$eval['tgl_uji']],
+            ['Penyebab & Keterangan', (string)($eval['penyebab_keterangan'] ?: 'Nihil / Sesuai')],
+            ['Impact', (string)$eval['impact']],
+            ['Likelihood', (string)$eval['likelihood']],
+            ['Critical', $eval['is_critical'] ? 'Ya' : 'Tidak'],
+            ['Risk Score', (string)$eval['risk_score']],
+            ['Risk Level', (string)$eval['risk_level']],
+        ];
+        $builder->addSection('RINGKASAN EVALUASI & PENILAIAN RISIKO MESIN ATM', ['Parameter', 'Keterangan / Nilai'], $evalRows);
     }
 
     private function buildPdfKartuSection($builder, $kka)
@@ -2310,6 +2600,18 @@ class PhysicalKkaController extends Controller
             ];
         }
         $builder->addSection('KONTROL KARTU ATM (SECTION B)', ['No', 'Butir Kontrol', 'Jawaban'], $cRows);
+
+        $eval = $kka->getEvaluationSummary('kartu');
+        $evalRows = [
+            ['Tanggal Uji', (string)$eval['tgl_uji']],
+            ['Penyebab & Keterangan', (string)($eval['penyebab_keterangan'] ?: 'Nihil / Sesuai')],
+            ['Impact', (string)$eval['impact']],
+            ['Likelihood', (string)$eval['likelihood']],
+            ['Critical', $eval['is_critical'] ? 'Ya' : 'Tidak'],
+            ['Risk Score', (string)$eval['risk_score']],
+            ['Risk Level', (string)$eval['risk_level']],
+        ];
+        $builder->addSection('RINGKASAN EVALUASI & PENILAIAN RISIKO KARTU ATM', ['Parameter', 'Keterangan / Nilai'], $evalRows);
     }
 
     private function buildPdfCetakanSection($builder, $kka)

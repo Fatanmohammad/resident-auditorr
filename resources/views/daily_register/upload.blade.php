@@ -70,6 +70,33 @@
                         </select>
                     </div>
 
+                    <!-- PERIODE & FILTER TANGGAL TRANSAKSI (TIME_STAMP) -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <label for="periode" class="form-label fw-semibold text-dark small mb-1">
+                                Periode Bulan
+                            </label>
+                            <input type="month" name="periode" id="periode" class="form-control form-control-sm" value="{{ old('periode', date('Y-m')) }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="tanggal_mulai" class="form-label fw-semibold text-dark small mb-1">
+                                Tanggal Mulai
+                            </label>
+                            <input type="date" name="tanggal_mulai" id="tanggal_mulai" class="form-control form-control-sm" value="{{ old('tanggal_mulai') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="tanggal_selesai" class="form-label fw-semibold text-dark small mb-1">
+                                Tanggal Selesai
+                            </label>
+                            <input type="date" name="tanggal_selesai" id="tanggal_selesai" class="form-control form-control-sm" value="{{ old('tanggal_selesai') }}">
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted" style="font-size: 0.75rem;">
+                                <i class="bi bi-info-circle me-1"></i>Filter Tanggal Mulai &amp; Selesai memfilter baris CSV berdasarkan kolom <code>TIME_STAMP</code> secara otomatis.
+                            </small>
+                        </div>
+                    </div>
+
                     <!-- 3. JENIS FILE DUMP -->
                     <div class="mb-3">
                         <label for="jenis_file" class="form-label fw-semibold text-dark small mb-1">

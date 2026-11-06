@@ -795,6 +795,91 @@
                         </div>
                     </div>
 
+                    <!-- CARD EVALUASI & PENILAIAN RISIKO TUNGGAL (KAS KHASANAH) -->
+                    <div class="card border-primary-subtle shadow-sm my-3 eval-card" id="evalCardKas" style="border-radius: 10px; overflow: hidden;">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3" style="background-color: #1e3a8a !important;">
+                            <span class="fw-bold"><i class="bi bi-shield-check me-2"></i>Ringkasan Evaluasi &amp; Penilaian Risiko Halaman</span>
+                            <span class="badge bg-light text-primary fw-semibold">Evaluasi Keseluruhan Cash Opname Khasanah</span>
+                        </div>
+                        <div class="card-body p-3 bg-light-subtle">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-calendar-event me-1"></i>Tanggal Uji (Tgl Uji) <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="date" name="tgl_uji" class="form-control form-control-sm eval-tgl-uji" value="{{ $evalKas['tgl_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-card-text me-1"></i>Penyebab &amp; Keterangan <span class="text-danger eval-req-indicator" style="display:none;">* (Wajib diisi jika terdapat selisih fisik vs saldo Olibs)</span>
+                                    </label>
+                                    <textarea name="penyebab_keterangan" rows="2" class="form-control form-control-sm eval-penyebab @error('penyebab_keterangan') is-invalid @enderror" placeholder="Catat uraian penyebab selisih fisik kas / keterangan keseluruhan pemeriksaan kas khasanah..." {{ $isAdmin ? 'readonly' : '' }}>{{ old('penyebab_keterangan', $evalKas['penyebab_keterangan'] ?? '') }}</textarea>
+                                    <div class="invalid-feedback">{{ $errors->first('penyebab_keterangan') ?: 'Penyebab & keterangan wajib diisi karena terdapat selisih kas fisik vs saldo Olibs.' }}</div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="p-2 border rounded bg-white shadow-xs">
+                                        <div class="row g-2 align-items-center text-center">
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Impact (1-5)</label>
+                                                <input type="hidden" name="impact" class="eval-impact" value="{{ $evalKas['impact'] ?? 1 }}">
+                                                <span class="badge bg-light text-dark border px-3 py-2 fs-6 eval-impact-badge">
+                                                    {{ $evalKas['impact'] ?? 1 }}
+                                                </span>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Likelihood (1-5)</label>
+                                                <input type="hidden" name="likelihood" class="eval-likelihood" value="{{ $evalKas['likelihood'] ?? 1 }}">
+                                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <span class="badge bg-light text-dark border px-2 py-1 eval-likelihood-badge">
+                                                            {{ $evalKas['likelihood'] ?? 1 }}
+                                                        </span>
+                                                        <span class="badge bg-warning-subtle text-dark border eval-recurrence-badge" style="font-size: 0.72rem;">
+                                                            {{ ($evalKas['likelihood'] ?? 1) > 1 ? 'Temuan Berulang' : 'Temuan Baru' }}
+                                                        </span>
+                                                    </div>
+                                                    <span class="small text-muted mt-1 eval-likelihood-note" style="font-size: 0.7rem;">
+                                                        {{ ($evalKas['likelihood'] ?? 1) > 1 ? 'Terdeteksi riwayat temuan di cabang' : 'Temuan pertama kali' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Critical</label>
+                                                <input type="hidden" name="is_critical" class="eval-critical" value="{{ !empty($evalKas['is_critical']) ? 1 : 0 }}">
+                                                <span class="badge {{ !empty($evalKas['is_critical']) ? 'bg-danger text-white' : 'bg-success text-white' }} px-3 py-2 fs-6 eval-critical-badge">
+                                                    {{ !empty($evalKas['is_critical']) ? 'Ya' : 'Tidak' }}
+                                                </span>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Score</label>
+                                                <input type="text" name="risk_score" class="form-control form-control-sm text-center fw-bold eval-risk-score bg-light border-0" value="{{ $evalKas['risk_score'] ?? 1 }}" readonly>
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Level</label>
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <input type="hidden" name="risk_level" class="eval-risk-level-input" value="{{ $evalKas['risk_level'] ?? 'Low' }}">
+                                                    @php
+                                                        $lvlBadgeKas = match($evalKas['risk_level'] ?? 'Low') {
+                                                            'High' => 'bg-danger text-white',
+                                                            'Moderate to High' => 'bg-danger-subtle text-danger-emphasis border border-danger',
+                                                            'Moderate' => 'bg-warning text-dark',
+                                                            'Low to Moderate' => 'bg-info text-dark',
+                                                            default => 'bg-success text-white',
+                                                        };
+                                                    @endphp
+                                                    <span class="badge px-3 py-2 fs-6 eval-risk-level-badge {{ $lvlBadgeKas }}">
+                                                        {{ $evalKas['risk_level'] ?? 'Low' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Action Bar Tab 1: Simpan & Download -->
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -1200,6 +1285,91 @@
                         @endforelse
                     </div>
 
+                    <!-- CARD EVALUASI & PENILAIAN RISIKO TUNGGAL (MESIN ATM) -->
+                    <div class="card border-primary-subtle shadow-sm my-3 eval-card" id="evalCardAtm" style="border-radius: 10px; overflow: hidden;">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3" style="background-color: #1e3a8a !important;">
+                            <span class="fw-bold"><i class="bi bi-shield-check me-2"></i>Ringkasan Evaluasi &amp; Penilaian Risiko Halaman</span>
+                            <span class="badge bg-light text-primary fw-semibold">Evaluasi Keseluruhan Cash Opname Mesin ATM</span>
+                        </div>
+                        <div class="card-body p-3 bg-light-subtle">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-calendar-event me-1"></i>Tanggal Uji (Tgl Uji) <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="date" name="tgl_uji" class="form-control form-control-sm eval-tgl-uji" value="{{ $evalAtm['tgl_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-card-text me-1"></i>Penyebab &amp; Keterangan <span class="text-danger eval-req-indicator" style="display:none;">* (Wajib diisi jika terdapat selisih fisik vs saldo CBS)</span>
+                                    </label>
+                                    <textarea name="penyebab_keterangan" rows="2" class="form-control form-control-sm eval-penyebab @error('penyebab_keterangan') is-invalid @enderror" placeholder="Catat uraian penyebab selisih kas mesin ATM / keterangan keseluruhan pemeriksaan ATM..." {{ $isAdmin ? 'readonly' : '' }}>{{ old('penyebab_keterangan', $evalAtm['penyebab_keterangan'] ?? '') }}</textarea>
+                                    <div class="invalid-feedback">{{ $errors->first('penyebab_keterangan') ?: 'Penyebab & keterangan wajib diisi karena terdapat selisih fisik kas kaset vs CBS.' }}</div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="p-2 border rounded bg-white shadow-xs">
+                                        <div class="row g-2 align-items-center text-center">
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Impact (1-5)</label>
+                                                <input type="hidden" name="impact" class="eval-impact" value="{{ $evalAtm['impact'] ?? 1 }}">
+                                                <span class="badge bg-light text-dark border px-3 py-2 fs-6 eval-impact-badge">
+                                                    {{ $evalAtm['impact'] ?? 1 }}
+                                                </span>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Likelihood (1-5)</label>
+                                                <input type="hidden" name="likelihood" class="eval-likelihood" value="{{ $evalAtm['likelihood'] ?? 1 }}">
+                                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <span class="badge bg-light text-dark border px-2 py-1 eval-likelihood-badge">
+                                                            {{ $evalAtm['likelihood'] ?? 1 }}
+                                                        </span>
+                                                        <span class="badge bg-warning-subtle text-dark border eval-recurrence-badge" style="font-size: 0.72rem;">
+                                                            {{ ($evalAtm['likelihood'] ?? 1) > 1 ? 'Temuan Berulang' : 'Temuan Baru' }}
+                                                        </span>
+                                                    </div>
+                                                    <span class="small text-muted mt-1 eval-likelihood-note" style="font-size: 0.7rem;">
+                                                        {{ ($evalAtm['likelihood'] ?? 1) > 1 ? 'Terdeteksi riwayat temuan di cabang' : 'Temuan pertama kali' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Critical</label>
+                                                <input type="hidden" name="is_critical" class="eval-critical" value="{{ !empty($evalAtm['is_critical']) ? 1 : 0 }}">
+                                                <span class="badge {{ !empty($evalAtm['is_critical']) ? 'bg-danger text-white' : 'bg-success text-white' }} px-3 py-2 fs-6 eval-critical-badge">
+                                                    {{ !empty($evalAtm['is_critical']) ? 'Ya' : 'Tidak' }}
+                                                </span>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Score</label>
+                                                <input type="text" name="risk_score" class="form-control form-control-sm text-center fw-bold eval-risk-score bg-light border-0" value="{{ $evalAtm['risk_score'] ?? 1 }}" readonly>
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Level</label>
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <input type="hidden" name="risk_level" class="eval-risk-level-input" value="{{ $evalAtm['risk_level'] ?? 'Low' }}">
+                                                    @php
+                                                        $lvlBadgeAtm = match($evalAtm['risk_level'] ?? 'Low') {
+                                                            'High' => 'bg-danger text-white',
+                                                            'Moderate to High' => 'bg-danger-subtle text-danger-emphasis border border-danger',
+                                                            'Moderate' => 'bg-warning text-dark',
+                                                            'Low to Moderate' => 'bg-info text-dark',
+                                                            default => 'bg-success text-white',
+                                                        };
+                                                    @endphp
+                                                    <span class="badge px-3 py-2 fs-6 eval-risk-level-badge {{ $lvlBadgeAtm }}">
+                                                        {{ $evalAtm['risk_level'] ?? 'Low' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Action Bar Tab 2: Simpan & Download -->
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -1373,34 +1543,42 @@
                                     <div class="p-2 border rounded bg-white shadow-xs">
                                         <div class="row g-2 align-items-center text-center">
                                             <div class="col-6 col-md-2">
-                                                <label class="form-label small fw-bold text-muted mb-1">Impact (1-5)</label>
-                                                <select name="impact" class="form-select form-select-sm eval-impact" {{ $isAdmin ? 'disabled' : '' }}>
-                                                    @for($i = 1; $i <= 5; $i++)
-                                                        <option value="{{ $i }}" {{ ($evalObs['impact'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                                    @endfor
-                                                </select>
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Impact (1-5)</label>
+                                                <input type="hidden" name="impact" class="eval-impact" value="{{ $evalObs['impact'] ?? 1 }}">
+                                                <span class="badge bg-light text-dark border px-3 py-2 fs-6 eval-impact-badge">
+                                                    {{ $evalObs['impact'] ?? 1 }}
+                                                </span>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Likelihood (1-5)</label>
+                                                <input type="hidden" name="likelihood" class="eval-likelihood" value="{{ $evalObs['likelihood'] ?? 1 }}">
+                                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <span class="badge bg-light text-dark border px-2 py-1 eval-likelihood-badge">
+                                                            {{ $evalObs['likelihood'] ?? 1 }}
+                                                        </span>
+                                                        <span class="badge bg-warning-subtle text-dark border eval-recurrence-badge" style="font-size: 0.72rem;">
+                                                            {{ ($evalObs['likelihood'] ?? 1) > 1 ? 'Temuan Berulang' : 'Temuan Baru' }}
+                                                        </span>
+                                                    </div>
+                                                    <span class="small text-muted mt-1 eval-likelihood-note" style="font-size: 0.7rem;">
+                                                        {{ ($evalObs['likelihood'] ?? 1) > 1 ? 'Terdeteksi riwayat temuan di cabang' : 'Temuan pertama kali' }}
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div class="col-6 col-md-2">
-                                                <label class="form-label small fw-bold text-muted mb-1">Likelihood (1-5)</label>
-                                                <select name="likelihood" class="form-select form-select-sm eval-likelihood" {{ $isAdmin ? 'disabled' : '' }}>
-                                                    @for($i = 1; $i <= 5; $i++)
-                                                        <option value="{{ $i }}" {{ ($evalObs['likelihood'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                                    @endfor
-                                                </select>
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Critical</label>
+                                                <input type="hidden" name="is_critical" class="eval-critical" value="{{ !empty($evalObs['is_critical']) ? 1 : 0 }}">
+                                                <span class="badge {{ !empty($evalObs['is_critical']) ? 'bg-danger text-white' : 'bg-success text-white' }} px-3 py-2 fs-6 eval-critical-badge">
+                                                    {{ !empty($evalObs['is_critical']) ? 'Ya' : 'Tidak' }}
+                                                </span>
                                             </div>
                                             <div class="col-6 col-md-2">
-                                                <label class="form-label small fw-bold text-muted mb-1">Critical</label>
-                                                <select name="is_critical" class="form-select form-select-sm eval-critical" {{ $isAdmin ? 'disabled' : '' }}>
-                                                    <option value="0" {{ empty($evalObs['is_critical']) ? 'selected' : '' }}>Tidak</option>
-                                                    <option value="1" {{ !empty($evalObs['is_critical']) ? 'selected' : '' }}>Ya</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-6 col-md-2">
-                                                <label class="form-label small fw-bold text-muted mb-1">Risk Score</label>
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Score</label>
                                                 <input type="text" name="risk_score" class="form-control form-control-sm text-center fw-bold eval-risk-score bg-light border-0" value="{{ $evalObs['risk_score'] ?? 1 }}" readonly>
                                             </div>
-                                            <div class="col-12 col-md-4">
-                                                <label class="form-label small fw-bold text-muted mb-1">Risk Level</label>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Level</label>
                                                 <div class="d-flex align-items-center justify-content-center gap-2">
                                                     <input type="hidden" name="risk_level" class="eval-risk-level-input" value="{{ $evalObs['risk_level'] ?? 'Low' }}">
                                                     @php
@@ -1592,34 +1770,42 @@
                                         <div class="p-2 border rounded bg-white shadow-xs">
                                             <div class="row g-2 align-items-center text-center">
                                                 <div class="col-6 col-md-2">
-                                                    <label class="form-label small fw-bold text-muted mb-1">Impact (1-5)</label>
-                                                    <select name="impact" class="form-select form-select-sm eval-impact" {{ $isAdmin ? 'disabled' : '' }}>
-                                                        @for($i = 1; $i <= 5; $i++)
-                                                            <option value="{{ $i }}" {{ ($evalStok['impact'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                                        @endfor
-                                                    </select>
+                                                    <label class="form-label small fw-bold text-muted mb-1 d-block">Impact (1-5)</label>
+                                                    <input type="hidden" name="impact" class="eval-impact" value="{{ $evalStok['impact'] ?? 1 }}">
+                                                    <span class="badge bg-light text-dark border px-3 py-2 fs-6 eval-impact-badge">
+                                                        {{ $evalStok['impact'] ?? 1 }}
+                                                    </span>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <label class="form-label small fw-bold text-muted mb-1 d-block">Likelihood (1-5)</label>
+                                                    <input type="hidden" name="likelihood" class="eval-likelihood" value="{{ $evalStok['likelihood'] ?? 1 }}">
+                                                    <div class="d-flex flex-column align-items-center justify-content-center">
+                                                        <div class="d-flex align-items-center gap-1">
+                                                            <span class="badge bg-light text-dark border px-2 py-1 eval-likelihood-badge">
+                                                                {{ $evalStok['likelihood'] ?? 1 }}
+                                                            </span>
+                                                            <span class="badge bg-warning-subtle text-dark border eval-recurrence-badge" style="font-size: 0.72rem;">
+                                                                {{ ($evalStok['likelihood'] ?? 1) > 1 ? 'Temuan Berulang' : 'Temuan Baru' }}
+                                                            </span>
+                                                        </div>
+                                                        <span class="small text-muted mt-1 eval-likelihood-note" style="font-size: 0.7rem;">
+                                                            {{ ($evalStok['likelihood'] ?? 1) > 1 ? 'Terdeteksi riwayat temuan di cabang' : 'Temuan pertama kali' }}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <div class="col-6 col-md-2">
-                                                    <label class="form-label small fw-bold text-muted mb-1">Likelihood (1-5)</label>
-                                                    <select name="likelihood" class="form-select form-select-sm eval-likelihood" {{ $isAdmin ? 'disabled' : '' }}>
-                                                        @for($i = 1; $i <= 5; $i++)
-                                                            <option value="{{ $i }}" {{ ($evalStok['likelihood'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                                        @endfor
-                                                    </select>
+                                                    <label class="form-label small fw-bold text-muted mb-1 d-block">Critical</label>
+                                                    <input type="hidden" name="is_critical" class="eval-critical" value="{{ !empty($evalStok['is_critical']) ? 1 : 0 }}">
+                                                    <span class="badge {{ !empty($evalStok['is_critical']) ? 'bg-danger text-white' : 'bg-success text-white' }} px-3 py-2 fs-6 eval-critical-badge">
+                                                        {{ !empty($evalStok['is_critical']) ? 'Ya' : 'Tidak' }}
+                                                    </span>
                                                 </div>
                                                 <div class="col-6 col-md-2">
-                                                    <label class="form-label small fw-bold text-muted mb-1">Critical</label>
-                                                    <select name="is_critical" class="form-select form-select-sm eval-critical" {{ $isAdmin ? 'disabled' : '' }}>
-                                                        <option value="0" {{ empty($evalStok['is_critical']) ? 'selected' : '' }}>Tidak</option>
-                                                        <option value="1" {{ !empty($evalStok['is_critical']) ? 'selected' : '' }}>Ya</option>
-                                                    </select>
-                                                </div>
-                                                <div class="col-6 col-md-2">
-                                                    <label class="form-label small fw-bold text-muted mb-1">Risk Score</label>
+                                                    <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Score</label>
                                                     <input type="text" name="risk_score" class="form-control form-control-sm text-center fw-bold eval-risk-score bg-light border-0" value="{{ $evalStok['risk_score'] ?? 1 }}" readonly>
                                                 </div>
-                                                <div class="col-12 col-md-4">
-                                                    <label class="form-label small fw-bold text-muted mb-1">Risk Level</label>
+                                                <div class="col-12 col-md-3">
+                                                    <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Level</label>
                                                     <div class="d-flex align-items-center justify-content-center gap-2">
                                                         <input type="hidden" name="risk_level" class="eval-risk-level-input" value="{{ $evalStok['risk_level'] ?? 'Low' }}">
                                                         @php
@@ -1876,6 +2062,91 @@
                         </div>
                     </div>
 
+                    <!-- CARD EVALUASI & PENILAIAN RISIKO TUNGGAL (REKON KARTU ATM) -->
+                    <div class="card border-primary-subtle shadow-sm my-3 eval-card" id="evalCardKartu" style="border-radius: 10px; overflow: hidden;">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3" style="background-color: #1e3a8a !important;">
+                            <span class="fw-bold"><i class="bi bi-shield-check me-2"></i>Ringkasan Evaluasi &amp; Penilaian Risiko Halaman</span>
+                            <span class="badge bg-light text-primary fw-semibold">Evaluasi Keseluruhan Rekonsiliasi Kartu ATM</span>
+                        </div>
+                        <div class="card-body p-3 bg-light-subtle">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-calendar-event me-1"></i>Tanggal Uji (Tgl Uji) <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="date" name="tgl_uji" class="form-control form-control-sm eval-tgl-uji" value="{{ $evalKartu['tgl_uji'] ?? date('Y-m-d') }}" {{ $isAdmin ? 'readonly' : '' }}>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label fw-bold small text-secondary">
+                                        <i class="bi bi-card-text me-1"></i>Penyebab &amp; Keterangan <span class="text-danger eval-req-indicator" style="display:none;">* (Wajib diisi jika terdapat selisih atau kontrol bernilai Tidak)</span>
+                                    </label>
+                                    <textarea name="penyebab_keterangan" rows="2" class="form-control form-control-sm eval-penyebab @error('penyebab_keterangan') is-invalid @enderror" placeholder="Catat uraian penyebab selisih fisik / saldo buku persediaan kartu ATM / keterangan pengujian..." {{ $isAdmin ? 'readonly' : '' }}>{{ old('penyebab_keterangan', $evalKartu['penyebab_keterangan'] ?? '') }}</textarea>
+                                    <div class="invalid-feedback">{{ $errors->first('penyebab_keterangan') ?: 'Penyebab & keterangan wajib diisi karena terdapat selisih persediaan atau butir kontrol dijawab Tidak.' }}</div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="p-2 border rounded bg-white shadow-xs">
+                                        <div class="row g-2 align-items-center text-center">
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Impact (1-5)</label>
+                                                <input type="hidden" name="impact" class="eval-impact" value="{{ $evalKartu['impact'] ?? 1 }}">
+                                                <span class="badge bg-light text-dark border px-3 py-2 fs-6 eval-impact-badge">
+                                                    {{ $evalKartu['impact'] ?? 1 }}
+                                                </span>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Likelihood (1-5)</label>
+                                                <input type="hidden" name="likelihood" class="eval-likelihood" value="{{ $evalKartu['likelihood'] ?? 1 }}">
+                                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <span class="badge bg-light text-dark border px-2 py-1 eval-likelihood-badge">
+                                                            {{ $evalKartu['likelihood'] ?? 1 }}
+                                                        </span>
+                                                        <span class="badge bg-warning-subtle text-dark border eval-recurrence-badge" style="font-size: 0.72rem;">
+                                                            {{ ($evalKartu['likelihood'] ?? 1) > 1 ? 'Temuan Berulang' : 'Temuan Baru' }}
+                                                        </span>
+                                                    </div>
+                                                    <span class="small text-muted mt-1 eval-likelihood-note" style="font-size: 0.7rem;">
+                                                        {{ ($evalKartu['likelihood'] ?? 1) > 1 ? 'Terdeteksi riwayat temuan di cabang' : 'Temuan pertama kali' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Critical</label>
+                                                <input type="hidden" name="is_critical" class="eval-critical" value="{{ !empty($evalKartu['is_critical']) ? 1 : 0 }}">
+                                                <span class="badge {{ !empty($evalKartu['is_critical']) ? 'bg-danger text-white' : 'bg-success text-white' }} px-3 py-2 fs-6 eval-critical-badge">
+                                                    {{ !empty($evalKartu['is_critical']) ? 'Ya' : 'Tidak' }}
+                                                </span>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Score</label>
+                                                <input type="text" name="risk_score" class="form-control form-control-sm text-center fw-bold eval-risk-score bg-light border-0" value="{{ $evalKartu['risk_score'] ?? 1 }}" readonly>
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Level</label>
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <input type="hidden" name="risk_level" class="eval-risk-level-input" value="{{ $evalKartu['risk_level'] ?? 'Low' }}">
+                                                    @php
+                                                        $lvlBadgeKartu = match($evalKartu['risk_level'] ?? 'Low') {
+                                                            'High' => 'bg-danger text-white',
+                                                            'Moderate to High' => 'bg-danger-subtle text-danger-emphasis border border-danger',
+                                                            'Moderate' => 'bg-warning text-dark',
+                                                            'Low to Moderate' => 'bg-info text-dark',
+                                                            default => 'bg-success text-white',
+                                                        };
+                                                    @endphp
+                                                    <span class="badge px-3 py-2 fs-6 eval-risk-level-badge {{ $lvlBadgeKartu }}">
+                                                        {{ $evalKartu['risk_level'] ?? 'Low' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card-footer bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3">
                         <div class="d-flex flex-wrap align-items-center gap-2">
                             @if(isset($id))
@@ -2062,34 +2333,42 @@
                                     <div class="p-2 border rounded bg-white shadow-xs">
                                         <div class="row g-2 align-items-center text-center">
                                             <div class="col-6 col-md-2">
-                                                <label class="form-label small fw-bold text-muted mb-1">Impact (1-5)</label>
-                                                <select name="impact" class="form-select form-select-sm eval-impact" {{ $isAdmin ? 'disabled' : '' }}>
-                                                    @for($i = 1; $i <= 5; $i++)
-                                                        <option value="{{ $i }}" {{ ($evalCetakan['impact'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                                    @endfor
-                                                </select>
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Impact (1-5)</label>
+                                                <input type="hidden" name="impact" class="eval-impact" value="{{ $evalCetakan['impact'] ?? 1 }}">
+                                                <span class="badge bg-light text-dark border px-3 py-2 fs-6 eval-impact-badge">
+                                                    {{ $evalCetakan['impact'] ?? 1 }}
+                                                </span>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Likelihood (1-5)</label>
+                                                <input type="hidden" name="likelihood" class="eval-likelihood" value="{{ $evalCetakan['likelihood'] ?? 1 }}">
+                                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <span class="badge bg-light text-dark border px-2 py-1 eval-likelihood-badge">
+                                                            {{ $evalCetakan['likelihood'] ?? 1 }}
+                                                        </span>
+                                                        <span class="badge bg-warning-subtle text-dark border eval-recurrence-badge" style="font-size: 0.72rem;">
+                                                            {{ ($evalCetakan['likelihood'] ?? 1) > 1 ? 'Temuan Berulang' : 'Temuan Baru' }}
+                                                        </span>
+                                                    </div>
+                                                    <span class="small text-muted mt-1 eval-likelihood-note" style="font-size: 0.7rem;">
+                                                        {{ ($evalCetakan['likelihood'] ?? 1) > 1 ? 'Terdeteksi riwayat temuan di cabang' : 'Temuan pertama kali' }}
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div class="col-6 col-md-2">
-                                                <label class="form-label small fw-bold text-muted mb-1">Likelihood (1-5)</label>
-                                                <select name="likelihood" class="form-select form-select-sm eval-likelihood" {{ $isAdmin ? 'disabled' : '' }}>
-                                                    @for($i = 1; $i <= 5; $i++)
-                                                        <option value="{{ $i }}" {{ ($evalCetakan['likelihood'] ?? 1) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                                    @endfor
-                                                </select>
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Critical</label>
+                                                <input type="hidden" name="is_critical" class="eval-critical" value="{{ !empty($evalCetakan['is_critical']) ? 1 : 0 }}">
+                                                <span class="badge {{ !empty($evalCetakan['is_critical']) ? 'bg-danger text-white' : 'bg-success text-white' }} px-3 py-2 fs-6 eval-critical-badge">
+                                                    {{ !empty($evalCetakan['is_critical']) ? 'Ya' : 'Tidak' }}
+                                                </span>
                                             </div>
                                             <div class="col-6 col-md-2">
-                                                <label class="form-label small fw-bold text-muted mb-1">Critical</label>
-                                                <select name="is_critical" class="form-select form-select-sm eval-critical" {{ $isAdmin ? 'disabled' : '' }}>
-                                                    <option value="0" {{ empty($evalCetakan['is_critical']) ? 'selected' : '' }}>Tidak</option>
-                                                    <option value="1" {{ !empty($evalCetakan['is_critical']) ? 'selected' : '' }}>Ya</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-6 col-md-2">
-                                                <label class="form-label small fw-bold text-muted mb-1">Risk Score</label>
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Score</label>
                                                 <input type="text" name="risk_score" class="form-control form-control-sm text-center fw-bold eval-risk-score bg-light border-0" value="{{ $evalCetakan['risk_score'] ?? 1 }}" readonly>
                                             </div>
-                                            <div class="col-12 col-md-4">
-                                                <label class="form-label small fw-bold text-muted mb-1">Risk Level</label>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label small fw-bold text-muted mb-1 d-block">Risk Level</label>
                                                 <div class="d-flex align-items-center justify-content-center gap-2">
                                                     <input type="hidden" name="risk_level" class="eval-risk-level-input" value="{{ $evalCetakan['risk_level'] ?? 'Low' }}">
                                                     @php
@@ -2213,6 +2492,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (penjelasanInput) penjelasanInput.required = false;
             }
         }
+        if (window.evalKasHandler) window.evalKasHandler.update();
     }
 
     document.querySelectorAll('.cash-lembar').forEach(inp => {
@@ -2346,6 +2626,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (ketInput) ketInput.required = false;
             }
         }
+        if (window.evalAtmHandler) window.evalAtmHandler.update();
     }
 
     function initAtmCardListeners(card) {
@@ -2716,6 +2997,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         }
+        if (window.evalKartuHandler) window.evalKartuHandler.update();
     }
 
     function initAtmStockListeners(row) {
@@ -2888,15 +3170,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================================
-    // 5. FRAMEWORK UNIFIED EVALUATION & PENILAIAN RISIKO (TAB 3, TAB 4, TAB 6)
+    // 5. FRAMEWORK UNIFIED EVALUATION & PENILAIAN RISIKO (TAB 1 S.D. TAB 6)
     // =========================================================================
     function setupUnifiedEvaluationCard(config) {
         const card = document.getElementById(config.cardId);
         if (!card) return null;
 
-        const impactSel = card.querySelector('.eval-impact');
-        const likelihoodSel = card.querySelector('.eval-likelihood');
-        const criticalSel = card.querySelector('.eval-critical');
+        const impactInp = card.querySelector('.eval-impact');
+        const impactBadge = card.querySelector('.eval-impact-badge');
+        const likelihoodInp = card.querySelector('.eval-likelihood');
+        const likelihoodBadge = card.querySelector('.eval-likelihood-badge');
+        const recurrenceBadge = card.querySelector('.eval-recurrence-badge');
+        const likelihoodNote = card.querySelector('.eval-likelihood-note');
+        const criticalInp = card.querySelector('.eval-critical');
+        const criticalBadge = card.querySelector('.eval-critical-badge');
         const scoreInp = card.querySelector('.eval-risk-score');
         const levelInp = card.querySelector('.eval-risk-level-input');
         const levelBadge = card.querySelector('.eval-risk-level-badge');
@@ -2904,11 +3191,105 @@ document.addEventListener('DOMContentLoaded', function () {
         const reqIndicator = card.querySelector('.eval-req-indicator');
         const form = card.closest('form');
 
+        let previewTimer = null;
+        function fetchPreview() {
+            if (!config.tab || !form) return;
+            clearTimeout(previewTimer);
+            previewTimer = setTimeout(function() {
+                try {
+                    const formData = new FormData(form);
+                    formData.append('tab', config.tab);
+                    formData.append('context', 'physical');
+                    formData.append('kode_unit', '{{ $kodeUnit }}');
+                    @if(isset($id))
+                    formData.append('kka_id', '{{ $id }}');
+                    @endif
+                    fetch('{{ route("daily-register.auto-risk.preview") }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res && res.success && res.data) {
+                            const d = res.data;
+                            if (likelihoodInp) likelihoodInp.value = d.likelihood;
+                            if (likelihoodBadge) likelihoodBadge.innerText = d.likelihood;
+                            if (recurrenceBadge && d.likelihood_badge) {
+                                recurrenceBadge.innerText = d.likelihood_badge;
+                                recurrenceBadge.className = 'badge border eval-recurrence-badge ' + (d.likelihood > 1 ? 'bg-warning-subtle text-dark' : 'bg-info-subtle text-dark');
+                            }
+                            if (likelihoodNote && d.likelihood_note) likelihoodNote.innerText = d.likelihood_note;
+                            if (impactInp) impactInp.value = d.impact;
+                            if (impactBadge) impactBadge.innerText = d.impact;
+                            if (criticalInp) criticalInp.value = d.is_critical ? '1' : '0';
+                            if (criticalBadge) {
+                                criticalBadge.innerText = d.is_critical ? 'Ya' : 'Tidak';
+                                criticalBadge.className = 'badge px-3 py-2 fs-6 eval-critical-badge ' + (d.is_critical ? 'bg-danger text-white' : 'bg-success text-white');
+                            }
+                            if (scoreInp) scoreInp.value = d.risk_score;
+                            if (levelInp) levelInp.value = d.risk_level;
+                            if (levelBadge) {
+                                levelBadge.innerText = d.risk_level;
+                                levelBadge.className = 'badge px-3 py-2 fs-6 eval-risk-level-badge ';
+                                if (d.risk_level === 'High') {
+                                    levelBadge.classList.add('bg-danger', 'text-white');
+                                } else if (d.risk_level === 'Moderate to High') {
+                                    levelBadge.classList.add('bg-danger-subtle', 'text-danger-emphasis', 'border', 'border-danger');
+                                } else if (d.risk_level === 'Moderate') {
+                                    levelBadge.classList.add('bg-warning', 'text-dark');
+                                } else if (d.risk_level === 'Low to Moderate') {
+                                    levelBadge.classList.add('bg-info', 'text-dark');
+                                } else {
+                                    levelBadge.classList.add('bg-success', 'text-white');
+                                }
+                            }
+                        }
+                    })
+                    .catch(() => {});
+                } catch(e) {}
+            }, 300);
+        }
+
         function update() {
             const hasException = config.checkException();
-            const isCrit = (criticalSel?.value === '1' || criticalSel?.value === 'Ya' || criticalSel?.value === 'true');
-            let impact = parseInt(impactSel?.value) || 1;
-            let likelihood = parseInt(likelihoodSel?.value) || 1;
+            const metrics = config.calculateMetrics ? config.calculateMetrics() : {
+                nominal: 0,
+                failedCount: hasException ? 1 : 0,
+                hasCriticalSecurity: false,
+                hasWarkatCardDiff: false,
+                hasCashAtmDiff: false,
+                isCritical: false
+            };
+
+            let impact = 1;
+            let likelihood = parseInt(likelihoodInp?.value) || 1;
+            let isCrit = false;
+
+            if (!hasException) {
+                impact = 1;
+                likelihood = 1;
+                isCrit = false;
+            } else {
+                const nom = Math.abs(metrics.nominal || 0);
+                if (metrics.hasCriticalSecurity || nom >= 100000000 || (metrics.hasCashAtmDiff && nom >= 25000000)) {
+                    impact = 5;
+                } else if (nom >= 25000000 || metrics.hasWarkatCardDiff || (metrics.failedCount > 3)) {
+                    impact = 4;
+                } else if (nom >= 5000000 || (metrics.failedCount >= 2)) {
+                    impact = 3;
+                } else {
+                    impact = 2;
+                }
+
+                if (metrics.isCritical || metrics.hasCashAtmDiff || metrics.hasCriticalSecurity || metrics.hasWarkatCardDiff || impact === 5) {
+                    isCrit = true;
+                }
+            }
+
             impact = Math.max(1, Math.min(5, impact));
             likelihood = Math.max(1, Math.min(5, likelihood));
 
@@ -2916,22 +3297,55 @@ document.addEventListener('DOMContentLoaded', function () {
             let level = 'Low';
 
             if (isCrit) {
-                score = Math.max(score, 20);
+                if (score < 16) score = 16;
                 level = 'High';
             } else if (!hasException) {
                 level = 'Low';
             } else {
-                if (score >= 20) {
+                if (score >= 16) {
                     level = 'High';
-                } else if (score >= 15) {
+                } else if (score >= 12) {
                     level = 'Moderate to High';
-                } else if (score >= 10) {
+                } else if (score >= 8) {
                     level = 'Moderate';
-                } else if (score >= 5) {
+                } else if (score >= 4) {
                     level = 'Low to Moderate';
                 } else {
-                    level = 'Low to Moderate';
+                    level = 'Low';
                 }
+            }
+
+            if (impactInp) impactInp.value = impact;
+            if (impactBadge) impactBadge.innerText = impact;
+
+            if (likelihoodInp) likelihoodInp.value = likelihood;
+            if (likelihoodBadge) likelihoodBadge.innerText = likelihood;
+            if (recurrenceBadge) {
+                if (!hasException) {
+                    recurrenceBadge.innerText = 'Nihil Temuan';
+                    recurrenceBadge.className = 'badge bg-light text-muted border eval-recurrence-badge';
+                } else if (likelihood > 1) {
+                    recurrenceBadge.innerText = 'Temuan Berulang';
+                    recurrenceBadge.className = 'badge bg-warning-subtle text-dark border eval-recurrence-badge';
+                } else {
+                    recurrenceBadge.innerText = 'Temuan Baru';
+                    recurrenceBadge.className = 'badge bg-info-subtle text-dark border eval-recurrence-badge';
+                }
+            }
+            if (likelihoodNote) {
+                if (!hasException) {
+                    likelihoodNote.innerText = 'Nihil Temuan';
+                } else if (likelihood > 1) {
+                    likelihoodNote.innerText = 'Terdeteksi riwayat temuan di cabang';
+                } else {
+                    likelihoodNote.innerText = 'Temuan pertama kali';
+                }
+            }
+
+            if (criticalInp) criticalInp.value = isCrit ? '1' : '0';
+            if (criticalBadge) {
+                criticalBadge.innerText = isCrit ? 'Ya' : 'Tidak';
+                criticalBadge.className = 'badge px-3 py-2 fs-6 eval-critical-badge ' + (isCrit ? 'bg-danger text-white' : 'bg-success text-white');
             }
 
             if (scoreInp) scoreInp.value = score;
@@ -2963,19 +3377,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     penyebabInp.classList.remove('is-invalid');
                 }
             }
-        }
 
-        if (impactSel) {
-            impactSel.addEventListener('change', update);
-            impactSel.addEventListener('input', update);
-        }
-        if (likelihoodSel) {
-            likelihoodSel.addEventListener('change', update);
-            likelihoodSel.addEventListener('input', update);
-        }
-        if (criticalSel) {
-            criticalSel.addEventListener('change', update);
-            criticalSel.addEventListener('input', update);
+            fetchPreview();
         }
 
         if (form) {
@@ -2997,17 +3400,114 @@ document.addEventListener('DOMContentLoaded', function () {
         return { update };
     }
 
-    // A. Setup Evaluation untuk Tab 3 (Observasi)
+    // A. Setup Evaluation untuk Tab 1 (Kas Khasanah)
+    const evalKasHandler = setupUnifiedEvaluationCard({
+        cardId: 'evalCardKas',
+        tab: 'kas',
+        checkException: function() {
+            const inputOlibs = document.getElementById('inputSaldoOlibs');
+            const saldoOlibs = parseFloat(inputOlibs?.value) || 0;
+            let totalFisik = 0;
+            document.querySelectorAll('#cash .cash-lembar').forEach(inp => {
+                const tr = inp.closest('tr');
+                const nom = parseFloat(tr?.querySelector('.subtotal-display')?.value) || 0;
+                totalFisik += nom;
+            });
+            return Math.abs(totalFisik - saldoOlibs) >= 0.01;
+        },
+        calculateMetrics: function() {
+            const inputOlibs = document.getElementById('inputSaldoOlibs');
+            const saldoOlibs = parseFloat(inputOlibs?.value) || 0;
+            let totalFisik = 0;
+            document.querySelectorAll('#cash .cash-lembar').forEach(inp => {
+                const tr = inp.closest('tr');
+                const nom = parseFloat(tr?.querySelector('.subtotal-display')?.value) || 0;
+                totalFisik += nom;
+            });
+            const sel = Math.abs(totalFisik - saldoOlibs);
+            return {
+                nominal: sel,
+                failedCount: sel >= 0.01 ? 1 : 0,
+                hasCashAtmDiff: sel >= 0.01,
+                isCritical: sel >= 0.01
+            };
+        }
+    });
+    window.evalKasHandler = evalKasHandler;
+
+    // B. Setup Evaluation untuk Tab 2 (Mesin ATM)
+    const evalAtmHandler = setupUnifiedEvaluationCard({
+        cardId: 'evalCardAtm',
+        tab: 'atm',
+        checkException: function() {
+            let hasEx = false;
+            document.querySelectorAll('#cash-atm .atm-card').forEach(card => {
+                const saldoCbs = parseFloat(card.querySelector('.atm-saldo-cbs')?.value) || 0;
+                let totFisik = 0;
+                card.querySelectorAll('.kaset-total-nominal').forEach(c => {
+                    totFisik += (parseFloat(c.value) || 0);
+                });
+                if (Math.abs(totFisik - saldoCbs) >= 0.01) hasEx = true;
+            });
+            return hasEx;
+        },
+        calculateMetrics: function() {
+            let totalSel = 0;
+            let failed = 0;
+            document.querySelectorAll('#cash-atm .atm-card').forEach(card => {
+                const saldoCbs = parseFloat(card.querySelector('.atm-saldo-cbs')?.value) || 0;
+                let totFisik = 0;
+                card.querySelectorAll('.kaset-total-nominal').forEach(c => {
+                    totFisik += (parseFloat(c.value) || 0);
+                });
+                const diff = Math.abs(totFisik - saldoCbs);
+                if (diff >= 0.01) {
+                    totalSel += diff;
+                    failed++;
+                }
+            });
+            return {
+                nominal: totalSel,
+                failedCount: failed,
+                hasCashAtmDiff: totalSel >= 0.01,
+                isCritical: totalSel >= 0.01
+            };
+        }
+    });
+    window.evalAtmHandler = evalAtmHandler;
+
+    // C. Setup Evaluation untuk Tab 3 (Observasi)
     const evalObsHandler = setupUnifiedEvaluationCard({
         cardId: 'evalCardObs',
+        tab: 'observasi',
         checkException: function() {
             let hasEx = false;
             document.querySelectorAll('#obs select.hasil-obs').forEach(sel => {
                 if (sel.value === 'Tidak Sesuai' || sel.value === 'Tidak' || sel.value === 'Kurang Baik') hasEx = true;
             });
             return hasEx;
+        },
+        calculateMetrics: function() {
+            let failed = 0;
+            let hasCritSec = false;
+            document.querySelectorAll('#obs select.hasil-obs').forEach(sel => {
+                if (sel.value === 'Tidak Sesuai' || sel.value === 'Tidak' || sel.value === 'Kurang Baik') {
+                    failed++;
+                    const rowText = sel.closest('tr')?.innerText || '';
+                    if (/dual control|khasanah|brankas|kunci|cctv|alarm/i.test(rowText)) {
+                        hasCritSec = true;
+                    }
+                }
+            });
+            return {
+                nominal: 0,
+                failedCount: failed,
+                hasCriticalSecurity: hasCritSec,
+                isCritical: hasCritSec
+            };
         }
     });
+    window.evalObsHandler = evalObsHandler;
 
     document.querySelectorAll('#obs select.hasil-obs').forEach(sel => {
         sel.addEventListener('change', function() {
@@ -3015,7 +3515,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // B. Setup Evaluation & Kalkulasi Baris untuk Tab 4 (Stok Cek/BG)
+    // D. Setup Evaluation & Kalkulasi Baris untuk Tab 4 (Stok Cek/BG)
     function calcStokRow(row) {
         const isCtrl = row.dataset.isCtrl === '1';
         if (isCtrl) return;
@@ -3065,6 +3565,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const evalStokHandler = setupUnifiedEvaluationCard({
         cardId: 'evalCardStok',
+        tab: 'stok',
         checkException: function() {
             let hasEx = false;
             document.querySelectorAll('#stok .stok-calc-row').forEach(row => {
@@ -3083,6 +3584,34 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
             return hasEx;
+        },
+        calculateMetrics: function() {
+            let failed = 0;
+            let hasWarkat = false;
+            document.querySelectorAll('#stok .stok-calc-row').forEach(row => {
+                const isCtrl = row.dataset.isCtrl === '1';
+                if (isCtrl) {
+                    const checkedRadio = row.querySelector('.stok-ctrl-radio:checked');
+                    if (checkedRadio && checkedRadio.value === 'Tidak') failed++;
+                } else {
+                    const sysInp = row.querySelector('.saldo-sistem');
+                    const fisInp = row.querySelector('.stok-fisik-input');
+                    if (fisInp && fisInp.value !== '') {
+                        const sys = parseFloat(sysInp?.value) || 0;
+                        const fis = parseFloat(fisInp.value) || 0;
+                        if (Math.abs(sys - fis) >= 0.01) {
+                            failed++;
+                            hasWarkat = true;
+                        }
+                    }
+                }
+            });
+            return {
+                nominal: 0,
+                failedCount: failed,
+                hasWarkatCardDiff: hasWarkat,
+                isCritical: hasWarkat
+            };
         }
     });
 
@@ -3111,9 +3640,66 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // C. Setup Evaluation untuk Tab 6 (Barang Cetakan)
+    // E. Setup Evaluation untuk Tab 5 (Kartu ATM)
+    const evalKartuHandler = setupUnifiedEvaluationCard({
+        cardId: 'evalCardKartu',
+        tab: 'kartu',
+        checkException: function() {
+            let hasEx = false;
+            document.querySelectorAll('#atm .atm-stock-row').forEach(row => {
+                const hargaModal = parseFloat(row.querySelector('.atm-harga-modal')?.value) || 0;
+                const kosong = parseInt(row.querySelector('.atm-kosong')?.value) || 0;
+                const nomFisik = hargaModal * kosong;
+                const bukuNom = parseFloat(row.querySelector('.atm-buku-nom')?.value) || 0;
+                const selPers = nomFisik - bukuNom;
+                const pinQty = parseInt(row.querySelector('.atm-pin-mailer')?.value) || 0;
+                const selPin = kosong - pinQty;
+                if (Math.abs(selPers) >= 0.01 || selPin !== 0) hasEx = true;
+            });
+            document.querySelectorAll('#atm .atm-ctrl-radio:checked').forEach(r => {
+                if (r.value === 'Tidak') hasEx = true;
+            });
+            return hasEx;
+        },
+        calculateMetrics: function() {
+            let totalNom = 0;
+            let failed = 0;
+            let hasDual = false;
+            document.querySelectorAll('#atm .atm-stock-row').forEach(row => {
+                const hargaModal = parseFloat(row.querySelector('.atm-harga-modal')?.value) || 0;
+                const kosong = parseInt(row.querySelector('.atm-kosong')?.value) || 0;
+                const nomFisik = hargaModal * kosong;
+                const bukuNom = parseFloat(row.querySelector('.atm-buku-nom')?.value) || 0;
+                const selPers = Math.abs(nomFisik - bukuNom);
+                const pinQty = parseInt(row.querySelector('.atm-pin-mailer')?.value) || 0;
+                const selPin = Math.abs(kosong - pinQty);
+                if (selPers >= 0.01 || selPin !== 0) {
+                    totalNom += selPers;
+                    failed++;
+                }
+            });
+            document.querySelectorAll('#atm .atm-ctrl-radio:checked').forEach(r => {
+                if (r.value === 'Tidak') {
+                    failed++;
+                    const text = r.closest('tr')?.innerText || '';
+                    if (/dual control|kunci/i.test(text)) hasDual = true;
+                }
+            });
+            return {
+                nominal: totalNom,
+                failedCount: failed,
+                hasWarkatCardDiff: totalNom >= 0.01 || failed > 0,
+                hasCriticalSecurity: hasDual,
+                isCritical: totalNom >= 0.01 || hasDual
+            };
+        }
+    });
+    window.evalKartuHandler = evalKartuHandler;
+
+    // F. Setup Evaluation untuk Tab 6 (Barang Cetakan)
     const evalCetakanHandler = setupUnifiedEvaluationCard({
         cardId: 'evalCardCetakan',
+        tab: 'cetakan',
         checkException: function() {
             let hasEx = false;
             document.querySelectorAll('#tbodyBarangCetakan .bct-calc-row').forEach(row => {
@@ -3129,6 +3715,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (r.value === 'Tidak') hasEx = true;
             });
             return hasEx;
+        },
+        calculateMetrics: function() {
+            let failed = 0;
+            let hasWarkat = false;
+            document.querySelectorAll('#tbodyBarangCetakan .bct-calc-row').forEach(row => {
+                const stokInp = row.querySelector('.bct-stok-buku');
+                const fisikInp = row.querySelector('.bct-hasil-fisik');
+                if (fisikInp && fisikInp.value !== '') {
+                    const stok = parseFloat(stokInp?.value) || 0;
+                    const fisik = parseFloat(fisikInp.value) || 0;
+                    if (Math.abs(fisik - stok) >= 0.01) {
+                        failed++;
+                        const name = row.querySelector('.bct-kriteria-input')?.value || '';
+                        if (/cek|bilyet|giro|warkat/i.test(name)) hasWarkat = true;
+                    }
+                }
+            });
+            document.querySelectorAll('#cetakan .bct-ctrl-radio:checked').forEach(r => {
+                if (r.value === 'Tidak') failed++;
+            });
+            return {
+                nominal: 0,
+                failedCount: failed,
+                hasWarkatCardDiff: hasWarkat,
+                isCritical: hasWarkat
+            };
         }
     });
     window.evalCetakanHandler = evalCetakanHandler;
