@@ -256,6 +256,7 @@ class CbsOnsiteParser
         // Bangun populasi_key dan simpan ke DB
         $populasiInsert = [];
         foreach ($rows as $r) {
+            $tglStr = $this->cleanDateStr($r['tgl_tx']);
             $populasiInsert[] = [
                 'onsite_visit_id' => $visit->id,
                 'kode_unit'       => $visit->kode_unit,
@@ -267,10 +268,10 @@ class CbsOnsiteParser
                 'db_kr'           => $r['db_kr'],
                 'txtype'          => $r['txtype'],
                 'kd_user'         => $r['kd_user'],
-                'tgl_tx'          => $r['tgl_tx'],
+                'tgl_tx'          => $tglStr,
                 'time_stamp'      => $r['time_stamp'],
                 'jumlah_tx'       => $r['jumlah_tx'],
-                'populasi_key'    => $r['tgl_tx'] . '|' . $r['no_arsip'],
+                'populasi_key'    => $tglStr . '|' . $r['no_arsip'],
                 'stable_score'    => $stableScores[$r['kd_user']][$r['tgl_tx']] ?? 0,
                 'created_at'      => now(),
                 'updated_at'      => now(),
@@ -323,54 +324,75 @@ class CbsOnsiteParser
     }
 
     /**
+     * Format tanggal Y-m-d bersih dari model/string
+     */
+    private function cleanDateStr(mixed $date): string
+    {
+        if ($date instanceof \Carbon\CarbonInterface) {
+            return $date->format('Y-m-d');
+        }
+        $str = substr(trim((string)$date), 0, 10);
+        return $str !== '' ? $str : date('Y-m-d');
+    }
+
+    /**
+     * Generate Sample ID unik dan aman dari tabrakan duplikat global
+     */
+    private function generateSampleId(string $prefix, OnsiteVisit $visit, int|string $popId, mixed $date): string
+    {
+        $tglStr = $this->cleanDateStr($date);
+        $cleanTgl = preg_replace('/[^0-9]/', '', $tglStr) ?: date('Ymd');
+        $uniq = strtoupper(substr(bin2hex(random_bytes(3)), 0, 5));
+        return "{$prefix}-{$cleanTgl}-V{$visit->id}-P{$popId}-{$uniq}";
+    }
+
+    /**
      * Jalankan jenis sampling, ambil baris D (debit) saja sebagai representasi kasus
      */
     private function runSampling(OnsiteVisit $visit, float $threshold): int
     {
         $populations = OnsitePopulation::where('onsite_visit_id', $visit->id)
             ->where('db_kr', 'D')
-            ->get()
-            ->keyBy('populasi_key');
+            ->get();
 
         // Fallback jika tidak ada record dengan flag debit 'D', ambil seluruh populasi
         if ($populations->isEmpty()) {
             $populations = OnsitePopulation::where('onsite_visit_id', $visit->id)
-                ->get()
-                ->keyBy('populasi_key');
+                ->get();
         }
 
         $dipilih = [];
         $kkaInsert = [];
 
         // 1. MANDATORY
-        foreach ($populations as $key => $pop) {
-            if (isset($dipilih[$key])) continue;
+        foreach ($populations as $pop) {
+            if (isset($dipilih[$pop->id])) continue;
 
             $alasan = $this->cekMandatory($pop);
             if ($alasan) {
-                $dipilih[$key] = true;
+                $dipilih[$pop->id] = true;
                 $kkaInsert[] = $this->buildKka($visit, $pop, 'Mandatory', self::PRIO_MANDATORY, $alasan);
             }
         }
 
         // 2. CERTAINTY
-        foreach ($populations as $key => $pop) {
-            if (isset($dipilih[$key])) continue;
+        foreach ($populations as $pop) {
+            if (isset($dipilih[$pop->id])) continue;
 
             if ($pop->jumlah_tx >= $threshold) {
-                $dipilih[$key] = true;
+                $dipilih[$pop->id] = true;
                 $kkaInsert[] = $this->buildKka($visit, $pop, 'Certainty', self::PRIO_CERTAINTY,
                     'Nominal >= Rp ' . number_format($threshold, 0, ',', '.'));
             }
         }
 
         // 3. TARGETED
-        foreach ($populations as $key => $pop) {
-            if (isset($dipilih[$key])) continue;
+        foreach ($populations as $pop) {
+            if (isset($dipilih[$pop->id])) continue;
 
             $alasan = $this->cekTargeted($pop);
             if ($alasan) {
-                $dipilih[$key] = true;
+                $dipilih[$pop->id] = true;
                 $kkaInsert[] = $this->buildKka($visit, $pop, 'Targeted', self::PRIO_TARGETED, $alasan);
             }
         }
@@ -380,13 +402,12 @@ class CbsOnsiteParser
         $sisaKuota    = max(0, $kuotaInitial - count($dipilih));
 
         if ($sisaKuota > 0) {
-            $belumDipilih = $populations->filter(fn($p) => !isset($dipilih[$p->populasi_key]));
+            $belumDipilih = $populations->filter(fn($p) => !isset($dipilih[$p->id]));
             $sample = $belumDipilih->random(min($sisaKuota, $belumDipilih->count()));
 
             foreach ($sample as $pop) {
-                $key = $pop->populasi_key;
-                if (isset($dipilih[$key])) continue;
-                $dipilih[$key] = true;
+                if (isset($dipilih[$pop->id])) continue;
+                $dipilih[$pop->id] = true;
                 $kkaInsert[] = $this->buildKka($visit, $pop, 'Initial', self::PRIO_INITIAL, 'Kuota Minimum SOP 02');
             }
         }
@@ -451,10 +472,12 @@ class CbsOnsiteParser
 
     private function cekTargeted(OnsitePopulation $pop): ?string
     {
-        $jam = $pop->time_stamp ?? '';
+        $jam = trim((string)($pop->time_stamp ?? ''));
 
-        if ($jam && ($jam < self::JAM_MULAI_NORMAL || $jam > self::JAM_SELESAI_NORMAL)) {
-            return 'Transaksi Di Luar Jam Kerja (' . $jam . ')';
+        if ($jam !== '' && preg_match('/^\d{1,2}:\d{2}/', $jam)) {
+            if ($jam < self::JAM_MULAI_NORMAL || $jam > self::JAM_SELESAI_NORMAL) {
+                return 'Transaksi Di Luar Jam Kerja (' . $jam . ')';
+            }
         }
 
         return null;
@@ -476,13 +499,14 @@ class CbsOnsiteParser
 
     private function buildKka(OnsiteVisit $visit, OnsitePopulation $pop, string $jenis, int $prioritas, string $alasan): array
     {
-        $tgl = str_replace('-', '', $pop->tgl_tx);
+        $tglStr = $this->cleanDateStr($pop->tgl_tx);
+
         return [
             'onsite_visit_id'       => $visit->id,
             'onsite_population_id'  => $pop->id,
             'kode_unit'             => $visit->kode_unit,
-            'sample_id'             => "SMP-ONS-TLR-{$tgl}-{$pop->populasi_key}",
-            'tgl_tx'                => $pop->tgl_tx,
+            'sample_id'             => $this->generateSampleId('SMP-ONS-TLR', $visit, $pop->id, $pop->tgl_tx),
+            'tgl_tx'                => $tglStr,
             'no_arsip'              => $pop->no_arsip,
             'ket_tx'                => $pop->ket_tx,
             'jumlah_tx'             => $pop->jumlah_tx,
@@ -544,13 +568,13 @@ class CbsOnsiteParser
 
             $kreditInsert = [];
             foreach ($kreditPops->take(10) as $pop) {
-                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $tglStr = $this->cleanDateStr($pop->tgl_tx);
                 $isCertainty = $pop->jumlah_tx >= 100000000;
                 $kreditInsert[] = [
                     'onsite_visit_id'       => $visit->id,
                     'onsite_population_id'  => $pop->id,
-                    'sample_id'             => "SMP-ONS-KRD-{$tgl}-{$pop->id}-" . rand(100, 999),
-                    'tgl_akad'              => $pop->tgl_tx,
+                    'sample_id'             => $this->generateSampleId('SMP-ONS-KRD', $visit, $pop->id, $pop->tgl_tx),
+                    'tgl_akad'              => $tglStr,
                     'no_rekening'           => $pop->no_rek ?: ('10503' . rand(1000000, 9999999)),
                     'nama_debitur'          => 'Debitur: ' . ($pop->ket_tx ?: 'Kredit ' . $pop->no_arsip),
                     'plafon'                => $pop->jumlah_tx,
@@ -580,13 +604,13 @@ class CbsOnsiteParser
 
             $dpkInsert = [];
             foreach ($dpkPops->take(10) as $pop) {
-                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $tglStr = $this->cleanDateStr($pop->tgl_tx);
                 $isCertainty = $pop->jumlah_tx >= 100000000;
                 $dpkInsert[] = [
                     'onsite_visit_id'       => $visit->id,
                     'onsite_population_id'  => $pop->id,
-                    'sample_id'             => "SMP-ONS-DPK-{$tgl}-{$pop->id}-" . rand(100, 999),
-                    'tgl_tx'                => $pop->tgl_tx,
+                    'sample_id'             => $this->generateSampleId('SMP-ONS-DPK', $visit, $pop->id, $pop->tgl_tx),
+                    'tgl_tx'                => $tglStr,
                     'no_rekening'           => $pop->no_rek ?: ('10502' . rand(1000000, 9999999)),
                     'nama_nasabah'          => 'Nasabah: ' . ($pop->ket_tx ?: 'Rekening ' . $pop->no_arsip),
                     'nominal'               => $pop->jumlah_tx,
@@ -617,12 +641,12 @@ class CbsOnsiteParser
 
             $biayaInsert = [];
             foreach ($biayaPops->take(10) as $pop) {
-                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $tglStr = $this->cleanDateStr($pop->tgl_tx);
                 $biayaInsert[] = [
                     'onsite_visit_id'       => $visit->id,
                     'onsite_population_id'  => $pop->id,
-                    'sample_id'             => "SMP-ONS-BYA-{$tgl}-{$pop->id}-" . rand(100, 999),
-                    'tgl_tx'                => $pop->tgl_tx,
+                    'sample_id'             => $this->generateSampleId('SMP-ONS-BYA', $visit, $pop->id, $pop->tgl_tx),
+                    'tgl_tx'                => $tglStr,
                     'no_voucher'            => $pop->no_arsip ?: ('VCR-' . rand(1000, 9999)),
                     'keterangan_biaya'      => $pop->ket_tx ?: 'Biaya Operasional Kantor',
                     'nominal'               => $pop->jumlah_tx,
@@ -653,12 +677,12 @@ class CbsOnsiteParser
 
             $atmInsert = [];
             foreach ($atmPops->take(10) as $pop) {
-                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $tglStr = $this->cleanDateStr($pop->tgl_tx);
                 $atmInsert[] = [
                     'onsite_visit_id'       => $visit->id,
                     'onsite_population_id'  => $pop->id,
-                    'sample_id'             => "SMP-ONS-ATM-{$tgl}-{$pop->id}-" . rand(100, 999),
-                    'tgl_transaksi'         => $pop->tgl_tx,
+                    'sample_id'             => $this->generateSampleId('SMP-ONS-ATM', $visit, $pop->id, $pop->tgl_tx),
+                    'tgl_transaksi'         => $tglStr,
                     'no_rekening'           => $pop->no_rek ?: ('10502' . rand(1000000, 9999999)),
                     'nomor_kartu'           => '5371-88' . rand(10, 99) . '-XXXX-' . substr($pop->no_rek ?: '1234', -4),
                     'nama_nasabah'          => 'Nasabah Pemegang Kartu (' . $pop->no_arsip . ')',
@@ -689,12 +713,12 @@ class CbsOnsiteParser
 
             $pengaduanInsert = [];
             foreach ($pengaduanPops->take(10) as $pop) {
-                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $tglStr = $this->cleanDateStr($pop->tgl_tx);
                 $pengaduanInsert[] = [
                     'onsite_visit_id'       => $visit->id,
                     'onsite_population_id'  => $pop->id,
-                    'sample_id'             => "SMP-ONS-PGD-{$tgl}-{$pop->id}-" . rand(100, 999),
-                    'tgl_pengaduan'         => $pop->tgl_tx,
+                    'sample_id'             => $this->generateSampleId('SMP-ONS-PGD', $visit, $pop->id, $pop->tgl_tx),
+                    'tgl_pengaduan'         => $tglStr,
                     'no_tiket'              => 'TKT-' . substr(md5($pop->no_arsip . $pop->id), 0, 8),
                     'nama_nasabah'          => 'Pelapor Pengaduan (' . $pop->no_arsip . ')',
                     'kategori_pengaduan'    => $pop->ket_tx ?: 'Keluhan Transaksi Layanan',

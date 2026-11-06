@@ -19,12 +19,20 @@ class TellerKasController extends Controller
             $findingsKka = \App\Models\Onsite\OnsiteKkaFinding::where('onsite_visit_id', $visit->id)->get();
             if ($findingsKka->isNotEmpty()) {
                 $syncData = [];
+                $seenSamples = [];
                 foreach ($findingsKka as $f) {
+                    $sampleId = $f->sample_id;
+                    $cleanTgl = preg_replace('/[^0-9]/', '', substr((string)$f->tgl_tx, 0, 10)) ?: date('Ymd');
+                    if (!$sampleId || isset($seenSamples[$sampleId]) || OnsiteKkaTellerKas::where('sample_id', $sampleId)->exists()) {
+                        $sampleId = "SMP-ONS-TLR-{$cleanTgl}-V{$visit->id}-F{$f->id}-" . strtoupper(substr(bin2hex(random_bytes(3)), 0, 5));
+                    }
+                    $seenSamples[$sampleId] = true;
+
                     $syncData[] = [
                         'onsite_visit_id'       => $visit->id,
                         'onsite_population_id'  => $f->onsite_population_id,
-                        'sample_id'             => $f->sample_id,
-                        'tgl_tx'                => $f->tgl_tx,
+                        'sample_id'             => $sampleId,
+                        'tgl_tx'                => substr((string)$f->tgl_tx, 0, 10),
                         'no_arsip'              => $f->no_arsip,
                         'ket_tx'                => $f->ket_tx,
                         'jumlah_tx'             => $f->jumlah_tx,
