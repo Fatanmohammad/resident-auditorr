@@ -10,8 +10,12 @@ use App\Models\Sop09ChainOfCustody;
 use App\Models\Sop09KkaPemeriksaanAwal;
 use App\Models\Sop09KeputusanEskalasi;
 use App\Models\Unit;
-use Illuminate\Support\Facades\Storage;
+use App\Models\Sop09FraudTriageChecklist;
+use App\Models\Sop09TemuanIndikasiCabang;
+use App\Models\Cabang;
 use Database\Seeders\Sop09IndikasiSeeder;
+use Database\Seeders\Sop09FraudTriageAndIndikasiSeeder;
+use Illuminate\Support\Facades\Storage;
 
 class PemeriksaanAwalController extends Controller
 {
@@ -23,6 +27,11 @@ class PemeriksaanAwalController extends Controller
         if (Sop09RegisterIndikasi::count() === 0) {
             $seeder = new Sop09IndikasiSeeder();
             $seeder->run();
+        }
+
+        if (Sop09TemuanIndikasiCabang::count() === 0 || Sop09FraudTriageChecklist::count() === 0) {
+            $seederTriage = new Sop09FraudTriageAndIndikasiSeeder();
+            $seederTriage->run();
         }
     }
 
@@ -432,6 +441,331 @@ class PemeriksaanAwalController extends Controller
     public function eskalasi(Request $request)
     {
         return $this->statusPenanganan($request);
+    }
+
+    /**
+     * =========================================================================
+     * INSTRUMEN 1: FRAUD TRIAGE CHECKLIST – RESIDENT AUDITOR (POJK 12/2024)
+     * =========================================================================
+     */
+    public function triageChecklist(Request $request)
+    {
+        $this->ensureStarterDataIfEmpty();
+
+        $activeId = $request->get('id');
+        if ($activeId) {
+            $checklist = Sop09FraudTriageChecklist::find($activeId);
+        } else {
+            $checklist = Sop09FraudTriageChecklist::latest()->first();
+        }
+
+        $historyList = Sop09FraudTriageChecklist::orderBy('id', 'desc')->get();
+        $masterQuestions = Sop09FraudTriageAndIndikasiSeeder::getMasterChecklistQuestions();
+        $units = Unit::orderBy('unit_name')->get();
+
+        return view('pemeriksaan_awal.triage_checklist', compact('checklist', 'historyList', 'masterQuestions', 'units'));
+    }
+
+    public function saveTriageChecklist(Request $request)
+    {
+        $request->validate([
+            'nama_cabang' => 'required',
+            'tanggal_pemeriksaan' => 'required|date',
+            'nama_ra' => 'required',
+        ]);
+
+        $masterQuestions = Sop09FraudTriageAndIndikasiSeeder::getMasterChecklistQuestions();
+        $answers = [];
+        $yaCount = 0;
+        $tidakCount = 0;
+        $belumCount = 0;
+        $hasCritical = false;
+
+        foreach ($masterQuestions as $q) {
+            $no = $q['no'];
+            $ans = $request->input("chk_answer_{$no}", '');
+            $catatan = $request->input("chk_catatan_{$no}", '');
+
+            if ($ans === 'Ya') {
+                $yaCount++;
+                if (!empty($q['is_critical'])) {
+                    $hasCritical = true;
+                }
+            } elseif ($ans === 'Tidak') {
+                $tidakCount++;
+            } else {
+                $belumCount++;
+            }
+
+            $answers[] = [
+                'no' => $no,
+                'section' => $q['section'],
+                'question' => $q['question'],
+                'is_critical' => $q['is_critical'],
+                'jawaban' => $ans,
+                'catatan' => $catatan,
+                'regulasi' => $q['regulasi'],
+            ];
+        }
+
+        $keputusan = $request->input('keputusan_triage_override');
+        if (!$keputusan) {
+            if ($hasCritical) {
+                $keputusan = 'ESKALASI SEGERA';
+            } elseif ($belumCount > 0) {
+                $keputusan = 'KLARIFIKASI TAMBAHAN';
+            } elseif ($yaCount > 0) {
+                $keputusan = 'LANJUT KE PENYELIDIKAN';
+            } else {
+                $keputusan = 'TIDAK DILANJUTKAN';
+            }
+        }
+
+        $triageId = $request->input('triage_id');
+        if ($triageId) {
+            $record = Sop09FraudTriageChecklist::find($triageId);
+        } else {
+            $record = new Sop09FraudTriageChecklist();
+            $record->nomor_triage = 'TRG-' . date('Ymd') . '-' . rand(1000, 9999);
+        }
+
+        $record->kode_unit = $request->input('kode_unit', '001');
+        $record->nama_cabang = $request->input('nama_cabang');
+        $record->tanggal_pemeriksaan = $request->input('tanggal_pemeriksaan');
+        $record->nama_ra = $request->input('nama_ra');
+        $record->checklist_answers = $answers;
+        $record->total_item = 28;
+        $record->dijawab_ya = $yaCount;
+        $record->dijawab_tidak = $tidakCount;
+        $record->belum_dijawab = $belumCount;
+        $record->ada_critical_trigger = $hasCritical;
+        $record->keputusan_triage = $keputusan;
+        $record->catatan_kesimpulan = $request->input('catatan_kesimpulan', '');
+        $record->status = 'Final';
+        $record->created_by = auth()->id();
+        $record->save();
+
+        if ($request->input('action') === 'eskalasi_pelaporan') {
+            return redirect()->route('pemeriksaan_awal.pelaporan_awal', [
+                'nama_unit' => $record->nama_cabang,
+                'kode_unit' => $record->kode_unit,
+                'source' => 'FRAUD_TRIAGE_' . $record->nomor_triage,
+                'dugaan' => "Indikasi Temuan Hasil Triage POJK 12/2024 ({$record->keputusan_triage}) pada {$record->nama_cabang}",
+                'fakta' => $record->catatan_kesimpulan ?: "Ditemukan {$record->dijawab_ya} item indikasi bernilai 'Ya' dari 28 item instrumen triage.",
+            ])->with('success', "Kertas kerja triage [{$record->nomor_triage}] berhasil disimpan dan dielevasikan ke Pelaporan Awal Indikasi Fraud.");
+        }
+
+        return redirect()->route('pemeriksaan_awal.triage_checklist', ['id' => $record->id])
+            ->with('success', "Kertas Kerja Fraud Triage [{$record->nomor_triage}] berhasil disimpan. Hasil: {$record->keputusan_triage}.");
+    }
+
+    public function printTriageChecklist($id)
+    {
+        $checklist = Sop09FraudTriageChecklist::findOrFail($id);
+        $masterQuestions = Sop09FraudTriageAndIndikasiSeeder::getMasterChecklistQuestions();
+        return view('pemeriksaan_awal.print_triage_checklist', compact('checklist', 'masterQuestions'));
+    }
+
+    /**
+     * =========================================================================
+     * INSTRUMEN 2: MATRIKS TEMUAN INDIKASI MENCURIGAKAN CABANG (18 INDIKATOR)
+     * =========================================================================
+     */
+    public function indikasiMencurigakan(Request $request)
+    {
+        $this->ensureStarterDataIfEmpty();
+
+        $indikasis = Sop09TemuanIndikasiCabang::orderBy('id', 'asc')->get();
+        $units = Unit::orderBy('unit_name')->get();
+        $indicatorRefs = self::getIndikatorReferences();
+
+        return view('pemeriksaan_awal.indikasi_mencurigakan', compact('indikasis', 'units', 'indicatorRefs'));
+    }
+
+    public function storeIndikasiMencurigakan(Request $request)
+    {
+        $request->validate([
+            'nama_cabang' => 'required',
+        ]);
+
+        $id = $request->input('item_id');
+        $data = [
+            'nama_cabang' => $request->nama_cabang,
+            'kode_cabang' => $request->kode_cabang ?? 'KCP',
+            'periode_bulan' => $request->periode_bulan ?? date('F Y'),
+            'reversal_teller' => (int) $request->reversal_teller,
+            'selisih_kas_teller' => (int) $request->selisih_kas_teller,
+            'selisih_kas_khasanah' => (int) $request->selisih_kas_khasanah,
+            'kas_kecil_melebihi_limit' => (int) $request->kas_kecil_melebihi_limit,
+            'kas_kecil_belum_selesai' => (int) $request->kas_kecil_belum_selesai,
+            'dual_control_kunci_dilanggar' => (int) $request->dual_control_kunci_dilanggar,
+            'trx_rekening_pasif' => (int) $request->trx_rekening_pasif,
+            'trx_rekening_titipan' => (int) $request->trx_rekening_titipan,
+            'trx_tidak_wajar_pegawai' => (int) $request->trx_tidak_wajar_pegawai,
+            'trx_luar_jam_operasional' => (int) $request->trx_luar_jam_operasional,
+            'setoran_non_tunai_pegawai' => (int) $request->setoran_non_tunai_pegawai,
+            'sharing_user_id' => (int) $request->sharing_user_id,
+            'skimming_atm' => (int) $request->skimming_atm,
+            'selisih_kas_crm_atm' => (int) $request->selisih_kas_crm_atm,
+            'restrukturisasi_berulang' => (int) $request->restrukturisasi_berulang,
+            'pencairan_tanpa_dokumen' => (int) $request->pencairan_tanpa_dokumen,
+            'cuti_wajib_belum_diambil' => (int) $request->cuti_wajib_belum_diambil,
+            'lonjakan_pengaduan_sla' => (int) $request->lonjakan_pengaduan_sla,
+            'catatan_umum' => $request->catatan_umum,
+        ];
+
+        if ($id) {
+            $item = Sop09TemuanIndikasiCabang::findOrFail($id);
+            $item->update($data);
+            $msg = "Data temuan indikasi cabang [{$item->nama_cabang}] berhasil diperbarui.";
+        } else {
+            $item = Sop09TemuanIndikasiCabang::create($data);
+            $msg = "Data temuan indikasi cabang [{$item->nama_cabang}] berhasil ditambahkan.";
+        }
+
+        return redirect()->route('pemeriksaan_awal.indikasi_mencurigakan')->with('success', $msg);
+    }
+
+    public function destroyIndikasiMencurigakan($id)
+    {
+        $item = Sop09TemuanIndikasiCabang::findOrFail($id);
+        $nama = $item->nama_cabang;
+        $item->delete();
+
+        return redirect()->route('pemeriksaan_awal.indikasi_mencurigakan')
+            ->with('success', "Baris temuan indikasi cabang [{$nama}] berhasil dihapus.");
+    }
+
+    public static function getIndikatorReferences(): array
+    {
+        return [
+            [
+                'kolom' => 'Reversal/Pembatalan Transaksi Teller',
+                'grup' => 'Kas & Teller',
+                'penjelasan' => 'Jumlah transaksi yang di-reversal/dibatalkan teller dalam sebulan',
+                'satuan_hitung' => 'Hitung: total reversal seluruh teller cabang per bulan. Wajar jika kecil & tersebar merata; curigai jika terkonsentrasi pada 1 teller/1 nasabah atau naik tajam dari bulan sebelumnya',
+                'rujukan' => 'BPP Strategi Anti Fraud SK 60/2022'
+            ],
+            [
+                'kolom' => 'Selisih Kas Teller Akhir Hari',
+                'grup' => 'Kas & Teller',
+                'penjelasan' => 'Jumlah hari dalam sebulan ditemukan selisih kas teller (lebih atau kurang) saat cash count akhir hari',
+                'satuan_hitung' => 'Hitung: jumlah kejadian selisih per bulan. SOP mewajibkan pencocokan bloter teller vs OLIBS tiap akhir hari — idealnya 0 kejadian; "Tidak menyetor selisih kas lebih" adalah modus fraud eksplisit',
+                'rujukan' => 'SOP Teller-CS-Khasanah; BPP Anti Fraud'
+            ],
+            [
+                'kolom' => 'Selisih Kas Khasanah vs Saldo OLIBS',
+                'grup' => 'Kas & Teller',
+                'penjelasan' => 'Jumlah hari dalam sebulan fisik uang di khasanah/brandkast tidak cocok dengan saldo Kas Besar OLIBS',
+                'satuan_hitung' => 'Hitung: jumlah kejadian selisih per bulan. Pencocokan wajib dilakukan tiap akhir hari — idealnya 0 kejadian',
+                'rujukan' => 'SOP Teller-CS-Khasanah Bagian D'
+            ],
+            [
+                'kolom' => 'Kas Kecil Melebihi Limit',
+                'grup' => 'Kas & Teller',
+                'penjelasan' => 'Jumlah hari dalam sebulan saldo kas kecil tercatat melebihi limit',
+                'satuan_hitung' => 'Hitung: jumlah hari melebihi limit per bulan. Limit Kantor Pusat Rp 10.000.000 / Kantor Cabang Rp 5.000.000',
+                'rujukan' => 'SOP Kas Kecil (SK .../BPD-ST/2014)'
+            ],
+            [
+                'kolom' => 'Kas Kecil Belum Diselesaikan >5 Hari Kerja',
+                'grup' => 'Kas & Teller',
+                'penjelasan' => 'Jumlah kali dalam sebulan penyelesaian/pertanggungjawaban kas kecil melewati tenggat',
+                'satuan_hitung' => 'Hitung: jumlah keterlambatan per bulan. Wajib selesai 1 minggu (5 hari kerja), tiap Jumat — idealnya 0',
+                'rujukan' => 'SOP Kas Kecil poin 4.3'
+            ],
+            [
+                'kolom' => 'Dual Control Kunci Khasanah/Brankas Dilanggar',
+                'grup' => 'Kas & Teller',
+                'penjelasan' => 'Jumlah kejadian dalam sebulan dual control kunci/kombinasi khasanah dilanggar (1 orang kuasai keduanya)',
+                'satuan_hitung' => 'Hitung: jumlah pelanggaran dual control per bulan dari Register Aktivitas Khasanah. Wajib 2 petugas berbeda — idealnya 0',
+                'rujukan' => 'SOP Teller-CS-Khasanah Bagian B'
+            ],
+            [
+                'kolom' => 'Transaksi pada Rekening Pasif',
+                'grup' => 'Rekening & Sistem',
+                'penjelasan' => 'Jumlah transaksi/mutasi yang terjadi pada rekening berstatus pasif/dormant dalam sebulan',
+                'satuan_hitung' => 'Hitung: jumlah transaksi per bulan dari laporan core banking. Rekening pasif seharusnya tidak bermutasi — tiap kejadian perlu justifikasi tertulis',
+                'rujukan' => 'BPP Anti Fraud Bab Monitoring Rekening Pasif'
+            ],
+            [
+                'kolom' => 'Transaksi pada Rekening Titipan Mengendap Lama',
+                'grup' => 'Rekening & Sistem',
+                'penjelasan' => 'Jumlah rekening titipan dalam sebulan yang dananya mengendap melewati batas waktu wajar sebelum disalurkan',
+                'satuan_hitung' => 'Hitung: jumlah rekening/kejadian mengendap per bulan dari daftar rekening titipan',
+                'rujukan' => 'BPP Anti Fraud Bab Monitoring Rekening Titipan'
+            ],
+            [
+                'kolom' => 'Transaksi Tidak Wajar pada Rekening Pegawai Sendiri',
+                'grup' => 'Rekening & Sistem',
+                'penjelasan' => 'Jumlah transaksi tidak wajar (nominal besar/frekuensi tinggi/sumber tidak jelas) pada rekening pegawai cabang dalam sebulan',
+                'satuan_hitung' => 'Hitung: jumlah transaksi mencurigakan per bulan. Data ini seharusnya rutin dikumpulkan Divisi Operasional',
+                'rujukan' => 'BPP Anti Fraud - tugas Divisi Operasional'
+            ],
+            [
+                'kolom' => 'Transaksi di Luar Jam Operasional',
+                'grup' => 'Rekening & Sistem',
+                'penjelasan' => 'Jumlah transaksi dengan timestamp di luar jam layanan cabang dalam sebulan',
+                'satuan_hitung' => 'Hitung: jumlah transaksi per bulan dari log sistem. Idealnya 0 kecuali ada alasan sistem/koreksi resmi yang terdokumentasi',
+                'rujukan' => 'BPP Anti Fraud - tugas Divisi Operasional'
+            ],
+            [
+                'kolom' => 'Setoran Non-Tunai ke Rekening Pribadi/Keluarga Pegawai',
+                'grup' => 'Rekening & Sistem',
+                'penjelasan' => 'Jumlah setoran non-tunai masuk ke rekening pegawai/keluarga tanpa nota pembukuan dalam sebulan',
+                'satuan_hitung' => 'Hitung: jumlah kejadian per bulan. Modus fraud eksplisit — idealnya 0',
+                'rujukan' => 'BPP Anti Fraud - Gejala Fraud Pegawai poin (q)'
+            ],
+            [
+                'kolom' => 'Sharing User ID/Password Antar Pegawai',
+                'grup' => 'Rekening & Sistem',
+                'penjelasan' => 'Jumlah kejadian/temuan praktik pinjam-meminjam password antar CS/Teller dalam sebulan',
+                'satuan_hitung' => 'Hitung: jumlah temuan dari observasi/wawancara per bulan. Dilarang mutlak — idealnya 0',
+                'rujukan' => 'SOP Teller-CS-Khasanah poin 4.4'
+            ],
+            [
+                'kolom' => 'Indikasi Skimming/Perangkat Asing pada ATM',
+                'grup' => 'ATM & APMK',
+                'penjelasan' => 'Jumlah temuan perangkat mencurigakan pada mesin ATM cabang dalam sebulan',
+                'satuan_hitung' => 'Hitung: jumlah temuan dari inspeksi fisik rutin per bulan. Idealnya 0',
+                'rujukan' => 'BPP Anti Fraud Bab Monitoring APMK'
+            ],
+            [
+                'kolom' => 'Selisih Kas Opname CRM/ATM',
+                'grup' => 'ATM & APMK',
+                'penjelasan' => 'Jumlah kejadian selisih kas saat pengisian ulang (replenishment) CRM/ATM dalam sebulan',
+                'satuan_hitung' => 'Hitung: jumlah kejadian selisih per bulan dari berita acara replenishment',
+                'rujukan' => 'SOP Operasional CRM'
+            ],
+            [
+                'kolom' => 'Restrukturisasi Kredit Berulang (Debitur Sama)',
+                'grup' => 'Kredit',
+                'penjelasan' => 'Jumlah debitur yang direstrukturisasi lebih dari 1 kali dalam periode singkat, tercatat bulan ini',
+                'satuan_hitung' => 'Hitung: jumlah debitur dengan restrukturisasi berulang per bulan',
+                'rujukan' => 'BPP Anti Fraud - Gejala Fraud Manajemen'
+            ],
+            [
+                'kolom' => 'Pencairan Kredit Tanpa Kelengkapan Dokumen',
+                'grup' => 'Kredit',
+                'penjelasan' => 'Jumlah pencairan kredit dalam sebulan yang ditemukan dokumennya tidak lengkap saat sampling',
+                'satuan_hitung' => 'Hitung: jumlah berkas tidak lengkap per bulan dari hasil sampling',
+                'rujukan' => 'BPP Anti Fraud - Gejala Fraud Manajemen poin (j)'
+            ],
+            [
+                'kolom' => 'Teller/Kasir Belum Mengambil Cuti Wajib Tahun Ini',
+                'grup' => 'SDM (Kontrol Preventif)',
+                'penjelasan' => 'Jumlah pegawai posisi kas/teller/kasir yang belum mengambil cuti wajib dalam 6 bulan terakhir, per bulan laporan',
+                'satuan_hitung' => 'Hitung: jumlah pegawai per bulan dari rekap cuti tahunan. Cuti wajib (mandatory vacation) adalah kontrol anti-fraud — idealnya 0',
+                'rujukan' => 'BPP Anti Fraud - Know Your Employee'
+            ],
+            [
+                'kolom' => 'Lonjakan Pengaduan Sejenis / Lewat SLA',
+                'grup' => 'Pengaduan Nasabah',
+                'penjelasan' => 'Jumlah pengaduan kategori sejenis dan jumlah pengaduan yang penyelesaiannya melewati SLA, dalam sebulan',
+                'satuan_hitung' => 'Hitung: jumlah pengaduan per bulan dari log pengaduan cabang. SLA 3-20 hari kerja tergantung kategori',
+                'rujukan' => 'SOP Pengaduan SK 153/2024; SE SLA 3175/2026'
+            ]
+        ];
     }
 
     public function exportExcel($sheet)

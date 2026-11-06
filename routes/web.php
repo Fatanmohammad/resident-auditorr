@@ -193,6 +193,16 @@ Route::middleware('auth')->group(function () {
     Route::prefix('pemeriksaan-awal')->name('pemeriksaan_awal.')->middleware('role:ra,kabag_ra,kadiv_skai,admin')->group(function () {
         Route::get('/', [PemeriksaanAwalController::class, 'index'])->name('index');
         
+        // Fitur Utama: Kertas Kerja Fraud Triage Checklist RA (POJK No. 12 Tahun 2024 & ACFE FEM)
+        Route::get('/triage-checklist', [PemeriksaanAwalController::class, 'triageChecklist'])->name('triage_checklist');
+        Route::post('/triage-checklist/save', [PemeriksaanAwalController::class, 'saveTriageChecklist'])->name('triage_checklist.save');
+        Route::get('/triage-checklist/{id}/print', [PemeriksaanAwalController::class, 'printTriageChecklist'])->name('triage_checklist.print');
+
+        // Fitur Utama: Matriks Rekap 18 Indikator Temuan Mencurigakan Cabang
+        Route::get('/indikasi-mencurigakan', [PemeriksaanAwalController::class, 'indikasiMencurigakan'])->name('indikasi_mencurigakan');
+        Route::post('/indikasi-mencurigakan/store', [PemeriksaanAwalController::class, 'storeIndikasiMencurigakan'])->name('indikasi_mencurigakan.store');
+        Route::delete('/indikasi-mencurigakan/{id}', [PemeriksaanAwalController::class, 'destroyIndikasiMencurigakan'])->name('indikasi_mencurigakan.destroy');
+
         // Submenu 1: Pelaporan Awal
         Route::get('/pelaporan-awal', [PemeriksaanAwalController::class, 'pelaporanAwal'])->name('pelaporan_awal');
         Route::post('/pelaporan-awal/store', [PemeriksaanAwalController::class, 'storePelaporanAwal'])->name('pelaporan_awal.store');

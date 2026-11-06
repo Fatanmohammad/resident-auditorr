@@ -258,6 +258,12 @@
                 <i class="bi bi-chevron-down nav-arrow"></i>
             </div>
             <div class="nav-group-children">
+                <a href="{{ route('pemeriksaan_awal.triage_checklist') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.triage_checklist*') ? 'active' : '' }}">
+                    <i class="bi bi-ui-checks-grid nav-icon"></i> Fraud Triage Checklist
+                </a>
+                <a href="{{ route('pemeriksaan_awal.indikasi_mencurigakan') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.indikasi_mencurigakan*') ? 'active' : '' }}">
+                    <i class="bi bi-table nav-icon"></i> Indikasi Mencurigakan
+                </a>
                 <a href="{{ route('pemeriksaan_awal.pelaporan_awal') }}" class="nav-item {{ request()->routeIs('pemeriksaan_awal.pelaporan_awal') ? 'active' : '' }}">
                     <i class="bi bi-file-earmark-plus nav-icon"></i> Pelaporan Awal
                 </a>

@@ -320,6 +320,20 @@
                     </div>
 
                     <div class="card-body p-4">
+                        <div class="p-3 rounded-3 mb-3" style="background-color: #eff6ff; border: 1px solid #bfdbfe;">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="fw-bold text-primary small">
+                                    <i class="bi bi-ui-checks-grid me-1"></i> Instrumen Resmi POJK 12/2024:
+                                </span>
+                                <a href="{{ route('pemeriksaan_awal.triage_checklist') }}" class="btn btn-sm btn-primary py-0.5 px-2.5 rounded-pill" style="font-size:0.75rem;">
+                                    Buka Checklist (28 Item) &raquo;
+                                </a>
+                            </div>
+                            <div class="small text-secondary" style="font-size: 0.82rem;">
+                                Gunakan <strong>Fraud Triage Checklist RA</strong> untuk evaluasi 28 pertanyaan POJK No. 12 Tahun 2024 dengan pemicu kritis ⚡ No. 3, 15, 17.
+                            </div>
+                        </div>
+
                         <div class="p-3 rounded-3 mb-3" style="background-color: #f0fdf4; border: 1px solid #bbf7d0;">
                             <div class="d-flex align-items-start gap-2">
                                 <i class="bi bi-info-circle-fill text-success fs-5 mt-0"></i>
