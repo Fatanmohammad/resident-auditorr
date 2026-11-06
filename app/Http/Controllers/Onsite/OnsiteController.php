@@ -102,7 +102,20 @@ class OnsiteController extends Controller
      */
     public function uploadForm(OnsiteVisit $visit)
     {
-        return view('onsite.upload', compact('visit'));
+        $user = auth()->user();
+        if ($user && strtolower($user->role) === 'ra') {
+            $allowedCabangIds = method_exists($user, 'cabangIdYangDapatDiakses') 
+                ? $user->cabangIdYangDapatDiakses() 
+                : [$user->cabang_id];
+
+            $cabangs = \App\Models\Unit::whereIn('cabang_id', $allowedCabangIds)
+                ->orderBy('unit_code')
+                ->get();
+        } else {
+            $cabangs = \App\Models\Unit::orderBy('unit_code')->get();
+        }
+
+        return view('onsite.upload', compact('visit', 'cabangs'));
     }
 
     /**
@@ -111,13 +124,20 @@ class OnsiteController extends Controller
     public function uploadProcess(Request $request, OnsiteVisit $visit, CbsOnsiteParser $parser)
     {
         $request->validate([
-            'file_cbs'        => 'required|file|mimes:csv,txt|max:20480',
+            'file_csv'        => 'nullable|file|mimes:csv,txt|max:51200',
+            'file_cbs'        => 'nullable|file|mimes:csv,txt|max:51200',
             'periode'         => 'nullable|string',
             'tanggal_mulai'   => 'nullable|date',
             'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
+            'jenis_file'      => 'nullable|string',
+            'kode_unit'       => 'nullable|string',
         ]);
 
-        $file     = $request->file('file_cbs');
+        $file = $request->file('file_csv') ?? $request->file('file_cbs');
+        if (!$file) {
+            return redirect()->back()->with('error', 'Silakan pilih file CSV DUMP untuk diunggah.');
+        }
+
         $filePath = $file->storeAs('onsite_staging', time() . '_' . $file->getClientOriginalName(), 'local');
         $fullPath = Storage::disk('local')->path($filePath);
 
@@ -147,7 +167,7 @@ class OnsiteController extends Controller
             if (file_exists($fullPath)) unlink($fullPath);
 
             return redirect()->route('onsite.kka', $visit->id)
-                ->with('success', "Upload CBS berhasil. {$result['total_populasi']} populasi diproses dan {$result['total_sampel']} sampel dipilih secara otomatis.");
+                ->with('success', "Upload CSV DUMP Onsite berhasil. {$result['total_populasi']} populasi diproses dan {$result['total_sampel']} sampel dipilih secara otomatis.");
 
         } catch (\Exception $e) {
             DB::rollBack();
