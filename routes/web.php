@@ -93,8 +93,10 @@ Route::middleware('auth')->group(function () {
     // Raw Metrics (RA memegang akses utama di sini — HANYA input raw metrics)
     Route::prefix('raw-metrics')->name('raw-metrics.')->middleware('role:kabag_ra,ra,admin')->group(function () {
         Route::get('/', [RawMetricController::class, 'index'])->name('index');
+        Route::post('/sync-all', [RawMetricController::class, 'syncAll'])->name('sync-all');
         Route::get('/{unit}/form', [RawMetricController::class, 'create'])->name('create');
         Route::post('/{unit}', [RawMetricController::class, 'store'])->name('store');
+        Route::post('/{unit}/sync', [RawMetricController::class, 'syncUnit'])->name('sync-unit');
     });
 
     // Critical Override (hanya dipakai dari detail unit — menu terpisah sudah dihapus)

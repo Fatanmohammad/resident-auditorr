@@ -23,3 +23,4 @@ return new class extends Migration
         // No-op or revert to enum
     }
 };
+

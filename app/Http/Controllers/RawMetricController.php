@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Unit;
 use App\Models\RawMetric;
 use App\Services\RiskScoringService;
+use App\Services\RawMetricAutoSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class RawMetricController extends Controller
 {
-public function __construct(private RiskScoringService $scoringService) {}
+    public function __construct(
+        private RiskScoringService $scoringService,
+        private RawMetricAutoSyncService $autoSyncService
+    ) {}
 
     /**
      * Pastikan user (khususnya role RA) berhak mengakses unit.
@@ -57,9 +61,60 @@ public function __construct(private RiskScoringService $scoringService) {}
     {
         $this->ensureCanAccessUnit($unit);
 
-        $period  = request('period', date('Y'));
+        $period  = (int)request('period', date('Y'));
         $existing = RawMetric::where('unit_id', $unit->id)->where('period', $period)->first();
-        return view('raw-metrics.form', compact('unit', 'period', 'existing'));
+        $autoCalculated = $this->autoSyncService->calculate($unit, $period);
+        $sourceLabels = $this->autoSyncService->getMetricSourceLabels();
+
+        return view('raw-metrics.form', compact('unit', 'period', 'existing', 'autoCalculated', 'sourceLabels'));
+    }
+
+    /**
+     * Sinkronisasi otomatis data mentah 1 unit dari seluruh tabel sistem
+     */
+    public function syncUnit(Request $request, Unit $unit)
+    {
+        $this->ensureCanAccessUnit($unit);
+        $period = $request->integer('period', (int)date('Y'));
+
+        try {
+            $this->autoSyncService->syncUnit($unit, $period, Auth::id());
+            return redirect()->route('raw-metrics.create', ['unit' => $unit, 'period' => $period])
+                ->with('success', "Data mentah untuk {$unit->unit_name} berhasil disinkronkan otomatis dari database sistem dan skor risiko telah diperbarui.");
+        } catch (\Throwable $e) {
+            return redirect()->back()
+                ->with('error', 'Gagal melakukan sinkronisasi otomatis: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Sinkronisasi otomatis massal seluruh unit pada periode tertentu
+     */
+    public function syncAll(Request $request)
+    {
+        $period = $request->integer('period', (int)date('Y'));
+        $allowedCabangIds = Auth::user()->cabangIdYangDapatDiakses();
+
+        $unitsQuery = Unit::where('is_active', true);
+        if ($allowedCabangIds !== null) {
+            $unitsQuery->whereIn('cabang_id', $allowedCabangIds);
+        }
+        $units = $unitsQuery->get();
+
+        $synced = 0;
+        $failed = 0;
+        foreach ($units as $unit) {
+            try {
+                $this->autoSyncService->syncUnit($unit, $period, Auth::id());
+                $synced++;
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Auto-sync error on unit {$unit->unit_code}: " . $e->getMessage());
+                $failed++;
+            }
+        }
+
+        return redirect()->route('raw-metrics.index', ['period' => $period])
+            ->with('success', "Berhasil sinkronisasi otomatis data {$synced} dari {$units->count()} unit kerja untuk periode {$period}. Skor risiko dan jadwal audit telah diperbarui.");
     }
 
 public function store(Request $request, Unit $unit)
