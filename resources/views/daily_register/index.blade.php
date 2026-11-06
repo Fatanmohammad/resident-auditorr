@@ -705,6 +705,11 @@
                     </tbody>
                 </table>
             </div>
+            <!-- BAR NAVIGASI & KONTROL PAGINASI -->
+            <div id="paginationWrapper" class="d-flex justify-content-between align-items-center p-2.5 px-3 border-top bg-light flex-wrap gap-2" style="display:none; font-size:0.78rem;">
+                <div id="paginationInfo" class="text-muted fw-medium">Menampilkan 0 data</div>
+                <div id="paginationControls" class="d-flex align-items-center gap-1"></div>
+            </div>
         </div>
     </div>
 
@@ -1394,7 +1399,11 @@
             btnTambahMandiri.style.display = isTeller ? 'inline-flex' : 'none';
         }
         
-        loadData();
+        currentStatusFilter = 'ALL';
+        document.querySelectorAll('#quickFilterChips .quick-chip').forEach(ch => ch.classList.remove('active'));
+        document.getElementById('chipSemua')?.classList.add('active');
+
+        loadData(1);
     }
 
     // Pindah ke Tab KKA Control & Integrasi (SOP 04.2)
@@ -1423,6 +1432,7 @@
     }
 
     let currentStatusFilter = 'ALL';
+    let currentPage = 1;
 
     function setQuickStatusFilter(status) {
         currentStatusFilter = status;
@@ -1438,7 +1448,8 @@
         } else if (status === 'SELESAI') {
             document.getElementById('chipSelesai')?.classList.add('active');
         }
-        processDataDisplay();
+        // Ambil data dari server sesuai status filter yang dipilih (kembali ke halaman 1)
+        loadData(1);
     }
 
     function getItemWorkflowStatus(item) {
@@ -1459,10 +1470,14 @@
 
     // Ambil Data via API
     function loadData(page = 1) {
+        currentPage = page;
         const tbody = document.getElementById('kkaTableBody');
         tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: var(--text-muted);"><i class="bi bi-hourglass-split" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i><p>Memuat data...</p></div></td></tr>`;
 
         let url = `${baseUrl}/data?page=${page}&source_sheet=${currentActiveSheetCode}`;
+        if (currentStatusFilter && currentStatusFilter !== 'ALL') {
+            url += `&review_status=${currentStatusFilter}`;
+        }
         @if(request()->has('kode_unit'))
         url += `&kode_unit={{ request('kode_unit') }}`;
         @elseif(isset($selectedKodeUnit))
@@ -1476,15 +1491,18 @@
 
         axios.get(url)
             .then(response => {
-                globalFindings = response.data.data.data;
+                const paginator = response.data.data;
+                globalFindings = (paginator && paginator.data) ? paginator.data : (Array.isArray(paginator) ? paginator : []);
+                window.currentPaginationFrom = (paginator && paginator.from) ? paginator.from : 1;
                 const summary = response.data.summary || {};
                 const tabCounts = summary.tab_counts || {};
                 const tabStatuses = summary.tab_statuses || {};
                 const currentSheetCounts = summary.current_sheet_counts || {};
 
-                document.getElementById('totalDataCount').innerText = globalFindings.length;
-                document.getElementById('statTotalException').innerText = summary.total_exception ?? globalFindings.length;
-                const totalBelumAll = summary.total_belum_dikerjakan ?? Math.max(0, (summary.total_exception ?? globalFindings.length) - (summary.selesai_review ?? 0));
+                const totalItem = (paginator && paginator.total !== undefined) ? paginator.total : globalFindings.length;
+                document.getElementById('totalDataCount').innerText = totalItem;
+                document.getElementById('statTotalException').innerText = summary.total_exception ?? totalItem;
+                const totalBelumAll = summary.total_belum_dikerjakan ?? Math.max(0, (summary.total_exception ?? totalItem) - (summary.selesai_review ?? 0));
                 if (document.getElementById('statBelumDikerjakan')) {
                     document.getElementById('statBelumDikerjakan').innerText = totalBelumAll;
                 }
@@ -1494,10 +1512,10 @@
 
                 // Update Dynamic Counts on Quick Filter Chips
                 const activeShStatus = tabStatuses[currentActiveSheetCode] || currentSheetCounts || {};
-                const totalSh = activeShStatus.total ?? globalFindings.length;
-                const perluSh = activeShStatus.perlu_revisi ?? globalFindings.filter(x => (getItemWorkflowStatus(x) === 'PERLU_REVISI')).length;
-                const menungguSh = activeShStatus.menunggu_konfirmasi ?? globalFindings.filter(x => (getItemWorkflowStatus(x) === 'MENUNGGU_KONFIRMASI')).length;
-                const selesaiSh = activeShStatus.selesai ?? globalFindings.filter(x => (getItemWorkflowStatus(x) === 'SELESAI')).length;
+                const totalSh = activeShStatus.total ?? totalItem;
+                const perluSh = activeShStatus.perlu_revisi ?? 0;
+                const menungguSh = activeShStatus.menunggu_konfirmasi ?? 0;
+                const selesaiSh = activeShStatus.selesai ?? 0;
                 const belumSh = activeShStatus.belum_diuji ?? Math.max(0, totalSh - perluSh - menungguSh - selesaiSh);
 
                 if (document.getElementById('chipCountSemua')) document.getElementById('chipCountSemua').innerText = totalSh;
@@ -1559,10 +1577,61 @@
 
                 updateRiwayatSubAreaDropdown();
                 processDataDisplay();
+                renderPagination(paginator);
             })
             .catch(error => {
                 tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state" style="text-align: center; padding: 3rem 0; color: #dc2626;"><i class="bi bi-exclamation-triangle" style="font-size: 2rem; display: block; margin-bottom: 1rem;"></i><p>Gagal memuat data.</p></div></td></tr>`;
+                const wrapper = document.getElementById('paginationWrapper');
+                if (wrapper) wrapper.style.display = 'none';
             });
+    }
+
+    function renderPagination(paginator) {
+        const wrapper = document.getElementById('paginationWrapper');
+        if (!wrapper) return;
+
+        if (!paginator || !paginator.total || paginator.total <= 0) {
+            wrapper.style.display = 'none';
+            return;
+        }
+
+        wrapper.style.display = 'flex';
+        const from = paginator.from || 1;
+        const to = paginator.to || paginator.total;
+        const total = paginator.total;
+        const cur = paginator.current_page || 1;
+        const last = paginator.last_page || 1;
+
+        document.getElementById('paginationInfo').innerText = `Menampilkan ${from} - ${to} dari total ${total} data (Halaman ${cur} dari ${last})`;
+
+        if (last <= 1) {
+            document.getElementById('paginationControls').innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        html += `<button type="button" class="btn btn-sm btn-outline-secondary ${cur <= 1 ? 'disabled' : ''}" onclick="loadData(${cur - 1})" style="font-size:0.75rem; padding:0.2rem 0.55rem;"><i class="bi bi-chevron-left"></i> Prev</button>`;
+
+        let startPage = Math.max(1, cur - 2);
+        let endPage = Math.min(last, cur + 2);
+
+        if (startPage > 1) {
+            html += `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadData(1)" style="font-size:0.75rem; padding:0.2rem 0.55rem;">1</button>`;
+            if (startPage > 2) html += `<span class="px-1 text-muted">...</span>`;
+        }
+
+        for (let p = startPage; p <= endPage; p++) {
+            html += `<button type="button" class="btn btn-sm ${p === cur ? 'btn-primary' : 'btn-outline-secondary'}" onclick="loadData(${p})" style="font-size:0.75rem; padding:0.2rem 0.55rem;">${p}</button>`;
+        }
+
+        if (endPage < last) {
+            if (endPage < last - 1) html += `<span class="px-1 text-muted">...</span>`;
+            html += `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadData(${last})" style="font-size:0.75rem; padding:0.2rem 0.55rem;">${last}</button>`;
+        }
+
+        html += `<button type="button" class="btn btn-sm btn-outline-secondary ${cur >= last ? 'disabled' : ''}" onclick="loadData(${cur + 1})" style="font-size:0.75rem; padding:0.2rem 0.55rem;">Next <i class="bi bi-chevron-right"></i></button>`;
+
+        document.getElementById('paginationControls').innerHTML = html;
     }
 
     function updateRiwayatSubAreaDropdown() {
@@ -1688,7 +1757,14 @@
         } else {
             // Filter Kapsul Cepat (Quick Status Filter Chips)
             if (currentStatusFilter && currentStatusFilter !== 'ALL') {
-                dataToRender = dataToRender.filter(x => getItemWorkflowStatus(x) === currentStatusFilter);
+                dataToRender = dataToRender.filter(x => {
+                    const st = getItemWorkflowStatus(x);
+                    if (currentStatusFilter === 'SELESAI') return st === 'SELESAI' || (x.status_review || '') === 'Approved';
+                    if (currentStatusFilter === 'PERLU_REVISI') return st === 'PERLU_REVISI' || (x.status_review || '') === 'Revisi';
+                    if (currentStatusFilter === 'MENUNGGU_KONFIRMASI') return st === 'MENUNGGU_KONFIRMASI' || (x.submitted_at && (x.status_review || '') !== 'Approved');
+                    if (currentStatusFilter === 'BELUM_DIUJI') return st === 'BELUM_DIUJI' && (x.status_review || '') !== 'Approved';
+                    return st === currentStatusFilter;
+                });
             }
         }
 
@@ -1840,8 +1916,9 @@
                         : (item.catatan_rule || item.jenis_exception_awal || '-')));
             let deskripsiClean = deskripsiDisplay.replace(/"/g, '&quot;');
 
+            const rowNum = (window.currentPaginationFrom ? window.currentPaginationFrom - 1 : 0) + index + 1;
             const tr = `<tr class="${rowClass}">
-                <td style="text-align:center; color:var(--text-muted); font-size:0.75rem;">${index + 1}</td>
+                <td style="text-align:center; color:var(--text-muted); font-size:0.75rem;">${rowNum}</td>
                 <td style="white-space:nowrap; font-size:0.78rem;">${item.tanggal_data || '-'}</td>
                 <td style="text-align:center;"><span class="badge bg-light text-dark border" style="border-radius:20px; padding: 0.2rem 0.45rem; font-size:0.7rem;">${item.kode_unit || '-'}</span></td>
                 <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.75rem;" title="${item.no_referensi || item.offsite_id || '-'}">

@@ -466,11 +466,14 @@ class KkaDailyRegisterController extends Controller
                 ELSE 5 END ASC";
         }
 
+        $perPage = (int) $request->input('per_page', 50);
+        if ($perPage <= 0 || $perPage > 500) $perPage = 50;
+
         $findings = $query->with('checklistAnswers')
             ->orderByRaw($orderSql)
             ->latest('tanggal_data')
             ->latest('id')
-            ->paginate(25);
+            ->paginate($perPage);
 
         // Hitung sinyal status per 6 Tab KKA Utama (Total, Perlu Revisi, Menunggu Konfirmasi, Selesai, dan 100% Selesai)
         $sheets = [
