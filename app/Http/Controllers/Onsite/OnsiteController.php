@@ -407,6 +407,11 @@ class OnsiteController extends Controller
         $finding->risk_final         = $riskFinal;
         $finding->risk_level         = $riskFinal;
         $finding->tanggal_ditemukan  = $request->input('tanggal_ditemukan', now()->toDateString());
+        
+        $userRole = strtolower(auth()->user()->role ?? '');
+        if ($userRole === 'ra') {
+            $finding->status_review = 'Menunggu Review';
+        }
         $finding->save();
 
         return response()->json([
@@ -424,7 +429,7 @@ class OnsiteController extends Controller
         $finding = OnsiteKkaFinding::findOrFail($id);
 
         $request->validate([
-            'status_review'      => 'required|in:Belum Direview,Revisi,Approved',
+            'status_review'      => 'required|in:Belum Direview,Menunggu Review,Revisi,Approved',
             'catatan_reviewer'   => 'nullable|string',
             'status_klarifikasi' => 'nullable|string',
             'keputusan_eskalasi' => 'nullable|string',

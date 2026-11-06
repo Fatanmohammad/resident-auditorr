@@ -615,7 +615,7 @@ function renderTable(data) {
     data.forEach((f, i) => {
         const bm = badgeMap[f.jenis_sampling] || { bg: '#f8fafc', color: '#64748b' };
         const riskColor = { High: '#dc2626', Moderate: '#ea580c', Low: '#16a34a' }[f.risk_level] || '#94a3b8';
-        const reviewColor = { Approved: '#16a34a', Revisi: '#ea580c' }[f.status_review] || '#94a3b8';
+        const reviewColor = { Approved: '#16a34a', Revisi: '#dc2626', 'Menunggu Review': '#d97706' }[f.status_review] || '#94a3b8';
         const nominal = 'Rp ' + Number(f.jumlah_tx).toLocaleString('id-ID');
 
         tbody.insertAdjacentHTML('beforeend', `<tr onclick="openDetail(${f.id})" style="cursor:pointer;">

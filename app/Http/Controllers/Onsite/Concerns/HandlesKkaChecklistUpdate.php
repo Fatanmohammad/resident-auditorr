@@ -84,8 +84,15 @@ trait HandlesKkaChecklistUpdate
             $updateData['file_bukti'] = $path;
         }
 
-        if ($request->filled('status_review')) {
+        $userRole = strtolower(auth()->user()->role ?? '');
+        $isReviewer = in_array($userRole, ['admin', 'kabag_ra', 'kadiv_skai']);
+
+        if (!$isReviewer) {
+            $updateData['status_review'] = 'Menunggu Review';
+        } elseif ($request->filled('status_review')) {
             $updateData['status_review'] = $request->input('status_review');
+            $updateData['reviewed_by']   = auth()->user()->name ?? 'Reviewer';
+            $updateData['reviewed_at']   = now();
         }
         if ($request->has('catatan_reviewer')) {
             $updateData['catatan_reviewer'] = $request->input('catatan_reviewer');

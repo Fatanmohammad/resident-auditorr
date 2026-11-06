@@ -347,6 +347,9 @@
                     <i class="bi bi-buildings text-primary me-1"></i> KC:
                 </label>
                 <select id="selectAdminCabang" class="form-select form-select-sm border-0 fw-bold" style="font-size: 0.82rem; min-width: 220px; background: transparent; cursor: pointer; color: var(--primary-blue);" onchange="changeAdminCabang(this.value)">
+                    <option value="ALL" data-cabang="" {{ ($selectedKodeUnit ?? '') === 'ALL' ? 'selected' : '' }}>
+                        -- Semua Kantor Cabang (Seluruh Wilayah) --
+                    </option>
                     @foreach($kcUnits as $kc)
                         <option value="{{ $kc->unit_code }}" data-cabang="{{ $kc->cabang_id }}" {{ ($selectedKodeUnit ?? '') === $kc->unit_code ? 'selected' : '' }}>
                             {{ $kc->unit_code }} - {{ $kc->unit_name }}
@@ -3081,26 +3084,10 @@
         axios.post(`${baseUrl}/${id}/ra`, formData, { 
             headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'multipart/form-data' } 
         }).then(res => {
-            alert(res.data.message || 'Pemeriksaan KKA berhasil disimpan langsung ke Arsip Riwayat Selesai!');
+            alert(res.data.message || 'Pemeriksaan KKA berhasil diajukan dan kini Menunggu Konfirmasi Admin.');
             closeDetailView();
-            // Otomatis arahkan RA langsung ke mode Arsip Riwayat Selesai beserta tombol cetak arsip matriks
-            if (!isShowingRiwayat) {
-                isShowingRiwayat = true;
-                const btn = document.getElementById('btnToggleRiwayat');
-                const filterCard = document.getElementById('riwayatFilterCard');
-                const btnText = document.getElementById('btnRiwayatText');
-                if (btn) {
-                    btn.style.background = 'var(--primary-blue)';
-                    btn.style.color = '#fff';
-                    btn.style.borderColor = 'var(--primary-blue)';
-                }
-                if (btnText) btnText.innerText = 'Kembali ke Data Utama';
-                if (filterCard) filterCard.style.display = 'block';
-                if (document.getElementById('tableTitle')) {
-                    document.getElementById('tableTitle').innerText = `${currentActiveSheet} (Arsip Riwayat Selesai)`;
-                }
-            }
             loadData();
+        }).catch(err => {
         }).catch(err => {
             if (err.response) {
                 if (err.response.status === 422) {

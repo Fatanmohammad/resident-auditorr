@@ -358,8 +358,12 @@ class KkaDailyRegisterController extends Controller
                 $targetUnit = explode('?', $targetUnit)[0];
             }
 
-            if ($targetUnit) {
+            if ($targetUnit && strtoupper($targetUnit) !== 'ALL') {
                 $query->where('kode_unit', $targetUnit);
+            } elseif (strtoupper($targetUnit ?? '') === 'ALL') {
+                // Admin memilih Semua Cabang: tampilkan semua unit KC/KCU/KP
+                $unitCodes = \App\Models\Unit::whereIn('unit_type', ['KC', 'KCU', 'KP'])->pluck('unit_code');
+                $query->whereIn('kode_unit', $unitCodes);
             } elseif ($request->filled('cabang_id') || $request->filled('cabang')) {
                 $cabangParam = $request->input('cabang_id') ?: $request->input('cabang');
                 $unitCodes = \App\Models\Unit::where('cabang_id', $cabangParam)
@@ -973,11 +977,19 @@ class KkaDailyRegisterController extends Controller
             );
         }
 
-        $finding->review_status = DailyRegisterFinding::STATUS_SELESAI;
-        $finding->status_review = 'Approved';
-        $finding->submitted_at = now();
-        $finding->reviewed_at = now();
-        $finding->reviewed_by = $user->name ?? 'Resident Auditor';
+        if (strtolower($user->role) === 'ra') {
+            $finding->review_status = DailyRegisterFinding::STATUS_MENUNGGU_KONFIRMASI;
+            $finding->status_review = 'Menunggu Konfirmasi';
+            $finding->submitted_at  = now();
+            $msg = 'Pemeriksaan KKA berhasil diajukan dan kini menunggu verifikasi/konfirmasi Admin.';
+        } else {
+            $finding->review_status = DailyRegisterFinding::STATUS_SELESAI;
+            $finding->status_review = 'Approved';
+            $finding->submitted_at  = now();
+            $finding->reviewed_at   = now();
+            $finding->reviewed_by   = $user->name ?? 'Administrator';
+            $msg = 'Review KKA berhasil disimpan langsung dan disetujui (Selesai).';
+        }
 
         if (!empty($selectedSubAreas)) {
             $finding->selected_sub_areas = array_values(array_unique($selectedSubAreas));
@@ -1035,7 +1047,7 @@ class KkaDailyRegisterController extends Controller
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Review KKA berhasil disimpan langsung ke Arsip Riwayat Selesai.',
+            'message' => $msg,
             'data'    => $finding->load('checklistAnswers')
         ]);
     }

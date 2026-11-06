@@ -244,6 +244,7 @@
                                     <label class="form-label small fw-bold text-dark">Status Review <span class="text-danger">*</span></label>
                                     <select id="f_status_review" name="status_review" class="form-select form-select-sm">
                                         <option value="Belum Direview">Belum Direview</option>
+                                        <option value="Menunggu Review">Menunggu Review</option>
                                         <option value="Revisi">Revisi (Kembalikan ke RA)</option>
                                         <option value="Approved">Approved (Selesai)</option>
                                     </select>
@@ -256,7 +257,7 @@
                         </div>
                     </div>
                     @else
-                    <input type="hidden" id="f_status_review" name="status_review" value="Belum Direview">
+                    <input type="hidden" id="f_status_review" name="status_review" value="Menunggu Review">
                     <input type="hidden" id="f_catatan_reviewer" name="catatan_reviewer" value="">
                     @endif
 

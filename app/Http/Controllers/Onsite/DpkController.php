@@ -53,8 +53,9 @@ class DpkController extends Controller
             'total'       => (clone $allBase)->count(),
             'sesuai'      => (clone $allBase)->where('status_uji', 'Sesuai')->count(),
             'exception'   => (clone $allBase)->where('status_uji', 'Ada Exception')->count(),
-            'high_risk'   => (clone $allBase)->whereIn('risk_level', ['High', 'Kritis'])->count(),
-            'approved'    => (clone $allBase)->where('status_review', 'Approved')->count(),
+            'high_risk'       => (clone $allBase)->whereIn('risk_level', ['High', 'Kritis'])->count(),
+            'menunggu_review' => (clone $allBase)->where('status_review', 'Menunggu Review')->count(),
+            'approved'        => (clone $allBase)->where('status_review', 'Approved')->count(),
             'belum_diuji' => (clone $allBase)->where(function($q) {
                 $q->whereNull('status_uji')->orWhere('status_uji', 'Belum Diuji')->orWhere('status_uji', '');
             })->count(),

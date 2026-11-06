@@ -269,6 +269,7 @@
         font-weight: 600;
     }
     .badge-review.approved { background: #dcfce7; color: #166534; }
+    .badge-review.menunggu { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
     .badge-review.revisi   { background: #fee2e2; color: #991b1b; }
     .badge-review.belum    { background: #f1f5f9; color: #475569; }
 
@@ -432,6 +433,17 @@
         </div>
 
         <div class="stat-card-custom">
+            <div class="stat-card-icon" style="background: rgba(245, 158, 11, 0.1); color: #d97706;">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <div>
+                <div class="stat-card-title">Menunggu Review</div>
+                <div class="stat-card-value text-warning">{{ $summary['menunggu_review'] ?? 0 }}</div>
+                <div class="stat-card-desc">Diajukan oleh RA</div>
+            </div>
+        </div>
+
+        <div class="stat-card-custom">
             <div class="stat-card-icon" style="background: rgba(99, 102, 241, 0.1); color: #6366f1;">
                 <i class="bi bi-patch-check-fill"></i>
             </div>
@@ -482,6 +494,7 @@
                 <select name="status_review" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Semua Review</option>
                     <option value="Belum Direview" {{ request('status_review') == 'Belum Direview' ? 'selected' : '' }}>Belum Direview</option>
+                    <option value="Menunggu Review" {{ request('status_review') == 'Menunggu Review' ? 'selected' : '' }}>Menunggu Review</option>
                     <option value="Revisi" {{ request('status_review') == 'Revisi' ? 'selected' : '' }}>Revisi</option>
                     <option value="Approved" {{ request('status_review') == 'Approved' ? 'selected' : '' }}>Approved</option>
                 </select>
@@ -597,8 +610,8 @@
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge-review {{ str_contains($review, 'app') ? 'approved' : (str_contains($review, 'rev') ? 'revisi' : 'belum') }}">
-                                        {{ $item->status_review ?? 'Belum' }}
+                                    <span class="badge-review {{ str_contains($review, 'app') ? 'approved' : (str_contains($review, 'rev') ? 'revisi' : (str_contains($review, 'menunggu') ? 'menunggu' : 'belum')) }}">
+                                        {{ $item->status_review ?? 'Belum Direview' }}
                                     </span>
                                 </td>
                                 <td class="text-center">
