@@ -26,7 +26,7 @@ class CbsOnsiteParser
     const JAM_MULAI_NORMAL = '06:00:00';
     const JAM_SELESAI_NORMAL = '17:00:00';
 
-    public function parse(string $filePath, OnsiteVisit $visit): array
+    public function parse(string $filePath, OnsiteVisit $visit, ?string $tanggalMulai = null, ?string $tanggalSelesai = null): array
     {
         if (!file_exists($filePath)) {
             throw new \Exception('File CBS tidak ditemukan di folder staging.');
@@ -219,6 +219,24 @@ class CbsOnsiteParser
                 }
             }
 
+            $rawTimeStamp = trim((string)($row[$idxTimeStamp] ?? ''));
+
+            // Tentukan tanggal evaluasi untuk filter rentang (mengutamakan format tanggal di TIME_STAMP, atau fallback ke TGL_TX)
+            $evalDate = null;
+            if ($rawTimeStamp !== '') {
+                if (preg_match('/\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/', $rawTimeStamp) || preg_match('/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/', $rawTimeStamp)) {
+                    $evalDate = \App\Services\Offsite\DumpParserHelper::parseTimestampToDate($rawTimeStamp);
+                }
+            }
+            if (!$evalDate) {
+                $evalDate = $tglTx;
+            }
+
+            // Filter rentang tanggal berdasarkan TIME_STAMP / TGL_TX jika filter Tanggal Mulai / Selesai diisi
+            if (!\App\Services\Offsite\DumpParserHelper::isWithinDateRange($evalDate, $tanggalMulai, $tanggalSelesai)) {
+                continue;
+            }
+
             $noArsip = trim((string)($row[$idxNoArsip] ?? ''));
             if ($noArsip === '') {
                 $noArsip = 'ARS-' . str_pad($rawRowsInspected, 4, '0', STR_PAD_LEFT);
@@ -239,13 +257,17 @@ class CbsOnsiteParser
                 'txtype'    => trim((string)($row[$idxTxtype] ?? 'TRX')),
                 'kd_user'   => trim((string)($row[$idxKdUser] ?? 'SYSTEM')),
                 'tgl_tx'    => $tglTx,
-                'time_stamp'=> trim((string)($row[$idxTimeStamp] ?? '09:00:00')),
+                'time_stamp'=> $rawTimeStamp !== '' ? $rawTimeStamp : '09:00:00',
                 'jumlah_tx' => $jumlah,
             ];
         }
         fclose($file);
 
         if (empty($rows)) {
+            if ($tanggalMulai || $tanggalSelesai) {
+                $rentangInfo = ($tanggalMulai ?: 'awal') . ' s/d ' . ($tanggalSelesai ?: 'akhir');
+                throw new \Exception("Tidak ada transaksi CBS yang cocok dengan filter tanggal ({$rentangInfo}) dari total {$rawRowsInspected} baris data.");
+            }
             $headerStr = implode(', ', array_slice($header, 0, 10));
             throw new \Exception("File CBS tidak mengandung data transaksi (hanya terbaca header: [{$headerStr}], total baris terdeteksi: {$rawRowsInspected}). Pastikan file memuat baris data transaksi.");
         }

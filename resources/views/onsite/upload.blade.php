@@ -10,9 +10,14 @@
             {{ \Carbon\Carbon::parse($visit->tanggal_mulai)->format('d M Y') }} s/d {{ \Carbon\Carbon::parse($visit->tanggal_selesai)->format('d M Y') }}
         </p>
     </div>
-    <a href="{{ route('onsite.show', $visit->id) }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i> Kembali ke Kunjungan
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('onsite.kka', $visit->id) }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-file-earmark-check me-1"></i> KKA Onsite
+        </a>
+        <a href="{{ route('onsite.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Kembali
+        </a>
+    </div>
 </div>
 
 <div class="row justify-content-center">
@@ -59,14 +64,33 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-dark small mb-1">
-                            Periode Data <span class="text-danger">*</span>
-                        </label>
-                        <input type="month" name="periode" required class="form-control form-control-sm"
-                               value="{{ old('periode', $visit->periode ?? date('Y-m')) }}">
-                        <div class="form-text small text-muted">
-                            Tentukan bulan dan tahun periode data transaksi CBS yang diuji selama onsite visit.
+                    <!-- PERIODE & FILTER TANGGAL TRANSAKSI (TIME_STAMP) -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <label for="periode" class="form-label fw-semibold text-dark small mb-1">
+                                Periode Bulan
+                            </label>
+                            <input type="month" name="periode" id="periode" class="form-control form-control-sm"
+                                   value="{{ old('periode', $visit->periode ?? date('Y-m')) }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="tanggal_mulai" class="form-label fw-semibold text-dark small mb-1">
+                                Tanggal Mulai
+                            </label>
+                            <input type="date" name="tanggal_mulai" id="tanggal_mulai" class="form-control form-control-sm"
+                                   value="{{ old('tanggal_mulai', $visit->tanggal_mulai ? date('Y-m-d', strtotime($visit->tanggal_mulai)) : '') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="tanggal_selesai" class="form-label fw-semibold text-dark small mb-1">
+                                Tanggal Selesai
+                            </label>
+                            <input type="date" name="tanggal_selesai" id="tanggal_selesai" class="form-control form-control-sm"
+                                   value="{{ old('tanggal_selesai', $visit->tanggal_selesai ? date('Y-m-d', strtotime($visit->tanggal_selesai)) : '') }}">
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted" style="font-size: 0.75rem;">
+                                <i class="bi bi-info-circle me-1"></i>Filter Tanggal Mulai &amp; Selesai memfilter baris CSV berdasarkan kolom <code>TIME_STAMP</code> secara otomatis.
+                            </small>
                         </div>
                     </div>
 

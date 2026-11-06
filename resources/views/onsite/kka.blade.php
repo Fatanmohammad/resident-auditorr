@@ -53,6 +53,20 @@
         </div>
     </div>
 
+    @if(session('success'))
+        <div class="alert alert-success d-flex align-items-center gap-2 mb-3" style="font-size: 0.9rem; border-radius: 8px;">
+            <i class="bi bi-check-circle-fill"></i>
+            <div><strong>Berhasil!</strong> {{ session('success') }}</div>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" style="font-size: 0.9rem; border-radius: 8px;">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div><strong>Error!</strong> {{ session('error') }}</div>
+        </div>
+    @endif
+
     {{-- Summary Cards --}}
     <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.5rem;">
         <div class="stat-card">

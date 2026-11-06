@@ -111,8 +111,10 @@ class OnsiteController extends Controller
     public function uploadProcess(Request $request, OnsiteVisit $visit, CbsOnsiteParser $parser)
     {
         $request->validate([
-            'file_cbs' => 'required|file|mimes:csv,txt|max:20480',
-            'periode'  => 'nullable|string',
+            'file_cbs'        => 'required|file|mimes:csv,txt|max:20480',
+            'periode'         => 'nullable|string',
+            'tanggal_mulai'   => 'nullable|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
         ]);
 
         $file     = $request->file('file_cbs');
@@ -121,11 +123,22 @@ class OnsiteController extends Controller
 
         DB::beginTransaction();
         try {
-            $result = $parser->parse($fullPath, $visit);
+            $result = $parser->parse(
+                $fullPath,
+                $visit,
+                $request->tanggal_mulai,
+                $request->tanggal_selesai
+            );
 
             $updateData = ['status' => 'Berlangsung'];
             if ($request->filled('periode')) {
                 $updateData['periode'] = $request->periode;
+            }
+            if ($request->filled('tanggal_mulai')) {
+                $updateData['tanggal_mulai'] = $request->tanggal_mulai;
+            }
+            if ($request->filled('tanggal_selesai')) {
+                $updateData['tanggal_selesai'] = $request->tanggal_selesai;
             }
             $visit->update($updateData);
 
@@ -133,8 +146,8 @@ class OnsiteController extends Controller
 
             if (file_exists($fullPath)) unlink($fullPath);
 
-            return redirect()->route('onsite.index')
-                ->with('success', "Upload CBS berhasil. {$result['total_populasi']} populasi diproses, {$result['total_sampel']} sampel dipilih otomatis.");
+            return redirect()->route('onsite.kka', $visit->id)
+                ->with('success', "Upload CBS berhasil. {$result['total_populasi']} populasi diproses dan {$result['total_sampel']} sampel dipilih secara otomatis.");
 
         } catch (\Exception $e) {
             DB::rollBack();
