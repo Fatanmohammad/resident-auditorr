@@ -11,6 +11,11 @@ class BiayaController extends Controller
 {
     public function index(Request $request, OnsiteVisit $visit)
     {
+        // Auto-distribusi sampel dari populasi CBS jika KKA Biaya belum memiliki data sampel
+        if (OnsiteKkaBiaya::where('onsite_visit_id', $visit->id)->count() === 0) {
+            app(\App\Services\Onsite\CbsOnsiteParser::class)->distributePopulationsToAllKka($visit);
+        }
+
         $query = OnsiteKkaBiaya::where('onsite_visit_id', $visit->id);
 
         if ($request->filled('q')) {

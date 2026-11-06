@@ -11,6 +11,11 @@ class DpkController extends Controller
 {
     public function index(Request $request, OnsiteVisit $visit)
     {
+        // Auto-distribusi sampel dari populasi CBS jika KKA DPK belum memiliki data sampel
+        if (OnsiteKkaDpk::where('onsite_visit_id', $visit->id)->count() === 0) {
+            app(\App\Services\Onsite\CbsOnsiteParser::class)->distributePopulationsToAllKka($visit);
+        }
+
         $query = OnsiteKkaDpk::where('onsite_visit_id', $visit->id);
 
         if ($request->filled('q')) {

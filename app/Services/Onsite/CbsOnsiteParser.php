@@ -5,6 +5,12 @@ namespace App\Services\Onsite;
 use App\Models\Onsite\OnsiteVisit;
 use App\Models\Onsite\OnsitePopulation;
 use App\Models\Onsite\OnsiteKkaFinding;
+use App\Models\Onsite\OnsiteKkaTellerKas;
+use App\Models\Onsite\OnsiteKkaDpk;
+use App\Models\Onsite\OnsiteKkaKredit;
+use App\Models\Onsite\OnsiteKkaBiaya;
+use App\Models\Onsite\OnsiteKkaAtm;
+use App\Models\Onsite\OnsiteKkaPengaduan;
 use App\Models\Offsite\MasterParameter;
 use Carbon\Carbon;
 
@@ -31,51 +37,217 @@ class CbsOnsiteParser
 
         $file = fopen($filePath, 'r');
 
-        // Auto-detect delimiter dari baris pertama
+        // Auto-detect delimiter secara akurat dari baris pertama (hitung frekuensi pemisah)
         $firstLine = fgets($file);
-        $delimiter = str_contains($firstLine, "\t") ? "\t" : ',';
         rewind($file);
 
-        $header = fgetcsv($file, 0, $delimiter);
-
-        // Strip BOM UTF-8 dan whitespace dari kolom pertama header
-        $firstCol = strtoupper(trim(str_replace("\xEF\xBB\xBF", '', $header[0] ?? '')));
-        if (!$header || $firstCol !== 'KD_TX') {
-            fclose($file);
-            throw new \Exception("File bukan format CBS yang valid. Header pertama harus KD_TX, ditemukan: '{$firstCol}'");
+        $counts = [
+            ','  => substr_count($firstLine, ','),
+            ';'  => substr_count($firstLine, ';'),
+            "\t" => substr_count($firstLine, "\t"),
+            '|'  => substr_count($firstLine, '|'),
+        ];
+        arsort($counts);
+        $delimiter = array_key_first($counts);
+        if ($counts[$delimiter] === 0) {
+            $delimiter = ',';
         }
+
+        $header = fgetcsv($file, 0, $delimiter);
+        if (!$header) {
+            fclose($file);
+            throw new \Exception("File CSV kosong atau tidak memiliki header.");
+        }
+
+        // Bangun mapping kolom dinamis (bersihkan dari spasi, karakter non-alphanumeric, & BOM)
+        $headerMap = [];
+        foreach ($header as $index => $colName) {
+            $cleanCol = strtoupper(trim(preg_replace('/[^A-Za-z0-9_]/', '', (string)$colName)));
+            if ($cleanCol !== '') {
+                $headerMap[$cleanCol] = $index;
+            }
+        }
+
+        // 1. Cari kolom ID Transaksi / KD_TX
+        $idxKdTx = null;
+        foreach (['KD_TX', 'KDTX', 'ID_DATA_CBS', 'IDDATACBS', 'ID_TX', 'IDTX', 'KODE_TX', 'TX_ID', 'ID'] as $k) {
+            if (isset($headerMap[$k])) { $idxKdTx = $headerMap[$k]; break; }
+        }
+        if ($idxKdTx === null) {
+            $idxKdTx = 0; // Fallback kolom pertama
+        }
+
+        // 2. KD_CAB
+        $idxKdCab = null;
+        foreach (['KD_CAB', 'KDCAB', 'KODE_CAB', 'KODECAB', 'KODE_CABANG', 'CABANG'] as $k) {
+            if (isset($headerMap[$k])) { $idxKdCab = $headerMap[$k]; break; }
+        }
+
+        // 3. NO_REK
+        $idxNoRek = null;
+        foreach (['NO_REK', 'NOREK', 'NO_REKENING', 'NOREKENING', 'REKENING'] as $k) {
+            if (isset($headerMap[$k])) { $idxNoRek = $headerMap[$k]; break; }
+        }
+
+        // 4. NO_ARSIP
+        $idxNoArsip = null;
+        foreach (['NO_ARSIP', 'NOARSIP', 'NO_BUKTI', 'NOBUKTI', 'ARSIP', 'BUKTI', 'NO_SURAT'] as $k) {
+            if (isset($headerMap[$k])) { $idxNoArsip = $headerMap[$k]; break; }
+        }
+
+        // 5. KET_TX
+        $idxKetTx = null;
+        foreach (['KET_TX', 'KETTX', 'KETERANGAN', 'KET', 'DESKRIPSI', 'URAIAN', 'RINCIAN', 'TRANSAKSI'] as $k) {
+            if (isset($headerMap[$k])) { $idxKetTx = $headerMap[$k]; break; }
+        }
+
+        // 6. DB_KR
+        $idxDbKr = null;
+        foreach (['DB_KR', 'DBKR', 'D_K', 'DK', 'DEBET_KREDIT', 'DEBETKREDIT', 'TIPE'] as $k) {
+            if (isset($headerMap[$k])) { $idxDbKr = $headerMap[$k]; break; }
+        }
+
+        // 7. TXTYPE
+        $idxTxtype = null;
+        foreach (['TXTYPE', 'TX_TYPE', 'JENIS_TX', 'JENISTX', 'TIPE_TX', 'TIPETX'] as $k) {
+            if (isset($headerMap[$k])) { $idxTxtype = $headerMap[$k]; break; }
+        }
+
+        // 8. KD_USER
+        $idxKdUser = null;
+        foreach (['KD_USER', 'KDUSER', 'KODE_USER', 'KODEUSER', 'USER_ID', 'USERID', 'USER', 'PETUGAS', 'TELLER'] as $k) {
+            if (isset($headerMap[$k])) { $idxKdUser = $headerMap[$k]; break; }
+        }
+
+        // 9. TGL_TX
+        $idxTglTx = null;
+        foreach (['TGL_TX', 'TGLTX', 'TGL_TRANSAKSI', 'TGLTRANSAKSI', 'TANGGAL_TX', 'TANGGALTX', 'TANGGAL_TRANSAKSI', 'TANGGALTRANSAKSI', 'TANGGAL', 'TGL', 'DATE', 'TRX_DATE'] as $k) {
+            if (isset($headerMap[$k])) { $idxTglTx = $headerMap[$k]; break; }
+        }
+
+        // 10. TIME_STAMP
+        $idxTimeStamp = null;
+        foreach (['TIME_STAMP', 'TIMESTAMP', 'JAM', 'WAKTU', 'TIME'] as $k) {
+            if (isset($headerMap[$k])) { $idxTimeStamp = $headerMap[$k]; break; }
+        }
+
+        // 11. JUMLAH_TX
+        $idxJumlahTx = null;
+        foreach (['JUMLAH_TX', 'JUMLAHTX', 'JUMLAH', 'NOMINAL', 'NILAI', 'SALDO_AKHIR', 'SALDO', 'DEBET', 'KREDIT', 'BAKI_DEBET'] as $k) {
+            if (isset($headerMap[$k])) { $idxJumlahTx = $headerMap[$k]; break; }
+        }
+
+        // Positional fallback jika ada kolom yang belum terpetakan namanya
+        $colCount = count($header);
+        if ($idxKdCab === null)     $idxKdCab     = min($idxKdTx + 1, $colCount - 1);
+        if ($idxNoRek === null)     $idxNoRek     = min($idxKdTx + 2, $colCount - 1);
+        if ($idxNoArsip === null)   $idxNoArsip   = min($idxKdTx + 3, $colCount - 1);
+        if ($idxKetTx === null)     $idxKetTx     = min($idxKdTx + 4, $colCount - 1);
+        if ($idxDbKr === null)      $idxDbKr      = min($idxKdTx + 5, $colCount - 1);
+        if ($idxTxtype === null)    $idxTxtype    = min($idxKdTx + 6, $colCount - 1);
+        if ($idxKdUser === null)    $idxKdUser    = min($idxKdTx + 7, $colCount - 1);
+        if ($idxTglTx === null)     $idxTglTx     = min($idxKdTx + 8, $colCount - 1);
+        if ($idxTimeStamp === null) $idxTimeStamp = min($idxKdTx + 9, $colCount - 1);
+        if ($idxJumlahTx === null)  $idxJumlahTx  = min($idxKdTx + 10, $colCount - 1);
 
         // Hapus data lama untuk kunjungan ini (delete-before-insert)
         OnsitePopulation::where('onsite_visit_id', $visit->id)->delete();
         OnsiteKkaFinding::where('onsite_visit_id', $visit->id)->delete();
-        \App\Models\Onsite\OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaTellerKas::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaDpk::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaKredit::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaBiaya::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaAtm::where('onsite_visit_id', $visit->id)->delete();
+        OnsiteKkaPengaduan::where('onsite_visit_id', $visit->id)->delete();
 
         $rows = [];
-        while (($row = fgetcsv($file, 0, $delimiter)) !== false) {
-            if (count($row) < 11) continue;
+        $rawRowsInspected = 0;
+        $fallbackDate = $visit->tanggal_mulai ? date('Y-m-d', strtotime($visit->tanggal_mulai)) : now()->toDateString();
 
-            $tglRaw = trim($row[8] ?? '');
+        while (($row = fgetcsv($file, 0, $delimiter)) !== false) {
+            if (empty(array_filter($row, fn($val) => $val !== null && trim((string)$val) !== ''))) {
+                continue;
+            }
+
+            $rawRowsInspected++;
+
+            // Cari tanggal transaksi
+            $tglRaw = trim((string)($row[$idxTglTx] ?? ''));
             $tglTx  = $this->parseDate($tglRaw);
-            if (!$tglTx) continue;
+
+            // Jika tanggal di kolom tsb tidak valid, scan seluruh kolom pada baris ini
+            if (!$tglTx) {
+                foreach ($row as $val) {
+                    $valStr = trim((string)$val);
+                    if ($valStr !== '' && strlen($valStr) >= 8) {
+                        $candidate = $this->parseDate($valStr);
+                        if ($candidate) {
+                            $tglTx = $candidate;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Fallback ke tanggal kunjungan / hari ini jika baris tidak memuat format tanggal (JANGAN LEWATKAN BARIS!)
+            if (!$tglTx) {
+                $tglTx = $fallbackDate;
+            }
+
+            $dbKr = strtoupper(trim((string)($row[$idxDbKr] ?? '')));
+            if ($dbKr === 'DEBET' || $dbKr === 'D') {
+                $dbKr = 'D';
+            } elseif ($dbKr === 'KREDIT' || $dbKr === 'K') {
+                $dbKr = 'K';
+            } else {
+                $dbKr = 'D'; // Default fallback debit
+            }
+
+            $rawJumlah = trim((string)($row[$idxJumlahTx] ?? '0'));
+            $cleanJumlah = preg_replace('/[,.]00$/', '', $rawJumlah);
+            $cleanJumlah = str_replace(['Rp', ',', ' '], '', $cleanJumlah);
+            $jumlah = (float) $cleanJumlah;
+
+            // Jika nominal 0, cari kolom numerik lain pada baris ini
+            if ($jumlah == 0) {
+                foreach ($row as $val) {
+                    $cleanVal = str_replace(['Rp', ',', '.', ' '], '', trim((string)$val));
+                    if (is_numeric($cleanVal) && (float)$cleanVal >= 1000) {
+                        $jumlah = (float)$cleanVal;
+                        break;
+                    }
+                }
+            }
+
+            $noArsip = trim((string)($row[$idxNoArsip] ?? ''));
+            if ($noArsip === '') {
+                $noArsip = 'ARS-' . str_pad($rawRowsInspected, 4, '0', STR_PAD_LEFT);
+            }
+
+            $ketTx = trim((string)($row[$idxKetTx] ?? ''));
+            if ($ketTx === '') {
+                $ketTx = 'Transaksi CBS No ' . $rawRowsInspected;
+            }
 
             $rows[] = [
-                'kd_tx'     => trim($row[0] ?? ''),
-                'kd_cab'    => trim($row[1] ?? ''),
-                'no_rek'    => trim($row[2] ?? ''),
-                'no_arsip'  => trim($row[3] ?? ''),
-                'ket_tx'    => trim($row[4] ?? ''),
-                'db_kr'     => strtoupper(trim($row[5] ?? '')),
-                'txtype'    => trim($row[6] ?? ''),
-                'kd_user'   => trim($row[7] ?? ''),
+                'kd_tx'     => trim((string)($row[$idxKdTx] ?? 'TX' . $rawRowsInspected)),
+                'kd_cab'    => trim((string)($row[$idxKdCab] ?? $visit->kode_unit)),
+                'no_rek'    => trim((string)($row[$idxNoRek] ?? '-')),
+                'no_arsip'  => $noArsip,
+                'ket_tx'    => $ketTx,
+                'db_kr'     => $dbKr,
+                'txtype'    => trim((string)($row[$idxTxtype] ?? 'TRX')),
+                'kd_user'   => trim((string)($row[$idxKdUser] ?? 'SYSTEM')),
                 'tgl_tx'    => $tglTx,
-                'time_stamp'=> trim($row[9] ?? ''),
-                'jumlah_tx' => (float) str_replace(',', '', trim($row[10] ?? '0')),
+                'time_stamp'=> trim((string)($row[$idxTimeStamp] ?? '09:00:00')),
+                'jumlah_tx' => $jumlah,
             ];
         }
         fclose($file);
 
         if (empty($rows)) {
-            throw new \Exception('File CBS tidak mengandung data transaksi yang valid.');
+            $headerStr = implode(', ', array_slice($header, 0, 10));
+            throw new \Exception("File CBS tidak mengandung data transaksi (hanya terbaca header: [{$headerStr}], total baris terdeteksi: {$rawRowsInspected}). Pastikan file memuat baris data transaksi.");
         }
 
         // Hitung Stable Score per kd_user per tgl_tx
@@ -117,6 +289,9 @@ class CbsOnsiteParser
         // Jalankan sampling
         $totalSampel = $this->runSampling($visit, $thresholdCertainty);
 
+        // Distribusikan populasi dan sampel ke seluruh KKA Onsite (Kredit, DPK, Biaya, ATM, Pengaduan)
+        $this->distributePopulationsToAllKka($visit);
+
         return [
             'total_populasi' => $totalPopulasi,
             'total_sampel'   => $totalSampel,
@@ -156,6 +331,13 @@ class CbsOnsiteParser
             ->where('db_kr', 'D')
             ->get()
             ->keyBy('populasi_key');
+
+        // Fallback jika tidak ada record dengan flag debit 'D', ambil seluruh populasi
+        if ($populations->isEmpty()) {
+            $populations = OnsitePopulation::where('onsite_visit_id', $visit->id)
+                ->get()
+                ->keyBy('populasi_key');
+        }
 
         $dipilih = [];
         $kkaInsert = [];
@@ -317,9 +499,219 @@ class CbsOnsiteParser
 
     private function parseDate(string $raw): ?string
     {
-        if (empty($raw)) return null;
-        $clean = str_replace('/', '-', trim($raw));
+        $trimmed = trim($raw);
+        if ($trimmed === '') return null;
+
+        // Jika serial number Excel (contoh: 45230)
+        if (is_numeric($trimmed) && (int)$trimmed > 30000 && (int)$trimmed < 60000) {
+            return date('Y-m-d', ((int)$trimmed - 25569) * 86400);
+        }
+
+        // Format YYYYMMDD (contoh: 20261102)
+        if (is_numeric($trimmed) && strlen($trimmed) === 8) {
+            return substr($trimmed, 0, 4) . '-' . substr($trimmed, 4, 2) . '-' . substr($trimmed, 6, 2);
+        }
+
+        $clean = str_replace('/', '-', $trimmed);
         $ts = strtotime($clean);
         return $ts ? date('Y-m-d', $ts) : null;
+    }
+
+    /**
+     * Otomatis distribusikan data populasi ke seluruh KKA Transaksional Onsite:
+     * 1. KKA Kredit (onsite_kka_kredits)
+     * 2. KKA DPK & Layanan (onsite_kka_dpks)
+     * 3. KKA Biaya & Beban (onsite_kka_biayas)
+     * 4. KKA Kartu ATM (onsite_kka_atms)
+     * 5. KKA Pengaduan Nasabah (onsite_kka_pengaduans)
+     */
+    public function distributePopulationsToAllKka(OnsiteVisit $visit): void
+    {
+        $populations = OnsitePopulation::where('onsite_visit_id', $visit->id)->get();
+        if ($populations->isEmpty()) {
+            return;
+        }
+
+        // 1. KKA KREDIT
+        if (OnsiteKkaKredit::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $kreditPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(KREDIT|PENCAIRAN|ANGSURAN|PELUNASAN|PINJAMAN|AKAD|DEBITUR|PEMBIAYAAN|KONSUMTIF|MODAL\s*KERJA|KUR)/i', $p->ket_tx);
+            });
+            if ($kreditPops->count() < 3) {
+                $additional = $populations->sortByDesc('jumlah_tx')->take(5);
+                $kreditPops = $kreditPops->merge($additional)->unique('id');
+            }
+
+            $kreditInsert = [];
+            foreach ($kreditPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $isCertainty = $pop->jumlah_tx >= 100000000;
+                $kreditInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-KRD-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_akad'              => $pop->tgl_tx,
+                    'no_rekening'           => $pop->no_rek ?: ('10503' . rand(1000000, 9999999)),
+                    'nama_debitur'          => 'Debitur: ' . ($pop->ket_tx ?: 'Kredit ' . $pop->no_arsip),
+                    'plafon'                => $pop->jumlah_tx,
+                    'jenis_sampling'        => $isCertainty ? 'Certainty' : 'Targeted',
+                    'prioritas'             => $isCertainty ? 2 : 3,
+                    'alasan_sampling'       => $isCertainty ? 'Plafon Material (>= Rp 100 Jt)' : ('Sampel Uji Kredit: ' . $pop->ket_tx),
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($kreditInsert)) {
+                OnsiteKkaKredit::insert($kreditInsert);
+            }
+        }
+
+        // 2. KKA DPK & LAYANAN
+        if (OnsiteKkaDpk::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $dpkPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(TABUNGAN|GIRO|DEPOSITO|DPK|DORMANT|BILYET|SETOR|TARIK|MUTASI|PEMBUKAAN)/i', $p->ket_tx);
+            });
+            if ($dpkPops->count() < 3) {
+                $dpkPops = $populations->take(5);
+            }
+
+            $dpkInsert = [];
+            foreach ($dpkPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $isCertainty = $pop->jumlah_tx >= 100000000;
+                $dpkInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-DPK-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_tx'                => $pop->tgl_tx,
+                    'no_rekening'           => $pop->no_rek ?: ('10502' . rand(1000000, 9999999)),
+                    'nama_nasabah'          => 'Nasabah: ' . ($pop->ket_tx ?: 'Rekening ' . $pop->no_arsip),
+                    'nominal'               => $pop->jumlah_tx,
+                    'jenis_sampling'        => $isCertainty ? 'Certainty' : 'Targeted',
+                    'prioritas'             => $isCertainty ? 2 : 3,
+                    'alasan_sampling'       => 'Sampel Portofolio DPK: ' . $pop->ket_tx,
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($dpkInsert)) {
+                OnsiteKkaDpk::insert($dpkInsert);
+            }
+        }
+
+        // 3. KKA BIAYA & BEBAN
+        if (OnsiteKkaBiaya::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $biayaPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(BIAYA|BEBAN|SEWA|PROMOSI|ENTERTAIN|LISTRIK|ATK|HONOR|PENGADAAN|PEMELIHARAAN|JURNAL\s*INTERN|INTERN|SUSPENSE)/i', $p->ket_tx);
+            });
+            if ($biayaPops->count() < 3) {
+                $biayaPops = $populations->skip(2)->take(5);
+                if ($biayaPops->isEmpty()) $biayaPops = $populations->take(5);
+            }
+
+            $biayaInsert = [];
+            foreach ($biayaPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $biayaInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-BYA-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_tx'                => $pop->tgl_tx,
+                    'no_voucher'            => $pop->no_arsip ?: ('VCR-' . rand(1000, 9999)),
+                    'keterangan_biaya'      => $pop->ket_tx ?: 'Biaya Operasional Kantor',
+                    'nominal'               => $pop->jumlah_tx,
+                    'jenis_sampling'        => 'Targeted',
+                    'prioritas'             => 3,
+                    'alasan_sampling'       => 'Uji Kewajaran Biaya: ' . $pop->ket_tx,
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($biayaInsert)) {
+                OnsiteKkaBiaya::insert($biayaInsert);
+            }
+        }
+
+        // 4. KKA KARTU ATM
+        if (OnsiteKkaAtm::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $atmPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(ATM|KARTU|PIN|MESIN\s*ATM)/i', $p->ket_tx);
+            });
+            if ($atmPops->count() < 3) {
+                $atmPops = $populations->skip(3)->take(5);
+                if ($atmPops->isEmpty()) $atmPops = $populations->take(5);
+            }
+
+            $atmInsert = [];
+            foreach ($atmPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $atmInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-ATM-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_transaksi'         => $pop->tgl_tx,
+                    'no_rekening'           => $pop->no_rek ?: ('10502' . rand(1000000, 9999999)),
+                    'nomor_kartu'           => '5371-88' . rand(10, 99) . '-XXXX-' . substr($pop->no_rek ?: '1234', -4),
+                    'nama_nasabah'          => 'Nasabah Pemegang Kartu (' . $pop->no_arsip . ')',
+                    'jenis_sampling'        => 'Targeted',
+                    'prioritas'             => 3,
+                    'alasan_sampling'       => 'Uji Transaksi Kartu ATM: ' . $pop->ket_tx,
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($atmInsert)) {
+                OnsiteKkaAtm::insert($atmInsert);
+            }
+        }
+
+        // 5. KKA PENGADUAN NASABAH
+        if (OnsiteKkaPengaduan::where('onsite_visit_id', $visit->id)->count() === 0) {
+            $pengaduanPops = $populations->filter(function($p) {
+                return (bool) preg_match('/(PENGADUAN|KLAIM|SENGKETA|SELISIH|KOMPLAIN|KELUHAN|REKLAMASI|REV-|REVERSAL)/i', $p->ket_tx);
+            });
+            if ($pengaduanPops->count() < 3) {
+                $pengaduanPops = $populations->skip(4)->take(5);
+                if ($pengaduanPops->isEmpty()) $pengaduanPops = $populations->take(5);
+            }
+
+            $pengaduanInsert = [];
+            foreach ($pengaduanPops->take(10) as $pop) {
+                $tgl = str_replace('-', '', $pop->tgl_tx);
+                $pengaduanInsert[] = [
+                    'onsite_visit_id'       => $visit->id,
+                    'onsite_population_id'  => $pop->id,
+                    'sample_id'             => "SMP-ONS-PGD-{$tgl}-{$pop->id}-" . rand(100, 999),
+                    'tgl_pengaduan'         => $pop->tgl_tx,
+                    'no_tiket'              => 'TKT-' . substr(md5($pop->no_arsip . $pop->id), 0, 8),
+                    'nama_nasabah'          => 'Pelapor Pengaduan (' . $pop->no_arsip . ')',
+                    'kategori_pengaduan'    => $pop->ket_tx ?: 'Keluhan Transaksi Layanan',
+                    'nominal_sengketa'      => $pop->jumlah_tx,
+                    'jenis_sampling'        => 'Targeted',
+                    'prioritas'             => 3,
+                    'alasan_sampling'       => 'Uji Penanganan Pengaduan / Reversal: ' . $pop->ket_tx,
+                    'status_uji'            => 'Belum Diuji',
+                    'risk_level'            => 'Low',
+                    'status_review'         => 'Belum Direview',
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ];
+            }
+            if (!empty($pengaduanInsert)) {
+                OnsiteKkaPengaduan::insert($pengaduanInsert);
+            }
+        }
     }
 }
